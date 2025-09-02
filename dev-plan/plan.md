@@ -155,13 +155,14 @@ _Status: Implemented in [`src/core/pricing.py`](../src/core/pricing.py)._
 #### Phase C2: Drift computation, triggers & prioritization
 **Deliverables**
 - `src/core/drift.py` calculates current vs target weights, drift % and $
-- Trigger selection (`per_holding` vs `total_drift`), **soft guidelines**  
-- Prioritize by **|drift|**; respect `min_order_usd`
+- Trigger selection (`per_holding` vs `total_drift`) with soft guidelines
+- `prioritize_by_drift` filters trades below `min_order_usd` and ranks by |drift|
 
 **Tests (unit)**
-- [ ] Per-holding band logic  
-- [ ] Total-drift logic  
-- [ ] Skips below `min_order_usd`
+- [x] Per-holding band logic
+- [x] Total-drift logic
+- [x] Skips below `min_order_usd`
+- [x] Prioritization ranks by |drift|
 
 **Acceptance**
 - Fixture-driven scenarios match expected selected trades
