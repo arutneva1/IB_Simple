@@ -72,7 +72,7 @@
 
 #### Phase B1: Config loader & schema validation
 **Deliverables**
-- `src/config_loader.py` parses `settings.ini`, validates `models` sum (~1.0), and exposes structured config dataclasses
+- `src/io/config_loader.py` parses `settings.ini`, validates `models` sum (~1.0), and exposes structured config dataclasses
 - Helpful error messages (abort on error)
 
 **Tests (unit)**
@@ -81,13 +81,13 @@
 - [ ] Models sum not ≈ 1.0
 
 **Acceptance**
-- CLI `python -m src.validate_config config/settings.ini` prints OK or errors
+- CLI `python -m src.io.validate_config config/settings.ini` prints OK or errors
 
 ---
 
 #### Phase B2: CSV parser & model portfolio validation
 **Deliverables**
-- `src/portfolio_csv.py` reads `portfolios.csv` and validates:
+- `src/io/portfolio_csv.py` reads `portfolios.csv` and validates:
   - Per-model asset sums ≈ 100% (±0.01)
   - If `CASH` present: `sum(assets)+CASH ≈ 100%`
   - Blank cells → 0%
@@ -101,7 +101,7 @@
 - [ ] Unknown ETF symbol aborts
 
 **Acceptance**
-- CLI `python -m src.validate_portfolios data/portfolios.csv` prints OK or detailed errors
+- CLI `python -m src.io.validate_portfolios data/portfolios.csv` prints OK or detailed errors
 
 ---
 
@@ -138,7 +138,7 @@
 
 #### Phase C1: Model mixing & target builder
 **Deliverables**
-- `src/targets.py` combines model vectors with model mix to compute final target weights per symbol (incl. CASH)
+- `src/core/targets.py` combines model vectors with model mix to compute final target weights per symbol (incl. CASH)
 
 **Tests (unit)**
 - [ ] Symbols missing in some models → treated as 0  
@@ -152,7 +152,7 @@
 
 #### Phase C2: Drift computation, triggers & prioritization
 **Deliverables**
-- `src/drift.py` calculates current vs target weights, drift % and $  
+- `src/core/drift.py` calculates current vs target weights, drift % and $
 - Trigger selection (`per_holding` vs `total_drift`), **soft guidelines**  
 - Prioritize by **|drift|**; respect `min_order_usd`
 
@@ -168,7 +168,7 @@
 
 #### Phase C3: Sizing, leverage guard, rounding, cash buffer
 **Deliverables**
-- `src/sizing.py` sizes orders to move toward target, reserves `cash_buffer_pct`, rounds to whole shares if `allow_fractional=false`, and enforces **post-trade leverage ≤ max_leverage** with partial scaling by priority
+- `src/core/sizing.py` sizes orders to move toward target, reserves `cash_buffer_pct`, rounds to whole shares if `allow_fractional=false`, and enforces **post-trade leverage ≤ max_leverage** with partial scaling by priority
 - Trades falling below `min_order_usd` after rounding are skipped
 
 **Tests (unit)**
@@ -183,7 +183,7 @@
 
 #### Phase C4: Preview & CLI confirmation
 **Deliverables**
-- `src/preview.py` renders a tabular **trade plan** (drift in % and $), batch summary (gross buy/sell, pre/post gross exposure & leverage)
+- `src/core/preview.py` renders a tabular **trade plan** (drift in % and $), batch summary (gross buy/sell, pre/post gross exposure & leverage)
 - `rebalance.py` orchestrates: load → snapshot → targets → drift → sizing → preview → **CLI Y/N**
 - `--dry-run` flag (no trading), `--read-only` guard
 
@@ -200,7 +200,7 @@
 
 #### Phase D1: Order submission (market + algo; fallback plain market)
 **Deliverables**
-- `src/execution.py` builds market orders, applies preferred algo (`adaptive`/`midprice`) if supported; else **fallback to plain market**
+- `src/broker/execution.py` builds market orders, applies preferred algo (`adaptive`/`midprice`) if supported; else **fallback to plain market**
 - Batch submission; track order IDs; poll states
 - Respect `prefer_rth` (initially block outside RTH with clear message)
 
