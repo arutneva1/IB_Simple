@@ -27,7 +27,7 @@ jobs:
       - name: Run isort
         run: isort --check-only .
       - name: Type check
-        run: mypy src || true
+        run: mypy src
         shell: bash
       - name: Run tests
         run: pytest -q -m "not integration"
