@@ -25,13 +25,13 @@
 - `README.md` with quickstart
 - Base repo structure:
   - `src/` (code), `tests/` (pytest), `reports/` (output), `config/` (sample `settings.ini`), `data/` (sample `portfolios.csv`)
-- `.editorconfig`, `.gitignore`, `requirements.txt` / `pyproject.toml`
+- `.editorconfig`, `.gitignore`, `requirements.txt`, `requirements-dev.txt` / `pyproject.toml`
 - `pre-commit` hooks (black, isort, ruff/flake8)
 
 **Checklist**
 - [ ] Install Python 3.10+ (Windows)  
 - [ ] Create venv or conda env  
-- [ ] Install dependencies (`pip install -r requirements.txt`)  
+- [ ] Install dependencies (`pip install -r requirements.txt -r requirements-dev.txt`)  
 - [ ] Configure pre-commit: `pre-commit install`
 
 **Acceptance**
@@ -284,7 +284,7 @@
 1) **Windows + Python**
 - Install Python 3.10+ (or Miniconda); ensure `python --version`
 - Create env: `python -m venv .venv` (or `conda create -n ibkr-rebal python=3.10`)
-- Activate env; `pip install -r requirements.txt`
+- Activate env; `pip install -r requirements.txt -r requirements-dev.txt`
 
 2) **IBKR TWS/Gateway**
 - Install and run TWS or IB Gateway (paper)  
@@ -328,7 +328,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-dev.txt
           pip install pytest pytest-cov ruff black mypy
       - name: Lint & Format
         run: |

@@ -39,7 +39,7 @@ ibkr-rebalancer/
 │  └─ settings.ini      # sample
 ├─ reports/             # output (gitignored)
 ├─ README.md
-├─ requirements.txt (or pyproject.toml)
+├─ requirements.txt, requirements-dev.txt (or pyproject.toml)
 ├─ .pre-commit-config.yaml
 ├─ .editorconfig
 ├─ .gitignore
@@ -53,7 +53,7 @@ cd ibkr-rebalancer
 py -3.10 -m venv .venv
 . .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 pre-commit install
 ```
 
@@ -65,12 +65,17 @@ typing-extensions
 pydantic>=2  # optional, helpful schemas
 rich         # optional pretty CLI
 click        # optional CLI flags
+```
+
+**`requirements-dev.txt`**
+```
 pytest
 pytest-cov
 ruff
 black
 isort
 mypy         # optional
+pre-commit
 ```
 
 **.gitignore**
@@ -196,7 +201,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt -r requirements-dev.txt
           pip install pytest pytest-cov ruff black isort mypy
       - name: Lint & Format
         run: |

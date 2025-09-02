@@ -9,7 +9,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ### Phase A1 — Repo Scaffold & Local Environment
 - [ ] Repo created and `main` branch protected
 - [ ] Directory structure scaffolded (`src/`, `tests/`, `config/`, `data/`, `reports/`)
-- [ ] `requirements.txt` or `pyproject.toml` committed
+- [ ] `requirements.txt`, `requirements-dev.txt` or `pyproject.toml` committed
 - [ ] `.editorconfig`, `.gitignore`, `.pre-commit-config.yaml` committed
 - [ ] Virtual environment created; dependencies install without error
 - [ ] `pre-commit install` works; `pre-commit run --all-files` passes
