@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -73,3 +74,34 @@ def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     assert bbb.drift_pct == pytest.approx(-40.0)
     assert bbb.drift_usd == pytest.approx(-240.0)
     assert bbb.action == "BUY"
+
+
+def _cfg(trigger_mode: str, per_band: int = 0, total_band: int = 0) -> SimpleNamespace:
+    rebalance = SimpleNamespace(
+        trigger_mode=trigger_mode,
+        per_holding_band_bps=per_band,
+        portfolio_total_band_bps=total_band,
+    )
+    return SimpleNamespace(rebalance=rebalance)
+
+
+def test_per_holding_band_filters_small_drifts() -> None:
+    current = {"AAA": 4, "BBB": 6, "CASH": 0}
+    targets = {"AAA": 50.0, "BBB": 50.0}
+    prices = {"AAA": 10.0, "BBB": 10.0}
+    net_liq = 100.0
+
+    cfg = _cfg("per_holding", per_band=1500)
+    drifts = compute_drift(current, targets, prices, net_liq, cfg)
+    assert drifts == []
+
+
+def test_total_drift_selects_largest_until_within_band() -> None:
+    current = {"AAA": 46, "BBB": 26, "CCC": 28}
+    targets = {"AAA": 40.0, "BBB": 30.0, "CCC": 30.0}
+    prices = {"AAA": 1.0, "BBB": 1.0, "CCC": 1.0}
+    net_liq = 100.0
+
+    cfg = _cfg("total_drift", total_band=1000)
+    drifts = compute_drift(current, targets, prices, net_liq, cfg)
+    assert [d.symbol for d in drifts] == ["AAA"]
