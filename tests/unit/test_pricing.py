@@ -12,7 +12,9 @@ class FakeIB:
         self.responses = list(responses)
         self.calls = []
 
-    async def reqTickersAsync(self, contract, *, snapshot=False):  # pragma: no cover - simple stub
+    async def reqTickersAsync(
+        self, contract, *, snapshot=False
+    ):  # pragma: no cover - simple stub
         self.calls.append(snapshot)
         return self.responses.pop(0)
 
