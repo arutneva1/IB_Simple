@@ -16,6 +16,7 @@ from .config_loader import (
     Rebalance,
     load_config,
 )
+from .portfolio_csv import PortfolioCSVError, load_portfolios
 
 __all__ = [
     "AppConfig",
@@ -27,4 +28,6 @@ __all__ = [
     "Pricing",
     "Rebalance",
     "load_config",
+    "PortfolioCSVError",
+    "load_portfolios",
 ]
