@@ -2,17 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from src.io.config_loader import (
-    IBKR,
-    IO,
-    AppConfig,
-    ConfigError,
-    Execution,
-    Models,
-    Pricing,
-    Rebalance,
-    load_config,
-)
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from src.io.config_loader import (IBKR, IO, AppConfig, ConfigError, Execution,
+                                  Models, Pricing, Rebalance, load_config)
 
 VALID_CONFIG = """\
 [ibkr]
