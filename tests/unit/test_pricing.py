@@ -1,48 +1,76 @@
 import asyncio
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 from src.core.pricing import PricingError, get_price
 
 
-class FakeIB:
-    def __init__(self, *responses):
-        # responses is a list of lists of ticker objects
-        self.responses = list(responses)
-        self.calls = []
-
-    async def reqTickersAsync(self, contract, *, snapshot=False):  # pragma: no cover - simple stub
-        self.calls.append(snapshot)
-        return self.responses.pop(0)
-
-
 class Ticker(SimpleNamespace):
-    pass
+    """Simple ticker object used for stubbing responses."""
 
 
-def test_get_price_realtime_only():
-    ib = FakeIB([Ticker(last=100.0)])
+def test_get_price_live(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Live price is returned when available and snapshot is disabled."""
+
+    ib = SimpleNamespace()
+    calls = []
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        calls.append(snapshot)
+        return [Ticker(last=100.0)]
+
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
     price = asyncio.run(
-        get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=True)
+        get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=False)
     )
+
     assert price == 100.0
-    assert ib.calls == [False]
+    assert calls == [False]
 
 
-def test_get_price_uses_snapshot_when_missing():
-    ib = FakeIB([Ticker(last=None)], [Ticker(last=50.0)])
+def test_get_price_falls_back_to_snapshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Snapshot price is used when live price is missing and fallback enabled."""
+
+    ib = SimpleNamespace()
+    calls = []
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        calls.append(snapshot)
+        if snapshot:
+            return [Ticker(last=50.0)]
+        return [Ticker(last=None)]
+
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
     price = asyncio.run(
         get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=True)
     )
+
     assert price == 50.0
-    assert ib.calls == [False, True]
+    assert calls == [False, True]
 
 
-def test_get_price_raises_when_unavailable():
-    ib = FakeIB([Ticker(last=None)])
+def test_get_price_raises_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PricingError is raised when both live and snapshot prices are missing."""
+
+    ib = SimpleNamespace()
+    calls = []
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        calls.append(snapshot)
+        return [Ticker(last=None)]
+
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
     with pytest.raises(PricingError):
         asyncio.run(
-            get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=False)
+            get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=True)
         )
-    assert ib.calls == [False]
+
+    assert calls == [False, True]
