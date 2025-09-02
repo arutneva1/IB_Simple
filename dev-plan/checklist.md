@@ -125,7 +125,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [ ] Sample `settings.ini` and `portfolios.csv` updated
 
 ### Phase E2 — Docs & Handoff
-- [ ] `README.md` Quickstart updated
+- [x] `README.md` Quickstart updated
 - [ ] `USAGE.md` with CLI examples and outputs
 - [ ] SRS, plan.md, workflow.md, checklist.md linked
 - [ ] PR template and contribution guidelines added
@@ -135,7 +135,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 
 ## Global PR Gates (Every Phase)
 - [ ] Code + unit tests implemented
-- [ ] Docs updated (README/USAGE/SRS/plan/workflow/checklist)
+- [x] Docs updated (README/USAGE/SRS/plan/workflow/checklist)
 - [ ] No API credentials or other secrets committed; `.gitignore` covers sensitive files
 - [ ] CI green; pre-commit clean
 - [ ] Manual smoke test (dry-run or paper) demonstrated

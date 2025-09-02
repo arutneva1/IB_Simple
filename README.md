@@ -19,6 +19,11 @@ pytest -q -m "not integration"
 
 ## Usage (placeholders)
 
+### Validate configuration
+```bash
+python -m src.io.validate_config config/settings.ini
+```
+
 ### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
