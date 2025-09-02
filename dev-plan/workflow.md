@@ -300,7 +300,7 @@ def load_config(path: str):
 
 ### C0. Pricing utility
 
-**Implement** `src/core/pricing.py`
+`src/core/pricing.py` implemented.
 - Fetch latest prices based on `price_source`
 - If real-time price missing and `fallback_to_snapshot=true`, use snapshot values
 - Wire into pipeline after snapshot retrieval and before drift/sizing calculations

@@ -123,6 +123,7 @@
 ### Milestone C — Core Logic & Preview
 
 #### Phase C0: Pricing utility
+_Status: Implemented in [`src/core/pricing.py`](../src/core/pricing.py)._
 **Deliverables**
 - `src/core/pricing.py` retrieves market prices for symbols
 - Honors `price_source` and optional `fallback_to_snapshot`
