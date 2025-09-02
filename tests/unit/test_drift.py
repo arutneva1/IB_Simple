@@ -127,7 +127,9 @@ def test_per_holding_mode_triggers_symbols_and_skips_small_drifts(
     cfg_factory,
 ) -> None:
     cfg = cfg_factory("per_holding", per_band=300)
-    drifts = compute_drift(per_holding_current, per_holding_targets, sample_prices, 100.0, cfg)
+    drifts = compute_drift(
+        per_holding_current, per_holding_targets, sample_prices, 100.0, cfg
+    )
     symbols = [d.symbol for d in drifts]
     assert symbols == ["AAA", "BBB"]
     by_symbol = {d.symbol: d for d in drifts}
