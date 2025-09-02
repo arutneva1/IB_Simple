@@ -260,10 +260,11 @@ def load_config(path: str):
 ### B2. CSV parser & model portfolio validation
 
 **Implement** `src/io/portfolio_csv.py`
-- Read wide format (ETF, SMURF, BADASS, GLTR).  
-- Convert blanks to 0; parse `%` strings.  
-- Validate **per-model** sums ≈ 100% and **Sum(assets)+CASH ≈ 100%** when CASH present (±0.01).  
+- Read wide format (ETF, SMURF, BADASS, GLTR).
+- Convert blanks to 0; parse `%` strings.
+- Validate **per-model** sums ≈ 100% and **Sum(assets)+CASH ≈ 100%** when CASH present (±0.01).
 - Return canonical dict: `{ symbol: {model: weight_float}, ... }`.
+- After parsing, verify each ETF symbol against IBKR's symbol list; abort on unknown symbols.
 
 **Tests** `tests/unit/test_portfolio_csv.py`
 - Happy path; CASH positive; CASH negative; malformed `%` raises error.
