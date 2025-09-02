@@ -83,6 +83,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [ ] Enforces leverage ≤ `max_leverage`
 - [ ] Partial scaling by priority when needed
 - [ ] Unit tests for cash/leverage/rounding edge cases
+- [ ] Unit tests enforce `min_order_usd` after rounding
 
 ### Phase C4 — Preview & CLI Confirmation
 - [ ] `src/core/preview.py` implemented
