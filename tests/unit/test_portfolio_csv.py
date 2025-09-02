@@ -1,3 +1,4 @@
+import re
 import sys
 from pathlib import Path
 
@@ -13,18 +14,28 @@ class FakeIB:
     def __init__(self) -> None:
         from ib_async.contract import ContractDetails, Stock
 
+        symbols = [
+            "BLOK",
+            "IBIT",
+            "ETHA",
+            "IAU",
+            "GLD",
+            "GDX",
+            "CWB",
+            "BIV",
+            "BNDX",
+            "VCIT",
+            "SCHG",
+            "SPY",
+            "MGK",
+        ]
         self.mapping = {
-            "BLOK": ContractDetails(
-                contract=Stock("BLOK", currency="USD"), stockType="ETF"
-            ),
-            "SPY": ContractDetails(
-                contract=Stock("SPY", currency="USD"), stockType="ETF"
-            ),
+            s: ContractDetails(contract=Stock(s, currency="USD"), stockType="ETF")
+            for s in symbols
         }
 
     def reqContractDetails(self, contract):
-        symbol = contract.symbol
-        detail = self.mapping.get(symbol)
+        detail = self.mapping.get(contract.symbol)
         return [detail] if detail else []
 
 
@@ -35,7 +46,22 @@ def fake_ib(monkeypatch):
     return ib
 
 
-def test_load_portfolios_valid(tmp_path: Path) -> None:
+@pytest.fixture()
+def portfolios_csv(tmp_path: Path) -> Path:
+    src = Path(__file__).resolve().parents[2] / "data" / "portfolios.csv"
+    dst = tmp_path / "portfolios.csv"
+    dst.write_text(src.read_text())
+    return dst
+
+
+def test_load_portfolios_valid(portfolios_csv: Path) -> None:
+    portfolios = load_portfolios(portfolios_csv)
+    # there are 14 rows including CASH
+    assert len(portfolios) == 14
+    assert portfolios["IAU"]["gltr"] == 100.0
+
+
+def test_positive_cash(tmp_path: Path) -> None:
     content = """ETF,SMURF,BADASS,GLTR
 BLOK,50%,,0%
 SPY,,25%,50%
@@ -44,22 +70,7 @@ CASH,50%,75%,50%
     path = tmp_path / "pf.csv"
     path.write_text(content)
     portfolios = load_portfolios(path)
-    assert portfolios == {
-        "BLOK": {"smurf": 50.0, "badass": 0.0, "gltr": 0.0},
-        "SPY": {"smurf": 0.0, "badass": 25.0, "gltr": 50.0},
-        "CASH": {"smurf": 50.0, "badass": 75.0, "gltr": 50.0},
-    }
-
-
-def test_totals_without_cash(tmp_path: Path) -> None:
-    content = """ETF,SMURF,BADASS,GLTR
-BLOK,50%,,0%
-SPY,,25%,50%
-"""
-    path = tmp_path / "pf.csv"
-    path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
-        load_portfolios(path)
+    assert portfolios["CASH"] == {"smurf": 50.0, "badass": 75.0, "gltr": 50.0}
 
 
 def test_negative_cash(tmp_path: Path) -> None:
@@ -74,6 +85,18 @@ CASH,-10%,75%,-10%
     assert portfolios["CASH"]["smurf"] == -10.0
 
 
+def test_totals_without_cash(tmp_path: Path) -> None:
+    content = """ETF,SMURF,BADASS,GLTR
+BLOK,50%,,0%
+SPY,,25%,50%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+    msg = r"SMURF: totals 50\.00% do not sum to 100%"
+    with pytest.raises(PortfolioCSVError, match=msg):
+        load_portfolios(path)
+
+
 def test_cash_mismatch(tmp_path: Path) -> None:
     content = """ETF,SMURF,BADASS,GLTR
 BLOK,50%,,0%
@@ -82,7 +105,8 @@ CASH,40%,70%,30%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
+    msg = r"SMURF: assets 50\.00% \+ CASH 40\.00% = 90\.00%, expected 100%"
+    with pytest.raises(PortfolioCSVError, match=msg):
         load_portfolios(path)
 
 
@@ -92,7 +116,7 @@ BLOK,0%,0%,0%,0%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
+    with pytest.raises(PortfolioCSVError, match=r"Unknown columns: FOO"):
         load_portfolios(path)
 
 
@@ -102,17 +126,22 @@ BLOK,0%,0%,0%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
+    with pytest.raises(PortfolioCSVError, match=r"Duplicate columns: SMURF"):
         load_portfolios(path)
 
 
-def test_malformed_percent(tmp_path: Path) -> None:
-    content = """ETF,SMURF,BADASS,GLTR
-BLOK,abc,0%,0%
-"""
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("abc", "BLOK: invalid percentage for SMURF: 'abc'"),
+        ("200%", "BLOK: percent out of range for SMURF: 200.0"),
+    ],
+)
+def test_malformed_percent(tmp_path: Path, value: str, expected: str) -> None:
+    content = f"ETF,SMURF,BADASS,GLTR\nBLOK,{value},0%,0%\n"
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
+    with pytest.raises(PortfolioCSVError, match=re.escape(expected)):
         load_portfolios(path)
 
 
@@ -123,5 +152,5 @@ CASH,50%,50%,50%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(PortfolioCSVError):
+    with pytest.raises(PortfolioCSVError, match=r"Unknown ETF symbol: FAKE"):
         load_portfolios(path)
