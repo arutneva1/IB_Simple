@@ -1,9 +1,6 @@
-import sys
 from pathlib import Path
 
 import pytest
-
-sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.io.config_loader import (
     IBKR,
