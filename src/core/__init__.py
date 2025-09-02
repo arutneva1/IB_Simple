@@ -1,8 +1,8 @@
 """Core package exports."""
 
 # Re-export public pricing utilities for convenient access from ``core``.
-from .pricing import PricingError, get_price
 from .drift import Drift, compute_drift
+from .pricing import PricingError, get_price
 
 # Lazy re-export target building utilities for convenient access from ``core``.
 
