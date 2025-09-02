@@ -7,9 +7,12 @@ contribution of each model to the final allocation.
 
 from __future__ import annotations
 
+import argparse
+from pathlib import Path
 from math import isclose
 
 from ..io.config_loader import Models
+from ..io import load_config, load_portfolios
 
 
 class TargetError(ValueError):
@@ -60,4 +63,23 @@ def build_targets(
     return targets
 
 
+def main(argv=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", type=Path, required=True)
+    parser.add_argument("--csv", type=Path, required=True)
+    ns = parser.parse_args(argv)
+
+    cfg = load_config(ns.config)
+    models = load_portfolios(
+        ns.csv, host=cfg.ibkr.host, port=cfg.ibkr.port, client_id=cfg.ibkr.client_id
+    )
+    targets = build_targets(models, cfg.models)
+    for symbol, pct in sorted(targets.items()):
+        print(f"{symbol} {pct:.1f}%")
+
+
 __all__ = ["TargetError", "build_targets"]
+
+
+if __name__ == "__main__":
+    main()
