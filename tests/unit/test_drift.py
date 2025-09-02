@@ -10,7 +10,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from src.core.drift import compute_drift
+from src.core.drift import Drift, compute_drift, prioritize_by_drift
 
 
 def test_compute_drift_normalizes_and_combines_targets() -> None:
@@ -76,32 +76,100 @@ def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     assert bbb.action == "BUY"
 
 
-def _cfg(trigger_mode: str, per_band: int = 0, total_band: int = 0) -> SimpleNamespace:
-    rebalance = SimpleNamespace(
-        trigger_mode=trigger_mode,
-        per_holding_band_bps=per_band,
-        portfolio_total_band_bps=total_band,
-    )
-    return SimpleNamespace(rebalance=rebalance)
+@pytest.fixture
+def sample_prices() -> dict[str, float]:
+    return {"AAA": 1.0, "BBB": 1.0, "CCC": 1.0, "DDD": 1.0}
 
 
-def test_per_holding_band_filters_small_drifts() -> None:
-    current = {"AAA": 4, "BBB": 6, "CASH": 0}
-    targets = {"AAA": 50.0, "BBB": 50.0}
-    prices = {"AAA": 10.0, "BBB": 10.0}
-    net_liq = 100.0
-
-    cfg = _cfg("per_holding", per_band=1500)
-    drifts = compute_drift(current, targets, prices, net_liq, cfg)
-    assert drifts == []
+@pytest.fixture
+def per_holding_current() -> dict[str, int]:
+    return {"AAA": 45, "BBB": 36, "CCC": 19, "DDD": 0}
 
 
-def test_total_drift_selects_largest_until_within_band() -> None:
-    current = {"AAA": 46, "BBB": 26, "CCC": 28}
-    targets = {"AAA": 40.0, "BBB": 30.0, "CCC": 30.0}
-    prices = {"AAA": 1.0, "BBB": 1.0, "CCC": 1.0}
-    net_liq = 100.0
+@pytest.fixture
+def per_holding_targets() -> dict[str, float]:
+    return {"AAA": 40.0, "BBB": 40.0, "CCC": 20.0, "DDD": 0.0}
 
-    cfg = _cfg("total_drift", total_band=1000)
-    drifts = compute_drift(current, targets, prices, net_liq, cfg)
-    assert [d.symbol for d in drifts] == ["AAA"]
+
+@pytest.fixture
+def total_current() -> dict[str, int]:
+    return {"AAA": 46, "BBB": 25, "CCC": 29}
+
+
+@pytest.fixture
+def total_targets() -> dict[str, float]:
+    return {"AAA": 40.0, "BBB": 30.0, "CCC": 30.0}
+
+
+@pytest.fixture
+def cfg_factory():
+    def _make_cfg(
+        trigger_mode: str = "",
+        per_band: int = 0,
+        total_band: int = 0,
+        min_order: int = 0,
+    ) -> SimpleNamespace:
+        rebalance = SimpleNamespace(
+            trigger_mode=trigger_mode,
+            per_holding_band_bps=per_band,
+            portfolio_total_band_bps=total_band,
+            min_order_usd=min_order,
+        )
+        return SimpleNamespace(rebalance=rebalance)
+
+    return _make_cfg
+
+
+def test_per_holding_mode_triggers_symbols_and_skips_small_drifts(
+    per_holding_current,
+    per_holding_targets,
+    sample_prices,
+    cfg_factory,
+) -> None:
+    cfg = cfg_factory("per_holding", per_band=300)
+    drifts = compute_drift(per_holding_current, per_holding_targets, sample_prices, 100.0, cfg)
+    symbols = [d.symbol for d in drifts]
+    assert symbols == ["AAA", "BBB"]
+    by_symbol = {d.symbol: d for d in drifts}
+    assert by_symbol["AAA"].action == "SELL"
+    assert by_symbol["BBB"].action == "BUY"
+    assert "CCC" not in symbols and "DDD" not in symbols
+
+
+def test_total_drift_mode_selects_largest_until_band(
+    total_current,
+    total_targets,
+    sample_prices,
+    cfg_factory,
+) -> None:
+    cfg = cfg_factory("total_drift", total_band=500)
+    drifts = compute_drift(total_current, total_targets, sample_prices, 100.0, cfg)
+    assert [d.symbol for d in drifts] == ["AAA", "BBB"]
+    by_symbol = {d.symbol: d for d in drifts}
+    assert by_symbol["AAA"].action == "SELL"
+    assert by_symbol["BBB"].action == "BUY"
+
+
+def test_prioritize_by_drift_filters_and_sorts(cfg_factory) -> None:
+    drifts = [
+        Drift("AAA", 0.0, 0.0, 0.0, 50.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, -200.0, "SELL"),
+        Drift("CCC", 0.0, 0.0, 0.0, 150.0, "BUY"),
+    ]
+    cfg = cfg_factory(min_order=100)
+    prioritized = prioritize_by_drift(drifts, cfg)
+    assert [d.symbol for d in prioritized] == ["BBB", "CCC"]
+    assert prioritized[0].drift_usd == -200.0
+    assert prioritized[1].drift_usd == 150.0
+
+
+def test_compute_drift_zero_drift_returns_hold() -> None:
+    current = {"AAA": 5}
+    targets = {"AAA": 100.0}
+    prices = {"AAA": 1.0}
+    net_liq = 5.0
+    drifts = compute_drift(current, targets, prices, net_liq, cfg=None)
+    assert len(drifts) == 1
+    d = drifts[0]
+    assert d.drift_pct == pytest.approx(0.0)
+    assert d.action == "HOLD"
