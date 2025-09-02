@@ -12,6 +12,7 @@ def test_load_portfolios_valid(tmp_path: Path) -> None:
     content = """ETF,SMURF,BADASS,GLTR
 BLOK,50%,,0%
 SPY,,25%,50%
+CASH,50%,75%,50%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
@@ -19,7 +20,43 @@ SPY,,25%,50%
     assert portfolios == {
         "BLOK": {"smurf": 50.0, "badass": 0.0, "gltr": 0.0},
         "SPY": {"smurf": 0.0, "badass": 25.0, "gltr": 50.0},
+        "CASH": {"smurf": 50.0, "badass": 75.0, "gltr": 50.0},
     }
+
+
+def test_totals_without_cash(tmp_path: Path) -> None:
+    content = """ETF,SMURF,BADASS,GLTR
+BLOK,50%,,0%
+SPY,,25%,50%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+    with pytest.raises(PortfolioCSVError):
+        load_portfolios(path)
+
+
+def test_negative_cash(tmp_path: Path) -> None:
+    content = """ETF,SMURF,BADASS,GLTR
+BLOK,60%,,60%
+SPY,50%,25%,50%
+CASH,-10%,75%,-10%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+    portfolios = load_portfolios(path)
+    assert portfolios["CASH"]["smurf"] == -10.0
+
+
+def test_cash_mismatch(tmp_path: Path) -> None:
+    content = """ETF,SMURF,BADASS,GLTR
+BLOK,50%,,0%
+SPY,,25%,50%
+CASH,40%,70%,30%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+    with pytest.raises(PortfolioCSVError):
+        load_portfolios(path)
 
 
 def test_unknown_column(tmp_path: Path) -> None:
