@@ -61,9 +61,9 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ## Milestone C — Core Logic & Preview
 
 ### Phase C0 — Pricing Utility
-- [ ] `src/core/pricing.py` implemented
-- [ ] Honors `price_source` and `fallback_to_snapshot`
-- [ ] Unit tests for price retrieval and snapshot fallback
+- [x] `src/core/pricing.py` implemented
+- [x] Honors `price_source` and `fallback_to_snapshot`
+- [x] Unit tests for price retrieval and snapshot fallback
 
 ### Phase C1 — Model Mixing & Target Builder
 - [ ] `src/core/targets.py` implemented

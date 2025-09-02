@@ -39,6 +39,15 @@ python -m src.snapshot --config config/settings.ini
 This step requires an IBKR paper account and serves as a manual integration test.
 It returns positions and cash in USD, ignoring any CAD cash.
 
+### Pricing utility
+Retrieve a market price using [`src/core/pricing.py`](src/core/pricing.py):
+
+```python
+from src.core.pricing import get_price
+# assume `ib` is a connected ib_async.IB instance
+price = await get_price(ib, "SPY", price_source="last", fallback_to_snapshot=True)
+```
+
 ### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
