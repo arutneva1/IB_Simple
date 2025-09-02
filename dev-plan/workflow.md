@@ -330,9 +330,10 @@ def load_config(path: str):
 ### C3. Sizing, leverage guard, rounding, cash buffer
 
 **Implement** `src/core/sizing.py`
-- Reserve `cash_buffer_pct` of NetLiq.  
-- Round to whole shares when `allow_fractional=false`.  
+- Reserve `cash_buffer_pct` of NetLiq.
+- Round to whole shares when `allow_fractional=false`.
 - Enforce **post-trade leverage ≤ max_leverage**; if exceeded, scale down lower-priority trades.
+- Drop trades below `min_order_usd` once quantities are rounded.
 
 **Tests**: cash constrained greedy fill, leverage scaling, rounding edge cases.
 
