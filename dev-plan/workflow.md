@@ -433,6 +433,9 @@ pre-commit run --all-files
 # Run unit tests only
 pytest -q -m "not integration"
 
+# Validate portfolio CSV
+python -m src.io.validate_portfolios data/portfolios.csv
+
 # Dry-run preview
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
 

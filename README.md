@@ -25,6 +25,11 @@ pytest -q -m "not integration"
 python -m src.io.validate_config config/settings.ini
 ```
 
+### Validate portfolio CSV
+```bash
+python -m src.io.validate_portfolios data/portfolios.csv
+```
+
 ### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv

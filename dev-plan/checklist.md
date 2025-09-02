@@ -40,13 +40,13 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] CLI `src/io/validate_config.py` for config validation
 
 ### Phase B2 — CSV Parser & Portfolio Validation
-- [ ] `src/io/portfolio_csv.py` implemented
-- [ ] Blanks parsed as 0%; percent strings handled
-- [ ] Per-model sums ≈ 100% (±0.01)
-- [ ] If `CASH` present: Sum(assets)+CASH ≈ 100% (±0.01)
-- [ ] ETF symbols validated against IBKR's list; unknown symbols abort
-- [ ] Invalid CSV aborts with actionable error
-- [ ] Unit tests cover CASH ±, malformed %, unknown columns
+- [x] `src/io/portfolio_csv.py` implemented
+- [x] Blanks parsed as 0%; percent strings handled
+- [x] Per-model sums ≈ 100% (±0.01)
+- [x] If `CASH` present: Sum(assets)+CASH ≈ 100% (±0.01)
+- [x] ETF symbols validated against IBKR's list; unknown symbols abort
+- [x] Invalid CSV aborts with actionable error
+- [x] Unit tests cover CASH ±, malformed %, unknown columns
 
 ### Phase B3 — IBKR Connection & Snapshot (Paper)
 - [ ] `src/broker/ibkr_client.py` implemented
