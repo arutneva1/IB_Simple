@@ -4,9 +4,3 @@ typing-extensions
 pydantic>=2
 rich
 click
-pytest
-pytest-cov
-ruff
-black
-isort
-mypy
