@@ -12,7 +12,7 @@ class PortfolioCSVError(Exception):
 
 
 def _parse_percent(value: str, *, symbol: str, model: str) -> float:
-    """Parse a percentage string into a float between 0 and 100."""
+    """Parse a percentage string into a float."""
 
     text = value.strip()
     if not text:
@@ -25,8 +25,15 @@ def _parse_percent(value: str, *, symbol: str, model: str) -> float:
         raise PortfolioCSVError(
             f"{symbol}: invalid percentage for {model}: {value!r}"
         ) from exc
-    if pct < 0 or pct > 100:
-        raise PortfolioCSVError(f"{symbol}: percent out of range for {model}: {pct}")
+
+    if symbol == "CASH":
+        limit_low = -100.0
+    else:
+        limit_low = 0.0
+    if pct < limit_low or pct > 100.0:
+        raise PortfolioCSVError(
+            f"{symbol}: percent out of range for {model}: {pct}"
+        )
     return pct
 
 
@@ -72,6 +79,29 @@ def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
                 weight = _parse_percent(raw, symbol=symbol, model=model)
                 weights[model.lower()] = weight
             portfolios[symbol] = weights
+
+    totals = {"smurf": 0.0, "badass": 0.0, "gltr": 0.0}
+    for symbol, weights in portfolios.items():
+        if symbol == "CASH":
+            continue
+        for model, weight in weights.items():
+            totals[model] += weight
+
+    cash_weights = portfolios.get("CASH")
+    for model, total in totals.items():
+        if cash_weights is None:
+            if abs(total - 100.0) > 0.01:
+                raise PortfolioCSVError(
+                    f"{model.upper()}: totals {total:.2f}% do not sum to 100%"
+                )
+        else:
+            cash = cash_weights[model]
+            combined = total + cash
+            if abs(combined - 100.0) > 0.01:
+                raise PortfolioCSVError(
+                    f"{model.upper()}: assets {total:.2f}% + CASH {cash:.2f}% = "
+                    f"{combined:.2f}%, expected 100%"
+                )
     return portfolios
 
 
