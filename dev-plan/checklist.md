@@ -7,22 +7,25 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ## Milestone A — Foundations
 
 ### Phase A1 — Repo Scaffold & Local Environment
-- [ ] Repo created and `main` branch protected
-- [ ] Directory structure scaffolded (`src/`, `tests/`, `config/`, `data/`, `reports/`)
-- [ ] `requirements.txt`, `requirements-dev.txt` or `pyproject.toml` committed
-- [ ] `.editorconfig`, `.gitignore`, `.pre-commit-config.yaml` committed
-- [ ] Virtual environment created; dependencies install without error
-- [ ] `pre-commit install` works; `pre-commit run --all-files` passes
-- [ ] `README.md` quickstart authored
-- [ ] Placeholder unit test in `tests/unit/`
-- [ ] `pytest -q` is green locally
+- [x] Repo created and `main` branch protected
+- [x] Directory structure scaffolded (`src/`, `tests/`, `config/`, `data/`, `reports/`)
+- [x] `requirements.txt`, `requirements-dev.txt` or `pyproject.toml` committed
+- [x] `.editorconfig`, `.gitignore`, `.pre-commit-config.yaml` committed
+- [x] Virtual environment created; dependencies install without error
+- [x] `pre-commit install` works; `pre-commit run --all-files` passes
+- [x] `README.md` quickstart authored
+- [x] Placeholder unit test in `tests/unit/`
+- [x] Placeholder integration test in `tests/integration/`
+- [x] `pytest -q` is green locally
 
 ### Phase A2 — CI Pipeline & Quality Gates
-- [ ] `.github/workflows/ci.yaml` created (lint, format, unit tests)
-- [ ] CI caches pip dependencies
-- [ ] CI skips integration tests by default
+- [x] `.github/workflows/ci.yaml` created (lint, format, unit tests)
+- [x] CI caches pip dependencies
+- [x] CI skips integration tests by default
 - [ ] CI enforced on `main` branch
 - [ ] CI green on PRs and `main`
+- [x] CI runs ruff, black, isort, and mypy
+- [x] Pull request template added (`.github/PULL_REQUEST_TEMPLATE.md`)
 
 ---
 
