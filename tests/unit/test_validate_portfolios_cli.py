@@ -6,8 +6,16 @@ from pathlib import Path
 def test_cli_ok(tmp_path: Path) -> None:
     csv = tmp_path / "pf.csv"
     csv.write_text("ETF,SMURF,BADASS,GLTR\nCASH,100%,100%,100%\n")
+    cfg = Path(__file__).resolve().parents[2] / "config" / "settings.ini"
     result = subprocess.run(
-        [sys.executable, "-m", "src.io.validate_portfolios", str(csv)],
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg),
+            str(csv),
+        ],
         capture_output=True,
         text=True,
     )
@@ -18,8 +26,16 @@ def test_cli_ok(tmp_path: Path) -> None:
 def test_cli_error(tmp_path: Path) -> None:
     csv = tmp_path / "pf.csv"
     csv.write_text("ETF,SMURF,BADASS\nCASH,100%,100%\n")
+    cfg = Path(__file__).resolve().parents[2] / "config" / "settings.ini"
     result = subprocess.run(
-        [sys.executable, "-m", "src.io.validate_portfolios", str(csv)],
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg),
+            str(csv),
+        ],
         capture_output=True,
         text=True,
     )

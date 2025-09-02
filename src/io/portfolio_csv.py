@@ -38,13 +38,17 @@ def _parse_percent(value: str, *, symbol: str, model: str) -> float:
     return pct
 
 
-def validate_symbols(symbols: Iterable[str]) -> None:
+def validate_symbols(
+    symbols: Iterable[str], *, host: str, port: int, client_id: int
+) -> None:
     """Ensure ``symbols`` are valid USD-denominated ETFs.
 
     Parameters
     ----------
     symbols:
         Iterable of ticker symbols to validate.
+    host, port, client_id:
+        Connection parameters for Interactive Brokers.
 
     Raises
     ------
@@ -52,20 +56,33 @@ def validate_symbols(symbols: Iterable[str]) -> None:
         If a symbol is unknown or does not represent a USD ETF.
     """
 
+    symbols_to_check = [s for s in symbols if s != "CASH"]
+    if not symbols_to_check:
+        return
+
     ib = IB()
-    for symbol in symbols:
-        if symbol == "CASH":
-            continue
-        details = ib.reqContractDetails(Stock(symbol=symbol, currency="USD"))
-        if not details:
-            raise PortfolioCSVError(f"Unknown ETF symbol: {symbol}")
-        cd = details[0]
-        contract = cd.contract
-        if contract is None or contract.currency != "USD" or cd.stockType != "ETF":
-            raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
+    try:
+        ib.connect(host, port, clientId=client_id)
+        for symbol in symbols_to_check:
+            details = ib.reqContractDetails(Stock(symbol=symbol, currency="USD"))
+            if not details:
+                raise PortfolioCSVError(f"Unknown ETF symbol: {symbol}")
+            cd = details[0]
+            contract = cd.contract
+            if (
+                contract is None
+                or contract.currency != "USD"
+                or cd.stockType != "ETF"
+            ):
+                raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
+    finally:
+        if ib.isConnected():
+            ib.disconnect()
 
 
-def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
+def load_portfolios(
+    path: Path, *, host: str, port: int, client_id: int
+) -> dict[str, dict[str, float]]:
     """Load portfolio model weights from ``path``.
 
     Parameters
@@ -108,7 +125,7 @@ def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
                 weights[model.lower()] = weight
             portfolios[symbol] = weights
 
-    validate_symbols(portfolios.keys())
+    validate_symbols(portfolios.keys(), host=host, port=port, client_id=client_id)
 
     totals = {"smurf": 0.0, "badass": 0.0, "gltr": 0.0}
     for symbol, weights in portfolios.items():

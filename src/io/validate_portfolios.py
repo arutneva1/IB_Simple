@@ -4,14 +4,26 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .config_loader import ConfigError, load_config
 from .portfolio_csv import PortfolioCSVError, load_portfolios
 
 
-def main(path: str) -> None:
+def main(path: str, *, config_path: str) -> None:
     """Validate and load ``path`` printing ``OK`` on success."""
 
     try:
-        load_portfolios(Path(path))
+        cfg = load_config(Path(config_path))
+    except (ConfigError, OSError) as exc:
+        print(exc)
+        raise SystemExit(1)
+
+    try:
+        load_portfolios(
+            Path(path),
+            host=cfg.ibkr.host,
+            port=cfg.ibkr.port,
+            client_id=cfg.ibkr.client_id,
+        )
     except PortfolioCSVError as exc:
         print(exc)
         raise SystemExit(1)
@@ -19,9 +31,10 @@ def main(path: str) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover - CLI utility
-    import sys
+    import argparse
 
-    if len(sys.argv) != 2:
-        print("Usage: python -m src.io.validate_portfolios <CSV_PATH>")
-        raise SystemExit(1)
-    main(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("csv_path", help="Portfolio CSV to validate")
+    parser.add_argument("--config", required=True, help="Path to settings.ini")
+    args = parser.parse_args()
+    main(args.csv_path, config_path=args.config)
