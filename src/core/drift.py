@@ -150,4 +150,30 @@ def compute_drift(
     return drifts
 
 
-__all__ = ["Drift", "compute_drift"]
+def prioritize_by_drift(drifts: list[Drift], cfg: Any) -> list[Drift]:
+    """Filter and sort drifts by dollar magnitude.
+
+    Parameters
+    ----------
+    drifts:
+        Drift records to evaluate.
+    cfg:
+        Configuration with ``rebalance.min_order_usd``.
+
+    Returns
+    -------
+    list[Drift]
+        Drifts whose absolute dollar value exceeds ``min_order_usd``,
+        sorted from largest to smallest by absolute drift.
+    """
+
+    try:
+        min_order = cfg.rebalance.min_order_usd  # type: ignore[attr-defined]
+    except AttributeError as exc:  # pragma: no cover - defensive
+        raise AttributeError("cfg.rebalance.min_order_usd is required") from exc
+
+    filtered = [d for d in drifts if abs(d.drift_usd) >= min_order]
+    return sorted(filtered, key=lambda d: abs(d.drift_usd), reverse=True)
+
+
+__all__ = ["Drift", "compute_drift", "prioritize_by_drift"]
