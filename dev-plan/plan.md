@@ -108,6 +108,20 @@
 
 ### Milestone C — Core Logic & Preview
 
+#### Phase C0: Pricing utility
+**Deliverables**
+- `src/core/pricing.py` retrieves market prices for symbols
+- Honors `price_source` and optional `fallback_to_snapshot`
+
+**Tests (unit)**
+- [ ] Price lookup respects requested source
+- [ ] Falls back to snapshot when live price unavailable
+
+**Acceptance**
+- Deterministic price mapping given sample snapshot and config
+
+---
+
 #### Phase C1: Model mixing & target builder
 **Deliverables**
 - `src/targets.py` combines model vectors with model mix to compute final target weights per symbol (incl. CASH)

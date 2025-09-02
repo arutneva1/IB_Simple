@@ -292,6 +292,17 @@ def load_config(path: str):
 
 ## 3) Milestone C — Core Logic & Preview
 
+### C0. Pricing utility
+
+**Implement** `src/core/pricing.py`
+- Fetch latest prices based on `price_source`
+- If real-time price missing and `fallback_to_snapshot=true`, use snapshot values
+- Wire into pipeline after snapshot retrieval and before drift/sizing calculations
+
+**Tests**: unit tests for source selection and snapshot fallback.
+
+---
+
 ### C1. Model mixing & target builder
 
 **Implement** `src/core/targets.py`
