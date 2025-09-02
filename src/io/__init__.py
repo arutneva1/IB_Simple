@@ -5,17 +5,8 @@ produces.  Importing from :mod:`src.io` gives convenient access to these
 types without reaching into the underlying modules.
 """
 
-from .config_loader import (
-    IBKR,
-    IO,
-    AppConfig,
-    ConfigError,
-    Execution,
-    Models,
-    Pricing,
-    Rebalance,
-    load_config,
-)
+from .config_loader import (IBKR, IO, AppConfig, ConfigError, Execution,
+                            Models, Pricing, Rebalance, load_config)
 
 __all__ = [
     "AppConfig",
