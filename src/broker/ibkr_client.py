@@ -2,5 +2,6 @@
 class IBKRClient:
     def connect(self):
         pass
+
     def snapshot(self):
         return {}
