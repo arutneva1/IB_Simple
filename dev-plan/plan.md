@@ -78,11 +78,13 @@
   - If `CASH` present: `sum(assets)+CASH ≈ 100%`
   - Blank cells → 0%
   - Malformed percentages → error (abort)
+  - Verifies each ETF symbol against IBKR's symbol list; abort on unknown symbols
 
 **Tests (unit)**
-- [ ] Correct sums, CASH ± cases  
-- [ ] Malformed percent  
+- [ ] Correct sums, CASH ± cases
+- [ ] Malformed percent
 - [ ] Unknown columns, duplicates
+- [ ] Unknown ETF symbol aborts
 
 **Acceptance**
 - CLI `python -m src.validate_portfolios data/portfolios.csv` prints OK or detailed errors

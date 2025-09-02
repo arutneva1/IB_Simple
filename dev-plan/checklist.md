@@ -40,6 +40,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [ ] Blanks parsed as 0%; percent strings handled
 - [ ] Per-model sums ≈ 100% (±0.01)
 - [ ] If `CASH` present: Sum(assets)+CASH ≈ 100% (±0.01)
+- [ ] ETF symbols validated against IBKR's list; unknown symbols abort
 - [ ] Invalid CSV aborts with actionable error
 - [ ] Unit tests cover CASH ±, malformed %, unknown columns
 
