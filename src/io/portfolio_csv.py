@@ -31,9 +31,7 @@ def _parse_percent(value: str, *, symbol: str, model: str) -> float:
     else:
         limit_low = 0.0
     if pct < limit_low or pct > 100.0:
-        raise PortfolioCSVError(
-            f"{symbol}: percent out of range for {model}: {pct}"
-        )
+        raise PortfolioCSVError(f"{symbol}: percent out of range for {model}: {pct}")
     return pct
 
 
