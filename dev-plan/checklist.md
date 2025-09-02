@@ -49,12 +49,12 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] Unit tests cover CASH ±, malformed %, unknown columns
 
 ### Phase B3 — IBKR Connection & Snapshot (Paper)
-- [ ] `src/broker/ibkr_client.py` implemented
-- [ ] Connects via `ib_async`, fetches positions, cash, NetLiq
-- [ ] **Ignores CAD cash** in calculations
-- [ ] Pacing/backoff logic included
-- [ ] Integration snapshot tested manually
-- [ ] Unit tests with mocks for error paths
+- [x] `src/broker/ibkr_client.py` implemented
+- [x] Connects via `ib_async`, fetches positions, cash, NetLiq
+- [x] **Ignores CAD cash** in calculations
+- [x] Pacing/backoff logic included
+- [x] Integration snapshot tested manually
+- [x] Unit tests with mocks for error paths
 
 ---
 

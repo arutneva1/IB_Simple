@@ -30,6 +30,13 @@ python -m src.io.validate_config config/settings.ini
 python -m src.io.validate_portfolios data/portfolios.csv
 ```
 
+### Account snapshot (paper)
+```bash
+python -m src.snapshot --config config/settings.ini
+```
+This step requires an IBKR paper account and serves as a manual integration test.
+It returns positions and cash in USD, ignoring any CAD cash.
+
 ### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
