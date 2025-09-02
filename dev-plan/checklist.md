@@ -66,11 +66,11 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] Unit tests for price retrieval and snapshot fallback
 
 ### Phase C1 — Model Mixing & Target Builder
-- [ ] `src/core/targets.py` implemented
-- [ ] Builds final targets with model mix and CASH
-- [ ] Handles missing symbols (treated as 0)
-- [ ] Totals ≈ 100%
-- [ ] Unit tests for vector math & edge cases
+- [x] `src/core/targets.py` implemented
+- [x] Builds final targets with model mix and CASH
+- [x] Handles missing symbols (treated as 0)
+- [x] Totals ≈ 100%
+- [x] Unit tests for missing symbols, CASH handling, and totals
 
 ### Phase C2 — Drift, Triggers & Prioritization
 - [ ] `src/core/drift.py` implemented

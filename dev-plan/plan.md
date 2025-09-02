@@ -142,9 +142,10 @@ _Status: Implemented in [`src/core/pricing.py`](../src/core/pricing.py)._
 - `src/core/targets.py` combines model vectors with model mix to compute final target weights per symbol (incl. CASH)
 
 **Tests (unit)**
-- [ ] Symbols missing in some models → treated as 0  
-- [ ] CASH handling ±  
-- [ ] Numerical stability summing to ≈ 100%
+- [x] Symbols missing in some models → treated as 0
+- [x] CASH handling ±
+- [x] Numerical stability summing to ≈ 100%
+- Implemented in `tests/unit/test_targets.py`
 
 **Acceptance**
 - Deterministic outputs given sample CSV + config
