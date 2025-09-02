@@ -16,7 +16,7 @@ from .config_loader import (
     Rebalance,
     load_config,
 )
-from .portfolio_csv import PortfolioCSVError, load_portfolios
+from .portfolio_csv import PortfolioCSVError, load_portfolios, validate_symbols
 
 __all__ = [
     "AppConfig",
@@ -30,4 +30,5 @@ __all__ = [
     "load_config",
     "PortfolioCSVError",
     "load_portfolios",
+    "validate_symbols",
 ]

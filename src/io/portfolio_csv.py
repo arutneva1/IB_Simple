@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Iterable
+
+from ib_async import IB
+from ib_async.contract import Stock
 
 
 class PortfolioCSVError(Exception):
@@ -31,10 +34,34 @@ def _parse_percent(value: str, *, symbol: str, model: str) -> float:
     else:
         limit_low = 0.0
     if pct < limit_low or pct > 100.0:
-        raise PortfolioCSVError(
-            f"{symbol}: percent out of range for {model}: {pct}"
-        )
+        raise PortfolioCSVError(f"{symbol}: percent out of range for {model}: {pct}")
     return pct
+
+
+def validate_symbols(symbols: Iterable[str]) -> None:
+    """Ensure ``symbols`` are valid USD-denominated ETFs.
+
+    Parameters
+    ----------
+    symbols:
+        Iterable of ticker symbols to validate.
+
+    Raises
+    ------
+    PortfolioCSVError
+        If a symbol is unknown or does not represent a USD ETF.
+    """
+
+    ib = IB()
+    for symbol in symbols:
+        if symbol == "CASH":
+            continue
+        details = ib.reqContractDetails(Stock(symbol=symbol, currency="USD"))
+        if not details:
+            raise PortfolioCSVError(f"Unknown ETF symbol: {symbol}")
+        cd = details[0]
+        if cd.contract.currency != "USD" or cd.stockType != "ETF":
+            raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
 
 
 def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
@@ -79,6 +106,8 @@ def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
                 weight = _parse_percent(raw, symbol=symbol, model=model)
                 weights[model.lower()] = weight
             portfolios[symbol] = weights
+
+    validate_symbols(portfolios.keys())
 
     totals = {"smurf": 0.0, "badass": 0.0, "gltr": 0.0}
     for symbol, weights in portfolios.items():
