@@ -54,6 +54,20 @@
 
 ---
 
+#### Phase A3: Credential hygiene
+**Deliverables**
+- No API keys or account credentials committed to the repository
+- `.gitignore` entries for `.env`, real `settings.ini`, and other sensitive files
+
+**Checklist**
+- [ ] Secrets stored outside the repo (env vars or untracked files)
+- [ ] `.gitignore` prevents committing credential files
+
+**Acceptance**
+- Manual scan confirms repository is free of credentials
+
+---
+
 ### Milestone B — Inputs, Validation, & State
 
 #### Phase B1: Config loader & schema validation

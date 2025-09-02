@@ -135,6 +135,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ## Global PR Gates (Every Phase)
 - [ ] Code + unit tests implemented
 - [ ] Docs updated (README/USAGE/SRS/plan/workflow/checklist)
+- [ ] No API credentials or other secrets committed; `.gitignore` covers sensitive files
 - [ ] CI green; pre-commit clean
 - [ ] Manual smoke test (dry-run or paper) demonstrated
 - [ ] Follow-ups/issues logged for next phases
