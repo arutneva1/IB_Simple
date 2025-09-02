@@ -32,11 +32,12 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ## Milestone B — Inputs, Validation, & State
 
 ### Phase B1 — Config Loader & Validation
-- [ ] `src/io/config_loader.py` implemented
-- [ ] `[models]` weights sum ≈ 1.0 (±0.001)
-- [ ] Required keys/types/ranges validated
-- [ ] Clear `ConfigError` messages on failure
-- [ ] Unit tests cover valid/invalid configs
+- [x] `src/io/config_loader.py` implemented
+- [x] `[models]` weights sum ≈ 1.0 (±0.001)
+- [x] Required keys/types/ranges validated
+- [x] Clear `ConfigError` messages on failure
+- [x] Unit tests cover valid/invalid configs
+- [x] CLI `src/io/validate_config.py` for config validation
 
 ### Phase B2 — CSV Parser & Portfolio Validation
 - [ ] `src/io/portfolio_csv.py` implemented
