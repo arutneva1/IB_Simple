@@ -74,7 +74,11 @@ def validate_symbols(
     finally:
         is_connected = getattr(ib, "isConnected", None)
         try:
-            connected = is_connected() if callable(is_connected) else getattr(ib, "connected", False)
+            connected = (
+                is_connected()
+                if callable(is_connected)
+                else getattr(ib, "connected", False)
+            )
         except Exception:
             connected = getattr(ib, "connected", False)
         if connected:
