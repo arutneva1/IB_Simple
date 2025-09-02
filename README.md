@@ -48,6 +48,13 @@ from src.core.pricing import get_price
 price = await get_price(ib, "SPY", price_source="last", fallback_to_snapshot=True)
 ```
 
+### Drift preview
+Generate a table of drift metrics:
+
+```bash
+python -m src.core.preview
+```
+
 ### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
