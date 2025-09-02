@@ -1,0 +1,198 @@
+"""Configuration loader for IB_Simple.
+
+This module parses ``settings.ini`` files into structured dataclasses.
+"""
+
+from __future__ import annotations
+
+from configparser import ConfigParser, NoOptionError, NoSectionError
+from dataclasses import dataclass
+from typing import Dict
+
+
+class ConfigError(Exception):
+    """Raised when configuration loading or validation fails."""
+
+
+@dataclass
+class IBKR:
+    """Settings for Interactive Brokers connection."""
+
+    host: str
+    port: int
+    client_id: int
+    account_id: str
+    read_only: bool
+
+
+@dataclass
+class Models:
+    """Model weightings that must sum to 1.0."""
+
+    smurf: float
+    badass: float
+    gltr: float
+
+
+@dataclass
+class Rebalance:
+    """Rebalancing configuration options."""
+
+    trigger_mode: str
+    per_holding_band_bps: int
+    portfolio_total_band_bps: int
+    min_order_usd: int
+    cash_buffer_pct: float
+    allow_fractional: bool
+    max_leverage: float
+    maintenance_buffer_pct: float
+    prefer_rth: bool
+
+
+@dataclass
+class Pricing:
+    """Pricing configuration."""
+
+    price_source: str
+    fallback_to_snapshot: bool
+
+
+@dataclass
+class Execution:
+    """Order execution preferences."""
+
+    order_type: str
+    algo_preference: str
+    fallback_plain_market: bool
+    batch_orders: bool
+
+
+@dataclass
+class IO:
+    """Input/output options."""
+
+    report_dir: str
+    log_level: str
+
+
+@dataclass
+class AppConfig:
+    """Top level application configuration."""
+
+    ibkr: IBKR
+    models: Models
+    rebalance: Rebalance
+    pricing: Pricing
+    execution: Execution
+    io: IO
+
+
+TOLERANCE = 0.001
+
+
+def _load_section(cp: ConfigParser, section: str) -> Dict[str, str]:
+    try:
+        return dict(cp.items(section))
+    except NoSectionError as exc:
+        raise ConfigError(f"Missing section [{section}]") from exc
+
+
+def load_config(path: str) -> AppConfig:
+    """Load configuration from an INI file."""
+
+    cp = ConfigParser()
+    if not cp.read(path):
+        raise ConfigError(f"Cannot read config: {path}")
+
+    # [ibkr]
+    try:
+        ibkr = IBKR(
+            host=cp.get("ibkr", "host"),
+            port=cp.getint("ibkr", "port"),
+            client_id=cp.getint("ibkr", "client_id"),
+            account_id=cp.get("ibkr", "account_id"),
+            read_only=cp.getboolean("ibkr", "read_only"),
+        )
+    except (NoSectionError, NoOptionError, ValueError) as exc:
+        raise ConfigError(f"[ibkr] {exc}") from exc
+
+    # [models]
+    data = _load_section(cp, "models")
+    required_models = ["smurf", "badass", "gltr"]
+    try:
+        weights = {k: float(data[k]) for k in required_models}
+    except KeyError as exc:
+        raise ConfigError(f"[models] missing key: {exc.args[0]}") from exc
+    except ValueError as exc:
+        raise ConfigError(f"[models] invalid float: {exc}") from exc
+    total = sum(weights.values())
+    if abs(total - 1.0) > TOLERANCE:
+        raise ConfigError(
+            f"[models] weights must sum to 1.0 (±{TOLERANCE}); got {total:.4f}"
+        )
+    models = Models(**weights)  # type: ignore[arg-type]
+
+    # [rebalance]
+    try:
+        rebalance = Rebalance(
+            trigger_mode=cp.get("rebalance", "trigger_mode"),
+            per_holding_band_bps=cp.getint("rebalance", "per_holding_band_bps"),
+            portfolio_total_band_bps=cp.getint("rebalance", "portfolio_total_band_bps"),
+            min_order_usd=cp.getint("rebalance", "min_order_usd"),
+            cash_buffer_pct=cp.getfloat("rebalance", "cash_buffer_pct"),
+            allow_fractional=cp.getboolean("rebalance", "allow_fractional"),
+            max_leverage=cp.getfloat("rebalance", "max_leverage"),
+            maintenance_buffer_pct=cp.getfloat("rebalance", "maintenance_buffer_pct"),
+            prefer_rth=cp.getboolean("rebalance", "prefer_rth"),
+        )
+    except (NoSectionError, NoOptionError, ValueError) as exc:
+        raise ConfigError(f"[rebalance] {exc}") from exc
+
+    # [pricing]
+    try:
+        pricing = Pricing(
+            price_source=cp.get("pricing", "price_source"),
+            fallback_to_snapshot=cp.getboolean("pricing", "fallback_to_snapshot"),
+        )
+    except (NoSectionError, NoOptionError, ValueError) as exc:
+        raise ConfigError(f"[pricing] {exc}") from exc
+
+    # [execution]
+    try:
+        execution = Execution(
+            order_type=cp.get("execution", "order_type"),
+            algo_preference=cp.get("execution", "algo_preference"),
+            fallback_plain_market=cp.getboolean("execution", "fallback_plain_market"),
+            batch_orders=cp.getboolean("execution", "batch_orders"),
+        )
+    except (NoSectionError, NoOptionError, ValueError) as exc:
+        raise ConfigError(f"[execution] {exc}") from exc
+
+    # [io]
+    try:
+        io_cfg = IO(
+            report_dir=cp.get("io", "report_dir"),
+            log_level=cp.get("io", "log_level"),
+        )
+    except (NoSectionError, NoOptionError, ValueError) as exc:
+        raise ConfigError(f"[io] {exc}") from exc
+
+    return AppConfig(
+        ibkr=ibkr,
+        models=models,
+        rebalance=rebalance,
+        pricing=pricing,
+        execution=execution,
+        io=io_cfg,
+    )
+
+
+if __name__ == "__main__":  # pragma: no cover - CLI utility
+    import sys
+
+    try:
+        cfg = load_config(sys.argv[1])
+    except (IndexError, ConfigError) as exc:  # missing path or config error
+        print(exc)
+        raise SystemExit(1)
+    print("OK")
