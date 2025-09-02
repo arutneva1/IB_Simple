@@ -33,10 +33,17 @@ class FakeIB:
             s: ContractDetails(contract=Stock(s, currency="USD"), stockType="ETF")
             for s in symbols
         }
+        self.connected = False
 
     def reqContractDetails(self, contract):
         detail = self.mapping.get(contract.symbol)
         return [detail] if detail else []
+
+    def connect(self, host, port, clientId):  # noqa: N803 - upstream camelCase
+        self.connected = True
+
+    def disconnect(self):
+        self.connected = False
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +62,9 @@ def portfolios_csv(tmp_path: Path) -> Path:
 
 
 def test_load_portfolios_valid(portfolios_csv: Path) -> None:
-    portfolios = load_portfolios(portfolios_csv)
+    portfolios = load_portfolios(
+        portfolios_csv, host="127.0.0.1", port=4001, client_id=1
+    )
     # there are 14 rows including CASH
     assert len(portfolios) == 14
     assert portfolios["IAU"]["gltr"] == 100.0
@@ -69,7 +78,7 @@ CASH,50%,75%,50%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    portfolios = load_portfolios(path)
+    portfolios = load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
     assert portfolios["CASH"] == {"smurf": 50.0, "badass": 75.0, "gltr": 50.0}
 
 
@@ -81,7 +90,7 @@ CASH,-10%,75%,-10%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    portfolios = load_portfolios(path)
+    portfolios = load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
     assert portfolios["CASH"]["smurf"] == -10.0
 
 
@@ -94,7 +103,7 @@ SPY,,25%,50%
     path.write_text(content)
     msg = r"SMURF: totals 50\.00% do not sum to 100%"
     with pytest.raises(PortfolioCSVError, match=msg):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
 
 
 def test_cash_mismatch(tmp_path: Path) -> None:
@@ -107,7 +116,7 @@ CASH,40%,70%,30%
     path.write_text(content)
     msg = r"SMURF: assets 50\.00% \+ CASH 40\.00% = 90\.00%, expected 100%"
     with pytest.raises(PortfolioCSVError, match=msg):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
 
 
 def test_unknown_column(tmp_path: Path) -> None:
@@ -117,7 +126,7 @@ BLOK,0%,0%,0%,0%
     path = tmp_path / "pf.csv"
     path.write_text(content)
     with pytest.raises(PortfolioCSVError, match=r"Unknown columns: FOO"):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
 
 
 def test_duplicate_column(tmp_path: Path) -> None:
@@ -127,7 +136,7 @@ BLOK,0%,0%,0%
     path = tmp_path / "pf.csv"
     path.write_text(content)
     with pytest.raises(PortfolioCSVError, match=r"Duplicate columns: SMURF"):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
 
 
 @pytest.mark.parametrize(
@@ -142,7 +151,7 @@ def test_malformed_percent(tmp_path: Path, value: str, expected: str) -> None:
     path = tmp_path / "pf.csv"
     path.write_text(content)
     with pytest.raises(PortfolioCSVError, match=re.escape(expected)):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)
 
 
 def test_unknown_symbol(tmp_path: Path) -> None:
@@ -153,4 +162,4 @@ CASH,50%,50%,50%
     path = tmp_path / "pf.csv"
     path.write_text(content)
     with pytest.raises(PortfolioCSVError, match=r"Unknown ETF symbol: FAKE"):
-        load_portfolios(path)
+        load_portfolios(path, host="127.0.0.1", port=4001, client_id=1)

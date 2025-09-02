@@ -27,8 +27,10 @@ python -m src.io.validate_config config/settings.ini
 
 ### Validate portfolio CSV
 ```bash
-python -m src.io.validate_portfolios data/portfolios.csv
+python -m src.io.validate_portfolios --config config/settings.ini data/portfolios.csv
 ```
+An active IBKR session (TWS or IB Gateway) must be running so the tool can
+verify ticker symbols.
 
 ### Account snapshot (paper)
 ```bash
