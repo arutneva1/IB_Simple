@@ -201,7 +201,7 @@
 
 #### Phase D2: Reporting & logging
 **Deliverables**
-- `src/reporting.py` writes **timestamped CSV** per run under `reports/` with order-level detail (planned → submitted → filled), including pre/post exposure & leverage
+- `src/io/reporting.py` writes **timestamped CSV** per run under `reports/` with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes` (planned → submitted → filled)
 - Unified logs (INFO/ERROR) embedded in main log
 
 **Tests**
