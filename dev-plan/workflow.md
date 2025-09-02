@@ -10,9 +10,10 @@
 
 1. **Decide repo name** (e.g., `ibkr-rebalancer`).  
 2. **Create GitHub repo** (private).  
-3. **Install** Python 3.10+ (or Miniconda) on Windows.  
-4. **Install** IBKR TWS or IB Gateway and enable API (127.0.0.1:4002).  
+3. **Install** Python 3.10+ (or Miniconda) on Windows.
+4. **Install** IBKR TWS or IB Gateway and enable API (127.0.0.1:4002).
 5. **Prepare paper account** credentials and confirm it connects manually in TWS.
+6. **Keep credentials out of version control** — store secrets in environment variables or gitignored files.
 
 ---
 
