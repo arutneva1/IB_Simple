@@ -1,5 +1,6 @@
 .venv/
-reports/
+reports/*
+!reports/.gitkeep
 __pycache__/
 *.pyc
 *.log
