@@ -119,6 +119,34 @@ def compute_drift(
             )
         )
 
+    if cfg is not None:
+        try:
+            rebalance_cfg = cfg.rebalance  # type: ignore[attr-defined]
+            trigger_mode = rebalance_cfg.trigger_mode
+        except AttributeError:  # pragma: no cover - defensive
+            pass
+        else:
+            if trigger_mode == "per_holding":
+                band = rebalance_cfg.per_holding_band_bps / 10_000.0
+                drifts = [d for d in drifts if abs(d.drift_pct) / 100.0 > band]
+            elif trigger_mode == "total_drift":
+                total_band = rebalance_cfg.portfolio_total_band_bps / 10_000.0
+                total_drift = sum(abs(d.drift_pct) / 100.0 for d in drifts)
+                if total_drift > total_band:
+                    ranked = sorted(
+                        drifts, key=lambda d: abs(d.drift_pct), reverse=True
+                    )
+                    selected: list[Drift] = []
+                    remaining = total_drift
+                    for d in ranked:
+                        selected.append(d)
+                        remaining -= abs(d.drift_pct) / 100.0
+                        if remaining <= total_band:
+                            break
+                    drifts = sorted(selected, key=lambda d: d.symbol)
+                else:
+                    drifts = []
+
     return drifts
 
 
