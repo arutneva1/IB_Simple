@@ -200,7 +200,7 @@ jobs:
           pip install pytest pytest-cov ruff black isort mypy
       - name: Lint & Format
         run: |
-          ruff .
+          ruff check .
           black --check .
           isort --check-only .
       - name: Type check
@@ -422,7 +422,7 @@ Proceed? [y/N]:
 
 ```bash
 # Lint/format/type check
-ruff . && black --check . && isort --check-only . && mypy src
+ruff check . && black --check . && isort --check-only . && mypy src
 
 # Run unit tests only
 pytest -q -m "not integration"

@@ -332,7 +332,7 @@ jobs:
           pip install pytest pytest-cov ruff black mypy
       - name: Lint & Format
         run: |
-          ruff .
+          ruff check .
           black --check .
       - name: Type check
         run: mypy src || true  # optional relax
