@@ -132,23 +132,3 @@ def load_portfolios(path: Path) -> dict[str, dict[str, float]]:
                     f"{combined:.2f}%, expected 100%"
                 )
     return portfolios
-
-
-def main(path: str) -> None:
-    """Validate and load ``path`` printing ``OK`` on success."""
-
-    try:
-        load_portfolios(Path(path))
-    except PortfolioCSVError as exc:
-        print(exc)
-        raise SystemExit(1)
-    print("OK")
-
-
-if __name__ == "__main__":  # pragma: no cover - CLI utility
-    import sys
-
-    if len(sys.argv) != 2:
-        print("Usage: python -m src.io.portfolio_csv <CSV_PATH>")
-        raise SystemExit(1)
-    main(sys.argv[1])
