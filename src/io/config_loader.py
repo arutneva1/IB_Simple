@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict
 
 
@@ -97,7 +98,7 @@ def _load_section(cp: ConfigParser, section: str) -> Dict[str, str]:
         raise ConfigError(f"Missing section [{section}]") from exc
 
 
-def load_config(path: str) -> AppConfig:
+def load_config(path: Path) -> AppConfig:
     """Load configuration from an INI file."""
 
     cp = ConfigParser()
@@ -106,15 +107,24 @@ def load_config(path: str) -> AppConfig:
 
     # [ibkr]
     try:
-        ibkr = IBKR(
-            host=cp.get("ibkr", "host"),
-            port=cp.getint("ibkr", "port"),
-            client_id=cp.getint("ibkr", "client_id"),
-            account_id=cp.get("ibkr", "account_id"),
-            read_only=cp.getboolean("ibkr", "read_only"),
-        )
+        host = cp.get("ibkr", "host")
+        port = cp.getint("ibkr", "port")
+        client_id = cp.getint("ibkr", "client_id")
+        account_id = cp.get("ibkr", "account_id")
+        read_only = cp.getboolean("ibkr", "read_only")
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[ibkr] {exc}") from exc
+    if port <= 0:
+        raise ConfigError("[ibkr] port must be positive")
+    if client_id < 0:
+        raise ConfigError("[ibkr] client_id must be non-negative")
+    ibkr = IBKR(
+        host=host,
+        port=port,
+        client_id=client_id,
+        account_id=account_id,
+        read_only=read_only,
+    )
 
     # [models]
     data = _load_section(cp, "models")
@@ -125,6 +135,8 @@ def load_config(path: str) -> AppConfig:
         raise ConfigError(f"[models] missing key: {exc.args[0]}") from exc
     except ValueError as exc:
         raise ConfigError(f"[models] invalid float: {exc}") from exc
+    if any(v < 0 for v in weights.values()):
+        raise ConfigError("[models] weights must be non-negative")
     total = sum(weights.values())
     if abs(total - 1.0) > TOLERANCE:
         raise ConfigError(
@@ -134,19 +146,40 @@ def load_config(path: str) -> AppConfig:
 
     # [rebalance]
     try:
-        rebalance = Rebalance(
-            trigger_mode=cp.get("rebalance", "trigger_mode"),
-            per_holding_band_bps=cp.getint("rebalance", "per_holding_band_bps"),
-            portfolio_total_band_bps=cp.getint("rebalance", "portfolio_total_band_bps"),
-            min_order_usd=cp.getint("rebalance", "min_order_usd"),
-            cash_buffer_pct=cp.getfloat("rebalance", "cash_buffer_pct"),
-            allow_fractional=cp.getboolean("rebalance", "allow_fractional"),
-            max_leverage=cp.getfloat("rebalance", "max_leverage"),
-            maintenance_buffer_pct=cp.getfloat("rebalance", "maintenance_buffer_pct"),
-            prefer_rth=cp.getboolean("rebalance", "prefer_rth"),
-        )
+        trigger_mode = cp.get("rebalance", "trigger_mode")
+        per_holding_band_bps = cp.getint("rebalance", "per_holding_band_bps")
+        portfolio_total_band_bps = cp.getint("rebalance", "portfolio_total_band_bps")
+        min_order_usd = cp.getint("rebalance", "min_order_usd")
+        cash_buffer_pct = cp.getfloat("rebalance", "cash_buffer_pct")
+        allow_fractional = cp.getboolean("rebalance", "allow_fractional")
+        max_leverage = cp.getfloat("rebalance", "max_leverage")
+        maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
+        prefer_rth = cp.getboolean("rebalance", "prefer_rth")
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[rebalance] {exc}") from exc
+    if per_holding_band_bps < 0:
+        raise ConfigError("[rebalance] per_holding_band_bps must be >= 0")
+    if portfolio_total_band_bps < 0:
+        raise ConfigError("[rebalance] portfolio_total_band_bps must be >= 0")
+    if min_order_usd <= 0:
+        raise ConfigError("[rebalance] min_order_usd must be positive")
+    if cash_buffer_pct < 0:
+        raise ConfigError("[rebalance] cash_buffer_pct must be >= 0")
+    if max_leverage <= 0:
+        raise ConfigError("[rebalance] max_leverage must be positive")
+    if maintenance_buffer_pct < 0:
+        raise ConfigError("[rebalance] maintenance_buffer_pct must be >= 0")
+    rebalance = Rebalance(
+        trigger_mode=trigger_mode,
+        per_holding_band_bps=per_holding_band_bps,
+        portfolio_total_band_bps=portfolio_total_band_bps,
+        min_order_usd=min_order_usd,
+        cash_buffer_pct=cash_buffer_pct,
+        allow_fractional=allow_fractional,
+        max_leverage=max_leverage,
+        maintenance_buffer_pct=maintenance_buffer_pct,
+        prefer_rth=prefer_rth,
+    )
 
     # [pricing]
     try:
@@ -191,7 +224,7 @@ if __name__ == "__main__":  # pragma: no cover - CLI utility
     import sys
 
     try:
-        cfg = load_config(sys.argv[1])
+        cfg = load_config(Path(sys.argv[1]))
     except (IndexError, ConfigError) as exc:  # missing path or config error
         print(exc)
         raise SystemExit(1)
