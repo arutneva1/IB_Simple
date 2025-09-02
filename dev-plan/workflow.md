@@ -312,10 +312,10 @@ def load_config(path: str):
 ### C1. Model mixing & target builder
 
 **Implement** `src/core/targets.py`
-- Build final target weights per ETF: `sum_k m_k * p_{k,i}`; add CASH if present.  
+- Build final target weights per ETF: `sum_k m_k * p_{k,i}`; add CASH if present.
 - Ensure final totals ≈ 100%.
 
-**Tests**: symbols missing in a model → treated as 0; CASH ± cases.
+**Tests**: symbols missing in a model → treated as 0; CASH ± cases. Covered in `tests/unit/test_targets.py`.
 
 ---
 
