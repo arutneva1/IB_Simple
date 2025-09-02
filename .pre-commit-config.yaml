@@ -27,6 +27,3 @@ repos:
           - freezegun            # tests import freezegun
           - typer                # CLI utilities
           - types-PyYAML         # yaml typing
-          - fastapi
-          - uvicorn
-          - types-requests
