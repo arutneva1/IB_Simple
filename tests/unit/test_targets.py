@@ -1,4 +1,4 @@
-"""Tests for the :mod:`core.targets` module."""
+"""Tests for :mod:`core.targets` build_targets function."""
 
 import sys
 from pathlib import Path
@@ -11,24 +11,36 @@ from src.core.targets import TargetError, build_targets
 from src.io.config_loader import Models
 
 
-def test_build_targets_combines_models() -> None:
+def test_build_targets_defaults_missing_weights_to_zero() -> None:
+    """Symbols missing weights for some models default those weights to ``0``."""
+
     models = {
-        "AAA": {"smurf": 50.0, "badass": 0.0, "gltr": 100.0},
-        "BBB": {"smurf": 50.0, "badass": 100.0, "gltr": 0.0},
-        "CASH": {"smurf": 0.0, "badass": 0.0, "gltr": 0.0},
+        "AAA": {"smurf": 100.0},
+        "BBB": {"badass": 100.0},
+        "CCC": {"gltr": 100.0},
+        "CASH": {},
     }
-    mix = Models(smurf=0.5, badass=0.25, gltr=0.25)
+    mix = Models(smurf=0.6, badass=0.2, gltr=0.2)
+
     targets = build_targets(models, mix)
 
-    assert targets["AAA"] == pytest.approx(50.0)
-    assert targets["BBB"] == pytest.approx(50.0)
-    assert "CASH" in targets
+    assert targets["AAA"] == pytest.approx(60.0)
+    assert targets["BBB"] == pytest.approx(20.0)
+    assert targets["CCC"] == pytest.approx(20.0)
+    # missing weights for CASH default to zero
+    assert targets["CASH"] == pytest.approx(0.0)
     assert sum(targets.values()) == pytest.approx(100.0)
 
 
-def test_build_targets_invalid_total() -> None:
-    models = {"AAA": {"smurf": 50.0, "badass": 50.0, "gltr": 50.0}}
-    mix = Models(smurf=0.5, badass=0.5, gltr=0.0)
+def test_build_targets_raises_when_total_invalid() -> None:
+    """Totals outside the tolerance raise ``TargetError``."""
+
+    models = {
+        "AAA": {"smurf": 100.0},
+        "BBB": {"badass": 100.0},
+        "CASH": {},
+    }
+    mix = Models(smurf=0.6, badass=0.3, gltr=0.1)
 
     with pytest.raises(TargetError):
         build_targets(models, mix)
