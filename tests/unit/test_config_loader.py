@@ -1,21 +1,12 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-from src.io.config_loader import (
-    AppConfig,
-    ConfigError,
-    Execution,
-    IBKR,
-    IO,
-    Models,
-    Pricing,
-    Rebalance,
-    load_config,
-)
+from src.io.config_loader import (IBKR, IO, AppConfig, ConfigError, Execution,
+                                  Models, Pricing, Rebalance, load_config)
 
 VALID_CONFIG = """\
 [ibkr]
@@ -141,4 +132,3 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
-
