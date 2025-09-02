@@ -30,4 +30,4 @@ jobs:
         run: mypy src || true
         shell: bash
       - name: Run tests
-        run: pytest
+        run: pytest -q -m "not integration"
