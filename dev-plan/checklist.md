@@ -110,6 +110,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [ ] Timestamped CSV written to `reports/`
 - [ ] CSV includes all SRS columns: `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes`
 - [ ] Logs include INFO/ERROR messages for validation and order states
+- [ ] Logs capture connection events, pacing/backoff messages, and a final summary
 - [ ] Unit tests check CSV schema and content
 
 ---

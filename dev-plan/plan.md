@@ -219,8 +219,8 @@
 - Unified logs (INFO/ERROR) embedded in main log
 
 **Tests**
-- [ ] CSV schema round-trips in tests  
-- [ ] Log messages include validation failures and order states
+- [ ] CSV schema round-trips in tests
+- [ ] Log messages include IBKR connection events, pacing/backoff notices, validation failures, order states, and final run summaries
 
 **Acceptance**
 - A full run generates a CSV with expected rows/columns and statuses
