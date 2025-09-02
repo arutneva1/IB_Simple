@@ -113,4 +113,3 @@ class IBKRClient:
 
         except Exception as exc:  # pragma: no cover - snapshot errors
             raise IBKRError("Failed to create account snapshot") from exc
-
