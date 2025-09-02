@@ -422,7 +422,8 @@ Proceed? [y/N]:
 
 ```bash
 # Lint/format/type check
-ruff check . && black --check . && isort --check-only . && mypy src
+pre-commit run --all-files
+# (same as: ruff check . && black --check . && isort --check-only . && mypy src)
 
 # Run unit tests only
 pytest -q -m "not integration"
