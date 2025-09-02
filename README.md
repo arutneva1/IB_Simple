@@ -1,6 +1,9 @@
 # IBKR ETF Rebalancer — Scaffold
 
-Minimal starter based on your SRS/plan/workflow. This scaffold compiles, runs, and gives you a place to start filling in logic.
+Simple scaffold for an ETF portfolio rebalancer using the Interactive Brokers
+API. It loads a settings file and portfolio CSV, previews the rebalance, and
+demonstrates dry‑run versus confirmed execution so you can build out the real
+trading logic.
 
 ## Quickstart (Windows PowerShell)
 
@@ -14,12 +17,14 @@ pre-commit install
 pytest -q -m "not integration"
 ```
 
-## Dry run (placeholder)
+## Usage (placeholders)
+
+### Dry run
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
 ```
 
-## Live (paper) with confirm (placeholder)
+### Confirmed execution
 ```bash
 python src/rebalance.py --confirm --config config/settings.ini --csv data/portfolios.csv
 ```
