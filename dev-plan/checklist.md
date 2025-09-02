@@ -73,12 +73,12 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] Unit tests for missing symbols, CASH handling, and totals
 
 ### Phase C2 — Drift, Triggers & Prioritization
-- [ ] `src/core/drift.py` implemented
-- [ ] Computes current vs target weights, drift % and $
-- [ ] Implements `per_holding` and `total_drift`
-- [ ] Applies soft guidelines; skips trades < `min_order_usd`
-- [ ] Prioritizes by |drift|
-- [ ] Unit tests with fixture scenarios
+- [x] `src/core/drift.py` implemented
+- [x] Computes current vs target weights, drift % and $
+- [x] Implements `per_holding` and `total_drift` triggers
+- [x] Applies soft guidelines; skips trades < `min_order_usd`
+- [x] Prioritizes by |drift|
+- [x] Unit tests cover trigger modes, min-order filtering, and prioritization
 
 ### Phase C3 — Sizing, Leverage Guard, Rounding, Cash Buffer
 - [ ] `src/core/sizing.py` implemented
