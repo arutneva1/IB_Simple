@@ -379,10 +379,10 @@ Proceed? [y/N]:
 ### D2. Reporting & logging
 
 **Implement** `src/io/reporting.py`
-- Write **timestamped CSV** per run under `reports/` with columns (see plan.md).  
+- Write **timestamped CSV** per run under `reports/` with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes`.
 - Unified INFO/ERROR log lines; include validation aborts and order states.
 
-**Tests**: schema round-trip; presence of required columns; status transitions captured.
+**Tests**: schema round-trip; presence of all SRS columns; status transitions captured.
 
 ---
 
