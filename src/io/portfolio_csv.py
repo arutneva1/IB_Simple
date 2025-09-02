@@ -69,11 +69,7 @@ def validate_symbols(
                 raise PortfolioCSVError(f"Unknown ETF symbol: {symbol}")
             cd = details[0]
             contract = cd.contract
-            if (
-                contract is None
-                or contract.currency != "USD"
-                or cd.stockType != "ETF"
-            ):
+            if contract is None or contract.currency != "USD" or cd.stockType != "ETF":
                 raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
     finally:
         if ib.isConnected():
