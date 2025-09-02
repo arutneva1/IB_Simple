@@ -8,11 +8,11 @@ contribution of each model to the final allocation.
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 from math import isclose
+from pathlib import Path
 
-from ..io.config_loader import Models
 from ..io import load_config, load_portfolios
+from ..io.config_loader import Models
 
 
 class TargetError(ValueError):
