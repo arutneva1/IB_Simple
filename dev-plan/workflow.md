@@ -346,10 +346,11 @@ def load_config(path: str):
 ---
 
 ### C4. Preview & CLI confirmation
+_Status: Completed — preview shows batch summary before prompting._
 
-**Implement** `src/core/preview.py` and wire `src/rebalance.py`
-- Render a tabular plan with drift **% and $** per symbol; batch summary: gross buy/sell, pre/post exposure & leverage.  
-- CLI flags: `--dry-run`, `--confirm`, `--config`, `--csv`, `--read-only`.
+`src/core/preview.py` is wired into `src/rebalance.py`.
+- Renders a tabular plan with drift **% and $** per symbol and a batch summary (gross buy/sell, pre/post exposure & leverage) before the prompt.
+- CLI flags: `--dry-run` (preview only), `--confirm` (execute after `y`), `--read-only` guard. `--config` and `--csv` select inputs.
 
 **Preview example (console)**
 ```

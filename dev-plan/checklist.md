@@ -90,12 +90,12 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [X] Unit tests enforce `min_order_usd` after rounding
 
 ### Phase C4 — Preview & CLI Confirmation
-- [ ] `src/core/preview.py` implemented
-- [ ] `src/rebalance.py` orchestrates end-to-end
-- [ ] CLI flags: `--dry-run`, `--confirm`, `--read-only`, `--config`, `--csv`
-- [ ] Trade plan shows drift % and $; batch summary visible
-- [ ] Y/N prompt blocks execution unless confirmed
-- [ ] End-to-end dry-run tested with fixtures
+- [x] `src/core/preview.py` implemented with batch summary preview
+- [x] `src/rebalance.py` orchestrates end-to-end
+- [x] CLI flags: `--dry-run`, `--confirm`, `--read-only`, `--config`, `--csv`
+- [x] Trade plan shows drift % and $; batch summary visible before prompt
+- [x] Y/N prompt blocks execution unless confirmed
+- [x] End-to-end dry-run tested with fixtures
 
 ---
 
