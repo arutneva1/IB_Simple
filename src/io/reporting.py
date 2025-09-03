@@ -13,7 +13,6 @@ from src.core.sizing import SizedTrade
 
 from .config_loader import AppConfig
 
-
 log = logging.getLogger(__name__)
 
 

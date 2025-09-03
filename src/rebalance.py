@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-from pathlib import Path
-from datetime import datetime, timezone
 import logging
+from datetime import datetime, timezone
+from pathlib import Path
 
 from rich import print
 

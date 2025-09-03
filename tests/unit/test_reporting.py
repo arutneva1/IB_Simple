@@ -7,11 +7,13 @@ import pytest
 
 from src.core.drift import Drift
 from src.core.sizing import SizedTrade
-from src.io.reporting import write_pre_trade_report, write_post_trade_report
+from src.io.reporting import write_post_trade_report, write_pre_trade_report
 
 
 def _cfg():
-    return SimpleNamespace(execution=SimpleNamespace(order_type="MKT", algo_preference="none"))
+    return SimpleNamespace(
+        execution=SimpleNamespace(order_type="MKT", algo_preference="none")
+    )
 
 
 def test_write_pre_and_post_trade_reports(tmp_path, caplog):
