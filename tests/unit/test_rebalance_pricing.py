@@ -60,9 +60,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
     monkeypatch.setattr(
         rebalance, "size_orders", lambda prioritized, prices, cash, cfg: ([], [], [])
     )
-    monkeypatch.setattr(
-        rebalance, "render_preview", lambda prioritized, trades, prices: "TABLE"
-    )
+    monkeypatch.setattr(rebalance, "render_preview", lambda *args, **kwargs: "TABLE")
 
     return captured
 
@@ -75,7 +73,9 @@ def test_run_fetches_prices_for_all_symbols(monkeypatch: pytest.MonkeyPatch) -> 
 
     monkeypatch.setattr(rebalance, "get_price", fake_get_price)
 
-    args = argparse.Namespace(config="cfg", csv="csv", dry_run=True, confirm=False)
+    args = argparse.Namespace(
+        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False
+    )
     asyncio.run(rebalance._run(args))
 
     assert captured == {"AAA": 15.0, "BBB": 20.0}
@@ -91,7 +91,9 @@ def test_run_aborts_when_price_unavailable(
 
     monkeypatch.setattr(rebalance, "get_price", fake_get_price)
 
-    args = argparse.Namespace(config="cfg", csv="csv", dry_run=True, confirm=False)
+    args = argparse.Namespace(
+        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False
+    )
     with pytest.raises(SystemExit):
         asyncio.run(rebalance._run(args))
 

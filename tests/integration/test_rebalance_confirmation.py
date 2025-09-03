@@ -1,0 +1,113 @@
+"""Integration tests for confirmation prompting behavior."""
+
+from __future__ import annotations
+
+import asyncio
+import sys
+from argparse import Namespace
+from pathlib import Path
+
+import pytest
+
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+import src.io.portfolio_csv as portfolio_csv
+import src.rebalance as rebalance
+
+pytestmark = pytest.mark.integration
+
+
+class DummyIBKRClient:
+    """Stub IBKR client for confirmation tests."""
+
+    def __init__(self) -> None:
+        self._ib = None
+
+    async def connect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
+        return None
+
+    async def disconnect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
+        return None
+
+    async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
+        return {
+            "positions": [
+                {"symbol": "SPY", "position": 10},
+                {"symbol": "IAU", "position": 5},
+            ],
+            "cash": 1000.0,
+            "net_liq": 2500.0,
+        }
+
+
+async def fake_get_price(
+    ib, symbol, *, price_source, fallback_to_snapshot
+):  # noqa: ARG001
+    return 100.0
+
+
+async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001, D401
+    return None
+
+
+def test_prompt_default(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Default execution prompts and aborts when the user declines."""
+
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
+    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
+
+    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+        print(prompt, end="")
+        return "n"
+
+    monkeypatch.setattr("builtins.input", fake_input)
+
+    args = Namespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=False,
+        yes=False,
+        read_only=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    captured = capsys.readouterr().out
+    assert "Proceed? [y/N]" in captured
+    assert "Aborted by user." in captured
+
+
+def test_yes_skips_prompt(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The --yes flag suppresses the prompt and proceeds."""
+
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
+    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
+
+    def fail_input(*args, **kwargs) -> str:  # pragma: no cover - should not be called
+        raise AssertionError("input() should not be invoked when --yes is used")
+
+    monkeypatch.setattr("builtins.input", fail_input)
+
+    args = Namespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=False,
+        yes=True,
+        read_only=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    captured = capsys.readouterr().out
+    assert "Proceed? [y/N]" not in captured
+    assert "Submitting batch market orders" in captured

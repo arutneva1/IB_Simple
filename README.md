@@ -2,7 +2,7 @@
 
 Simple scaffold for an ETF portfolio rebalancer using the Interactive Brokers
 API. It loads a settings file and portfolio CSV, previews the rebalance, and
-demonstrates dry‑run versus confirmed execution so you can build out the real
+demonstrates dry‑run versus prompted execution so you can build out the real
 trading logic.
 
 ## Quickstart (Windows PowerShell)
@@ -65,14 +65,20 @@ python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfo
 ```
 Displays the batch summary and exits without placing orders.
 
-### Confirmed execution
+### Interactive execution
 ```bash
-python src/rebalance.py --confirm --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
 ```
-Shows the same preview and waits for `y` before trading.
+Shows the preview and waits for `y` before trading.
+
+### Non-interactive execution
+```bash
+python src/rebalance.py --yes --config config/settings.ini --csv data/portfolios.csv
+```
+Skips the confirmation prompt and submits orders immediately.
 
 ### Read-only guard
 ```bash
 python src/rebalance.py --read-only --config config/settings.ini --csv data/portfolios.csv
 ```
-Forces preview-only mode even if `--confirm` is used.
+Forces preview-only mode even if `--yes` is used.
