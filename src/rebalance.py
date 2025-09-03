@@ -283,6 +283,10 @@ def main() -> None:
 
     try:
         asyncio.run(_run(args))
+    except KeyboardInterrupt:
+        logging.info("Aborted by user via keyboard interrupt")
+        print("[yellow]Aborted by user.[/yellow]")
+        raise SystemExit(1)
     except (ConfigError, PortfolioCSVError, IBKRError) as exc:
         logging.error(str(exc))
         print(f"[red]{exc}[/red]")
