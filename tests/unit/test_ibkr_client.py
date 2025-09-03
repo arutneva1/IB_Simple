@@ -8,7 +8,9 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.broker.ibkr_client as ibkr_client
-from src.broker.ibkr_client import IBKRClient, IBKRError
+import src.broker.utils as broker_utils
+from src.broker.errors import IBKRError
+from src.broker.ibkr_client import IBKRClient
 
 
 class FakeIBSnapshot:
@@ -65,18 +67,28 @@ def test_snapshot_filters_cad_cash(monkeypatch):
 
 
 class FailingIB:
+    def __init__(self):
+        self.calls = 0
+
     async def connectAsync(self, host, port, clientId):
+        self.calls += 1
         raise RuntimeError("boom")
 
 
-def test_connect_error_propagates(monkeypatch):
-    monkeypatch.setattr(ibkr_client, "IB", lambda: FailingIB())
+def test_connect_retry_exhaustion_message(monkeypatch):
+    failing_ib = FailingIB()
+    monkeypatch.setattr(ibkr_client, "IB", lambda: failing_ib)
 
-    async def fake_sleep(_):
-        return None
+    sleeps: list[float] = []
 
-    monkeypatch.setattr(ibkr_client.asyncio, "sleep", fake_sleep)
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+
+    monkeypatch.setattr(broker_utils.asyncio, "sleep", fake_sleep)
 
     client = IBKRClient()
-    with pytest.raises(IBKRError):
+    with pytest.raises(IBKRError) as exc:
         asyncio.run(client.connect("127.0.0.1", 4002, 1))
+    assert "connect to IBKR failed" in str(exc.value)
+    assert failing_ib.calls == 3
+    assert sleeps == [0.5, 1.0]
