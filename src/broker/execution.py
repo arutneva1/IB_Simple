@@ -59,6 +59,7 @@ async def submit_batch(
             if status in terminal:
                 return status
             await trade.statusEvent
+            trade.statusEvent.clear()
 
     async def _submit_one(st: Trade) -> dict[str, Any]:
         contract = Stock(st.symbol, "SMART", "USD")
