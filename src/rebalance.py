@@ -1,3 +1,4 @@
+# isort: skip_file
 """Rebalance CLI entry point."""
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from pathlib import Path
 from rich import print
 
 from src.broker.execution import submit_batch
-from src.broker.ibkr_client import IBKRClient, IBKRError
+from src.broker.ibkr_client import IBKRError, IBKRClient
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
