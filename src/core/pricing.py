@@ -16,8 +16,8 @@ price can be determined.
 
 from __future__ import annotations
 
-from typing import Any
 import math
+from typing import Any
 
 from ib_async.contract import Stock
 
