@@ -9,8 +9,8 @@ current account state in a simplified dictionary form.
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass
 import logging
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List
 
 from ib_async import IB, Position
