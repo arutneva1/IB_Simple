@@ -128,10 +128,7 @@ async def submit_batch(
                 cr = getattr(f, "commissionReport", None)
                 if cr is None:
                     return False
-                return bool(
-                    getattr(cr, "execId", "")
-                    or getattr(cr, "commission", 0.0)
-                )
+                return bool(getattr(cr, "execId", "") or getattr(cr, "commission", 0.0))
 
             try:
                 fills = getattr(ib_trade, "fills", []) or []
