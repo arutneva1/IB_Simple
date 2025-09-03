@@ -138,13 +138,22 @@ def write_post_trade_report(
     drifts: list[Drift],
     trades: list[SizedTrade],
     results: list[dict[str, Any]],
+    prices: Mapping[str, float],
     pre_gross_exposure: float,
     pre_leverage: float,
     post_gross_exposure: float,
     post_leverage: float,
     cfg: AppConfig,
 ) -> Path:
-    """Write a post-trade CSV report incorporating execution results."""
+    """Write a post-trade CSV report incorporating execution results.
+
+    Parameters
+    ----------
+    prices:
+        Mapping of symbol to pre-trade estimated prices. These values are
+        persisted so that the post-trade report reflects the same estimates
+        as the pre-trade report.
+    """
 
     report_dir.mkdir(parents=True, exist_ok=True)
     path = report_dir / f"rebalance_post_{_format_ts(ts)}.csv"
@@ -191,11 +200,8 @@ def write_post_trade_report(
             trade = trades_by_symbol.get(d.symbol)
             res = results_by_symbol.get(d.symbol, {})
             planned_qty = trade.quantity if trade else 0.0
-            planned_price = (
-                trade.notional / trade.quantity if trade and trade.quantity else 0.0
-            )
-            if d.symbol == "CASH":
-                planned_price = 1.0
+            est_price = prices.get(d.symbol, 1.0 if d.symbol == "CASH" else 0.0)
+            est_value = trade.notional if trade else 0.0
 
             fill_qty = res.get("fill_qty")
             if fill_qty is None:
@@ -207,7 +213,7 @@ def write_post_trade_report(
             if fill_price is None:
                 fill_price = res.get("avg_fill_price")
             if fill_price is None:
-                fill_price = planned_price
+                fill_price = est_price
 
             fill_ts_any = res.get("fill_time")
             if isinstance(fill_ts_any, datetime):
@@ -220,7 +226,6 @@ def write_post_trade_report(
             commission = res.get("commission", 0.0)
             commission_placeholder = res.get("commission_placeholder", False)
 
-            value = fill_qty * fill_price
             writer.writerow(
                 {
                     "timestamp_run": timestamp_run,
@@ -232,11 +237,11 @@ def write_post_trade_report(
                     "drift_pct": d.drift_pct,
                     "drift_usd": d.drift_usd,
                     "action": d.action,
-                    "qty_shares": fill_qty,
-                    "est_price": fill_price,
+                    "qty_shares": planned_qty,
+                    "est_price": est_price,
                     "order_type": order_type,
                     "algo": algo,
-                    "est_value_usd": value,
+                    "est_value_usd": est_value,
                     "pre_gross_exposure": pre_gross_exposure,
                     "post_gross_exposure": post_gross_exposure,
                     "pre_leverage": pre_leverage,

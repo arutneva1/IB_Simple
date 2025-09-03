@@ -201,6 +201,7 @@ async def _run(args: argparse.Namespace) -> None:
 
     cash_after = current["CASH"]
     positions = current.copy()
+    prices_before = prices.copy()
     results_by_symbol = {r.get("symbol"): r for r in results}
     for trade in trades:
         res = results_by_symbol.get(trade.symbol, {})
@@ -229,6 +230,7 @@ async def _run(args: argparse.Namespace) -> None:
         drifts,
         trades,
         results,
+        prices_before,
         pre_gross_exposure,
         pre_leverage,
         post_gross_exposure_actual,
