@@ -103,16 +103,20 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     ib = SimpleNamespace()
     monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
-    calls = {"count": 0}
+    events: list[str] = []
 
     def fake_place(*_a, **_k):
-        if calls["count"] == 0:
-            calls["count"] += 1
+        if not events:
+            events.append("algo")
             return DummyTrade(status="Rejected")
-        calls["count"] += 1
+        events.append("plain")
         return DummyTrade(status="Filled", filled=1.0)
 
+    def fake_cancel(_order):
+        events.append("cancel")
+
     monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    monkeypatch.setattr(ib, "cancelOrder", fake_cancel, raising=False)
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
     cfg = _base_cfg()
@@ -121,7 +125,7 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(1.0)
-    assert calls["count"] == 2
+    assert events == ["algo", "cancel", "plain"]
 
 
 def test_rth_guard_raises_outside_hours(monkeypatch):
