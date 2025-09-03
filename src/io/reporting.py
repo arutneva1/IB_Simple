@@ -225,6 +225,12 @@ def write_post_trade_report(
 
             commission = res.get("commission", 0.0)
             commission_placeholder = res.get("commission_placeholder", False)
+            notes = res.get("notes", "")
+            if commission_placeholder:
+                missing_ids = res.get("missing_exec_ids", [])
+                if missing_ids:
+                    msg = "missing commission execIds: " + ", ".join(missing_ids)
+                    notes = f"{notes}; {msg}" if notes else msg
 
             writer.writerow(
                 {
@@ -253,7 +259,7 @@ def write_post_trade_report(
                     "commission_placeholder": commission_placeholder,
                     "status": res.get("status", ""),
                     "error": res.get("error", ""),
-                    "notes": res.get("notes", ""),
+                    "notes": notes,
                 }
             )
     log.info("Post-trade report written to %s", path)

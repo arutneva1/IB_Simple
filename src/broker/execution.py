@@ -121,6 +121,7 @@ async def submit_batch(
             )
             status = await _wait(ib_trade, st.symbol)
         commission_placeholder = False
+        exec_commissions: dict[str, float] = {}
         if ib_trade is not None:
             timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
 
@@ -129,6 +130,20 @@ async def submit_batch(
                 if cr is None:
                     return False
                 return bool(getattr(cr, "execId", "") or getattr(cr, "commission", 0.0))
+
+            def _record_commission() -> None:
+                report = getattr(ib_trade, "commissionReport", None)
+                if report is None:
+                    reports = getattr(ib_trade, "commissionReports", None)
+                    if reports:
+                        report = reports[-1]
+                if report is None:
+                    return
+                exec_id = getattr(report, "execId", "")
+                if exec_id and exec_id not in exec_commissions:
+                    exec_commissions[exec_id] = abs(
+                        getattr(report, "commission", 0.0)
+                    )
 
             try:
                 fills = getattr(ib_trade, "fills", []) or []
@@ -148,8 +163,9 @@ async def submit_batch(
                             len(fills),
                             sum(1 for f in fills if _has_commission(f)),
                         )
+                        _record_commission()
                         if counts == last_counts:
-                            if counts[1] == 0:
+                            if counts[1] == 0 and not exec_commissions:
                                 log.warning(
                                     "No commission reports received for order %s",
                                     getattr(ib_trade.order, "orderId", None),
@@ -162,24 +178,29 @@ async def submit_batch(
                             len(fills),
                             sum(1 for f in fills if _has_commission(f)),
                         )
+                        _record_commission()
             except Exception:  # pragma: no cover - defensive
                 fills = getattr(ib_trade, "fills", []) or []
 
+            missing_execs: list[str] = []
             for idx, f in enumerate(fills):
-                cr = getattr(f, "commissionReport", None)
-                if cr is not None and not _has_commission(f):
+                exec_obj = getattr(f, "execution", None)
+                exec_id = getattr(exec_obj, "execId", "")
+                if exec_id and exec_id not in exec_commissions:
                     log.warning(
-                        "Fill %d for order %s has placeholder commission report",
+                        "No commission report for execId %s in fill %d for order %s",
+                        exec_id,
                         idx,
                         getattr(ib_trade.order, "orderId", None),
                     )
                     commission_placeholder = True
+                    missing_execs.append(exec_id)
         filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
         avg_price = (
             getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
         )
         fill_time = None
-        commission = 0.0
+        commission = sum(exec_commissions.values())
         if ib_trade is not None:
             try:
                 fills = getattr(ib_trade, "fills", []) or []
@@ -191,9 +212,6 @@ async def submit_batch(
                             fill_time = (
                                 ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
                             )
-                    comm_rep = getattr(fill, "commissionReport", None)
-                    if comm_rep is not None:
-                        commission += abs(getattr(comm_rep, "commission", 0.0))
                 if fill_time is None:
                     ts_attr = getattr(
                         ib_trade.orderStatus, "completedTime", None
@@ -217,6 +235,7 @@ async def submit_batch(
             "fill_time": fill_time,
             "commission": commission,
             "commission_placeholder": commission_placeholder,
+            "missing_exec_ids": missing_execs,
         }
 
     # Final safeguard: collapse trades with identical symbols and actions.
