@@ -72,7 +72,7 @@ async def _run(args: argparse.Namespace) -> None:
     drifts = compute_drift(current, targets, prices, net_liq, cfg)
     prioritized = prioritize_by_drift(drifts, cfg)
     trades, *_ = size_orders(prioritized, prices, current["CASH"], cfg)
-    table = render_preview(prioritized, trades)
+    table = render_preview(prioritized, trades, prices)
     print(table)
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")

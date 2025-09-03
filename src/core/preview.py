@@ -9,12 +9,17 @@ from __future__ import annotations
 
 from rich.console import Console
 from rich.table import Table
+from typing import Mapping
 
 from .drift import Drift
 from .sizing import SizedTrade
 
 
-def render(plan: list[Drift], trades: list[SizedTrade] | None = None) -> str:
+def render(
+    plan: list[Drift],
+    trades: list[SizedTrade] | None = None,
+    prices: Mapping[str, float] | None = None,
+) -> str:
     """Return a formatted table for the given drift plan.
 
     Parameters
@@ -34,19 +39,23 @@ def render(plan: list[Drift], trades: list[SizedTrade] | None = None) -> str:
     table.add_column("Current %", justify="right")
     table.add_column("Drift %", justify="right")
     table.add_column("Drift $", justify="right")
+    table.add_column("Price", justify="right")
     table.add_column("Qty", justify="right")
     table.add_column("Action")
 
     qty_lookup = {t.symbol: t.quantity for t in (trades or [])}
+    price_lookup = prices or {}
 
     for d in plan:
         qty = qty_lookup.get(d.symbol, 0.0)
+        price = price_lookup.get(d.symbol)
         table.add_row(
             d.symbol,
             f"{d.target_wt_pct:.2f}",
             f"{d.current_wt_pct:.2f}",
             f"{d.drift_pct:.2f}",
             f"{d.drift_usd:.2f}",
+            f"{price:.2f}" if price is not None else "-",
             f"{qty:.2f}",
             d.action,
         )
@@ -63,4 +72,4 @@ if __name__ == "__main__":  # pragma: no cover - convenience demo
         Drift("AAA", 50.0, 60.0, 10.0, 640.0, "SELL"),
         Drift("BBB", 50.0, 40.0, -10.0, -640.0, "BUY"),
     ]
-    print(render(sample_plan))
+    print(render(sample_plan, prices={"AAA": 100.0, "BBB": 90.0}))

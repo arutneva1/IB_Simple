@@ -30,11 +30,13 @@ def test_render_sorted_and_filtered() -> None:
         Drift("BBB", 0.0, 0.0, 0.0, 80.0, "SELL"),
         Drift("CCC", 0.0, 0.0, 0.0, 200.0, "SELL"),
     ]
+    prices = {"AAA": 1.0, "BBB": 2.0, "CCC": 3.0}
     cfg = _cfg(100)
 
     prioritized = prioritize_by_drift(drifts, cfg)
-    table = render(prioritized)
+    table = render(prioritized, prices=prices)
 
+    assert "Price" in table
     assert "BBB" not in table
     assert table.index("CCC") < table.index("AAA")
 
@@ -46,7 +48,8 @@ def test_render_shows_quantities() -> None:
 
     prioritized = prioritize_by_drift(drifts, cfg)
     trades, *_ = size_orders(prioritized, prices, cash=100.0, cfg=cfg)
-    table = render(prioritized, trades)
+    table = render(prioritized, trades, prices)
 
+    assert "Price" in table
     assert "Qty" in table
     assert "4.00" in table
