@@ -36,8 +36,8 @@ class DummyIBKRClient:
     async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
         return {
             "positions": [
-                {"symbol": "SPY", "position": 10},
-                {"symbol": "IAU", "position": 5},
+                {"symbol": "SPY", "position": 10, "avg_cost": 100.0},
+                {"symbol": "IAU", "position": 5, "avg_cost": 100.0},
             ],
             "cash": 1000.0,
             "net_liq": 2500.0,
