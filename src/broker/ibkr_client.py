@@ -15,7 +15,6 @@ from typing import Any, Dict, List
 
 from ib_async import IB, Position
 
-
 log = logging.getLogger(__name__)
 
 
