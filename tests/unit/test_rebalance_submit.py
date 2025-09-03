@@ -10,11 +10,17 @@ from src.core.sizing import SizedTrade
 
 def _setup_common(monkeypatch: pytest.MonkeyPatch):
     cfg = SimpleNamespace(
-        ibkr=SimpleNamespace(host="h", port=1, client_id=1, account_id="a", read_only=False),
+        ibkr=SimpleNamespace(
+            host="h", port=1, client_id=1, account_id="a", read_only=False
+        ),
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
-        rebalance=SimpleNamespace(min_order_usd=1, allow_fractional=True, cash_buffer_pct=0, max_leverage=2),
-        execution=SimpleNamespace(algo_preference="adaptive", fallback_plain_market=False),
+        rebalance=SimpleNamespace(
+            min_order_usd=1, allow_fractional=True, cash_buffer_pct=0, max_leverage=2
+        ),
+        execution=SimpleNamespace(
+            algo_preference="adaptive", fallback_plain_market=False
+        ),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
@@ -48,7 +54,11 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         rebalance,
         "size_orders",
-        lambda prioritized, prices, cash, cfg: ([SizedTrade("AAA", "BUY", 5.0, 50.0)], 0.0, 0.0),
+        lambda prioritized, prices, cash, cfg: (
+            [SizedTrade("AAA", "BUY", 5.0, 50.0)],
+            0.0,
+            0.0,
+        ),
     )
     monkeypatch.setattr(rebalance, "render_preview", lambda *a, **k: "TABLE")
 
@@ -61,11 +71,15 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
 
     async def fake_submit_batch(client, trades, cfg):
         recorded["trades"] = trades
-        return [{"symbol": "AAA", "status": "Filled", "filled": 5.0, "avg_fill_price": 10.0}]
+        return [
+            {"symbol": "AAA", "status": "Filled", "filled": 5.0, "avg_fill_price": 10.0}
+        ]
 
     monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
 
-    args = argparse.Namespace(config="cfg", csv="csv", dry_run=False, yes=True, read_only=False)
+    args = argparse.Namespace(
+        config="cfg", csv="csv", dry_run=False, yes=True, read_only=False
+    )
     asyncio.run(rebalance._run(args))
 
     assert recorded["trades"] == [SizedTrade("AAA", "BUY", 5.0, 50.0)]
@@ -77,10 +91,19 @@ def test_run_raises_on_order_failure(monkeypatch):
     _setup_common(monkeypatch)
 
     async def fake_submit_batch(client, trades, cfg):
-        return [{"symbol": "AAA", "status": "Rejected", "filled": 0.0, "avg_fill_price": 0.0}]
+        return [
+            {
+                "symbol": "AAA",
+                "status": "Rejected",
+                "filled": 0.0,
+                "avg_fill_price": 0.0,
+            }
+        ]
 
     monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
 
-    args = argparse.Namespace(config="cfg", csv="csv", dry_run=False, yes=True, read_only=False)
+    args = argparse.Namespace(
+        config="cfg", csv="csv", dry_run=False, yes=True, read_only=False
+    )
     with pytest.raises(SystemExit):
         asyncio.run(rebalance._run(args))

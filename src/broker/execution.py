@@ -74,11 +74,16 @@ async def submit_batch(
             elif algo_pref == "midprice":
                 order.algoStrategy = "ArrivalPx"
                 order.algoParams = [TagValue("strategyType", "Midpoint")]
-        ib_trade = await ib.placeOrderAsync(contract, order)
-        status = await _wait(ib_trade)
+        ib_trade = None
+        status = ""
+        try:
+            ib_trade = await ib.placeOrderAsync(contract, order)
+            status = await _wait(ib_trade)
+        except Exception:  # pragma: no cover - network errors
+            status = "Error"
         if (
             algo_used
-            and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive"}
+            and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive", "Error"}
             and cfg.execution.fallback_plain_market
         ):
             plain = MarketOrder(st.action, st.quantity)
@@ -86,10 +91,12 @@ async def submit_batch(
             status = await _wait(ib_trade)
         return {
             "symbol": st.symbol,
-            "order_id": getattr(ib_trade.order, "orderId", None),
+            "order_id": getattr(ib_trade.order, "orderId", None) if ib_trade else None,
             "status": status,
-            "filled": getattr(ib_trade.orderStatus, "filled", 0.0),
-            "avg_fill_price": getattr(ib_trade.orderStatus, "avgFillPrice", 0.0),
+            "filled": getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0,
+            "avg_fill_price": (
+                getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
+            ),
         }
 
     return list(await asyncio.gather(*[_submit_one(t) for t in trades]))

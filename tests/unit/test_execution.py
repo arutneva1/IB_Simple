@@ -12,7 +12,9 @@ from src.core.sizing import SizedTrade
 
 class DummyTrade:
     def __init__(self, status="Submitted", filled=0.0):
-        self.orderStatus = SimpleNamespace(status=status, filled=filled, avgFillPrice=0.0)
+        self.orderStatus = SimpleNamespace(
+            status=status, filled=filled, avgFillPrice=0.0
+        )
         self.order = SimpleNamespace(orderId=1)
         self.updateEvent = asyncio.Event()
 
@@ -89,6 +91,32 @@ def test_partial_fill_reports_final_quantity(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(10.0)
+
+
+def test_algo_order_falls_back_to_plain_market(monkeypatch):
+    """Algorithmic orders retry as plain market orders on failure."""
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    calls = {"count": 0}
+
+    async def fake_place(*_a, **_k):
+        if calls["count"] == 0:
+            calls["count"] += 1
+            return DummyTrade(status="Rejected")
+        calls["count"] += 1
+        return DummyTrade(status="Filled", filled=1.0)
+
+    monkeypatch.setattr(ib, "placeOrderAsync", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg()
+    cfg.execution.algo_preference = "midprice"
+    cfg.execution.fallback_plain_market = True
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["status"] == "Filled"
+    assert res[0]["filled"] == pytest.approx(1.0)
+    assert calls["count"] == 2
 
 
 def test_rth_guard_raises_outside_hours(monkeypatch):
