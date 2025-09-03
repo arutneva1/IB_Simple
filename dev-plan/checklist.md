@@ -112,16 +112,16 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 _Follow-up:_ capture partial fill metrics and consider extended-hours support.
 
 ### Phase D2 — Reporting & Logging
-- [ ] `src/io/reporting.py` implemented
-- [ ] Timestamped CSV written to `reports/`
-- [ ] Pre-trade report generated
-- [ ] Post-trade report generated
-- [ ] Pre-trade CSV matches schema: `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`
-- [ ] Post-trade CSV matches schema: `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes`
-- [ ] Logs include INFO/ERROR messages for validation and order states
-- [ ] Logs note pre-trade report generation
-- [ ] Logs note post-trade report generation
-- [ ] Logs capture connection events, pacing/backoff messages, and a final summary
+- [x] `src/io/reporting.py` implemented
+- [x] Timestamped CSV written to `reports/`
+- [x] Pre-trade report generated
+- [x] Post-trade report generated
+- [x] Pre-trade CSV matches schema: `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`
+- [x] Post-trade CSV matches schema: `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes`
+- [x] Logs written to `reports/rebalance_<timestamp>.log` with INFO/ERROR messages for validation and order states
+- [x] Logs note pre-trade report generation
+- [x] Logs note post-trade report generation
+- [x] Logs capture connection events and final summary
 - [ ] Unit tests check CSV schema and content
 
 ---

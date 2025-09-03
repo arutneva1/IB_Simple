@@ -479,3 +479,12 @@ powershell -Command "Get-ChildItem reports | Sort-Object LastWriteTime -Descendi
 4. Implement B3 snapshot against paper; manual integration test.  
 5. Proceed to Milestone C (targets → preview) and D (execution → reporting).
 
+## Reporting & Logging
+
+Pre- and post-trade CSV reports are written to `reports/` with timestamped filenames:
+
+- `rebalance_pre_<timestamp>.csv`
+- `rebalance_post_<timestamp>.csv`
+
+Run logs are captured in `reports/rebalance_<timestamp>.log`.
+

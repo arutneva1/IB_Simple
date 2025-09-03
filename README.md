@@ -83,6 +83,15 @@ python src/rebalance.py --read-only --config config/settings.ini --csv data/port
 ```
 Forces preview-only mode even if `--yes` is used.
 
+### Reporting & logging
+After a run, timestamped artifacts are written under `reports/`:
+
+```text
+reports/rebalance_pre_<timestamp>.csv   # state and intended trades
+reports/rebalance_post_<timestamp>.csv  # execution results (omitted on --dry-run)
+reports/rebalance_<timestamp>.log       # INFO/ERROR log output
+```
+
 ### Order execution module
 `src/broker/execution.py` submits the confirmed trades and supports IBKR's
 Adaptive or Midprice algos via `execution.algo_preference`. If the selected
