@@ -9,11 +9,14 @@ from types import SimpleNamespace
 import pytest
 
 from src import rebalance
+from src.core.drift import Drift
 from src.core.pricing import PricingError
 
 
-def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
-    """Prepare common patches and return a dict to capture prices."""
+def _setup_common(
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[dict[str, float], list[str], dict[str, float]]:
+    """Prepare common patches and capture pricing information."""
 
     cfg = SimpleNamespace(
         ibkr=SimpleNamespace(host="h", port=1, client_id=1, account_id="a"),
@@ -51,54 +54,73 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
 
     monkeypatch.setattr(rebalance, "IBKRClient", lambda: FakeClient())
 
-    captured: dict[str, float] = {}
+    captured_pre: dict[str, float] = {}
+    captured_fetch: list[str] = []
+    captured_sizing: dict[str, float] = {}
 
     def fake_compute_drift(current, targets, prices, net_liq, cfg):
-        captured.update(prices)
-        return {}
+        captured_pre.update(prices)
+        return [
+            Drift("AAA", 0, 0, -10.0, -10.0, "BUY"),
+            Drift("BBB", 0, 0, 0.0, 0.0, "HOLD"),
+        ]
 
     monkeypatch.setattr(rebalance, "compute_drift", fake_compute_drift)
-    monkeypatch.setattr(rebalance, "prioritize_by_drift", lambda drifts, cfg: [])
     monkeypatch.setattr(
-        rebalance, "size_orders", lambda prioritized, prices, cash, cfg: ([], [], [])
+        rebalance,
+        "prioritize_by_drift",
+        lambda drifts, cfg: [d for d in drifts if d.action != "HOLD"],
     )
+
+    def fake_size_orders(prioritized, prices, cash, cfg):
+        captured_sizing.update(prices)
+        return [], [], []
+
+    monkeypatch.setattr(rebalance, "size_orders", fake_size_orders)
     monkeypatch.setattr(rebalance, "render_preview", lambda *args, **kwargs: "TABLE")
 
-    return captured
+    return captured_pre, captured_fetch, captured_sizing
 
 
-def test_run_fetches_prices_for_all_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured = _setup_common(monkeypatch)
+def test_run_fetches_prices_only_for_trades(monkeypatch: pytest.MonkeyPatch) -> None:
+    pre, fetched, sizing = _setup_common(monkeypatch)
 
     async def fake_fetch_price(ib, symbol, cfg):
+        fetched.append(symbol)
         return symbol, {"AAA": 15.0, "BBB": 20.0}[symbol]
 
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
-        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False
+        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False,
     )
     asyncio.run(rebalance._run(args))
 
-    assert captured == {"AAA": 15.0, "BBB": 20.0}
+    assert pre == {"AAA": 10.0}
+    assert fetched == ["AAA"]
+    assert sizing == {"AAA": 15.0}
 
 
-def test_run_aborts_when_price_unavailable(
+def test_run_aborts_when_trade_price_unavailable(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    captured = _setup_common(monkeypatch)
+    pre, fetched, sizing = _setup_common(monkeypatch)
 
     async def fake_fetch_price(ib, symbol, cfg):
+        fetched.append(symbol)
         raise PricingError("bad price")
 
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
-        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False
+        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False,
     )
     with pytest.raises(SystemExit):
         asyncio.run(rebalance._run(args))
 
     out, _ = capsys.readouterr()
     assert "bad price" in out
-    assert captured == {}
+    assert pre == {"AAA": 10.0}
+    assert fetched == ["AAA"]
+    assert sizing == {}
+

@@ -76,16 +76,37 @@ async def _run(args: argparse.Namespace) -> None:
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
         current["CASH"] = float(snapshot["cash"])
 
-        symbols = set(current) | set(portfolios)
-        symbols.discard("CASH")
         prices: dict[str, float] = {}
+        for pos in snapshot["positions"]:
+            price = pos.get("market_price") or pos.get("avg_cost")
+            if price is not None:
+                prices[pos["symbol"]] = float(price)
 
-        print(f"[blue]Fetching prices for {len(symbols)} symbols[/blue]")
-        logging.info("Fetching prices for %d symbols", len(symbols))
-        # Use market prices for all symbols, including those already held, to
-        # ensure consistent valuation across the portfolio.
+        net_liq = float(snapshot.get("net_liq", 0.0))
+
+        targets: dict[str, float] = {}
+        for symbol, weights in portfolios.items():
+            targets[symbol] = (
+                weights["smurf"] * cfg.models.smurf
+                + weights["badass"] * cfg.models.badass
+                + weights["gltr"] * cfg.models.gltr
+            )
+
+        print("[blue]Computing drift[/blue]")
+        logging.info("Computing drift")
+        drifts = compute_drift(current, targets, prices, net_liq, cfg)
+        print("[blue]Prioritizing trades[/blue]")
+        logging.info("Prioritizing trades")
+        prioritized = prioritize_by_drift(drifts, cfg)
+
+        trade_symbols = {
+            d.symbol for d in prioritized if d.symbol != "CASH" and d.action in ("BUY", "SELL")
+        }
+
+        print(f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]")
+        logging.info("Fetching prices for %d symbols", len(trade_symbols))
         tasks = [
-            asyncio.create_task(_fetch_price(client._ib, sym, cfg)) for sym in symbols
+            asyncio.create_task(_fetch_price(client._ib, sym, cfg)) for sym in trade_symbols
         ]
         for idx, task in enumerate(asyncio.as_completed(tasks), 1):
             try:
@@ -98,28 +119,12 @@ async def _run(args: argparse.Namespace) -> None:
                 await asyncio.gather(*tasks, return_exceptions=True)
                 raise SystemExit(1)
             prices[symbol] = price
-            print(f"[blue]  ({idx}/{len(symbols)}) {symbol}[/blue]")
+            print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
 
-        net_liq = snapshot["cash"] + sum(
-            prices[sym] * qty for sym, qty in current.items() if sym != "CASH"
-        )
+        prices = {sym: prices[sym] for sym in trade_symbols}
     finally:
         await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-
-    targets: dict[str, float] = {}
-    for symbol, weights in portfolios.items():
-        targets[symbol] = (
-            weights["smurf"] * cfg.models.smurf
-            + weights["badass"] * cfg.models.badass
-            + weights["gltr"] * cfg.models.gltr
-        )
-
-    print("[blue]Computing drift[/blue]")
-    logging.info("Computing drift")
-    drifts = compute_drift(current, targets, prices, net_liq, cfg)
-    print("[blue]Prioritizing trades[/blue]")
-    logging.info("Prioritizing trades")
-    prioritized = prioritize_by_drift(drifts, cfg)
+    
     print("[blue]Sizing orders[/blue]")
     logging.info("Sizing orders")
     trades, post_gross_exposure, post_leverage = size_orders(
