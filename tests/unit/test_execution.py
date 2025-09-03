@@ -10,13 +10,22 @@ from src.broker.ibkr_client import IBKRError
 from src.core.sizing import SizedTrade
 
 
+class AutoEvent(asyncio.Event):
+    async def _wait(self) -> None:
+        await super().wait()
+        self.clear()
+
+    def __await__(self):  # type: ignore[override]
+        return self._wait().__await__()
+
+
 class DummyTrade:
     def __init__(self, status="Submitted", filled=0.0):
         self.orderStatus = SimpleNamespace(
             status=status, filled=filled, avgFillPrice=0.0
         )
         self.order = SimpleNamespace(orderId=1)
-        self.statusEvent = asyncio.Event()
+        self.statusEvent = AutoEvent()
 
 
 class FakeClient:
