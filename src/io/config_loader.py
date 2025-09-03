@@ -164,15 +164,11 @@ def load_config(path: Path) -> AppConfig:
     if min_order_usd <= 0:
         raise ConfigError("[rebalance] min_order_usd must be positive")
     if not 0 <= cash_buffer_pct <= 1:
-        raise ConfigError(
-            "[rebalance] cash_buffer_pct must be between 0 and 1"
-        )
+        raise ConfigError("[rebalance] cash_buffer_pct must be between 0 and 1")
     if max_leverage <= 0:
         raise ConfigError("[rebalance] max_leverage must be positive")
     if not 0 <= maintenance_buffer_pct <= 1:
-        raise ConfigError(
-            "[rebalance] maintenance_buffer_pct must be between 0 and 1"
-        )
+        raise ConfigError("[rebalance] maintenance_buffer_pct must be between 0 and 1")
     rebalance = Rebalance(
         trigger_mode=trigger_mode,
         per_holding_band_bps=per_holding_band_bps,

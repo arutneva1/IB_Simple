@@ -1,10 +1,11 @@
 """Tests for sizing logic."""
 
+import math
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
-import math
+
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))

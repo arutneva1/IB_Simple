@@ -136,9 +136,7 @@ def test_negative_per_holding_band_bps(tmp_path: Path) -> None:
 
 
 def test_cash_buffer_pct_out_of_range(tmp_path: Path) -> None:
-    content = VALID_CONFIG.replace(
-        "cash_buffer_pct = 0.01", "cash_buffer_pct = 1.5"
-    )
+    content = VALID_CONFIG.replace("cash_buffer_pct = 0.01", "cash_buffer_pct = 1.5")
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError):
@@ -146,9 +144,7 @@ def test_cash_buffer_pct_out_of_range(tmp_path: Path) -> None:
 
 
 def test_cash_buffer_pct_negative(tmp_path: Path) -> None:
-    content = VALID_CONFIG.replace(
-        "cash_buffer_pct = 0.01", "cash_buffer_pct = -0.2"
-    )
+    content = VALID_CONFIG.replace("cash_buffer_pct = 0.01", "cash_buffer_pct = -0.2")
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError):

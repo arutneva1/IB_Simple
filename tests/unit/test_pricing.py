@@ -115,7 +115,9 @@ def test_get_price_falls_back_to_close(monkeypatch: pytest.MonkeyPatch) -> None:
     assert getattr(qualify_calls[0], "currency") == "USD"
 
 
-def test_get_price_snapshot_falls_back_to_close(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_price_snapshot_falls_back_to_close(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Snapshot close price is used when both live last and close are invalid."""
 
     ib = SimpleNamespace()
