@@ -369,13 +369,15 @@ Proceed? [y/N]:
 
 ### D1. Order submission (market + algo; fallback plain market)
 
+*Runs after the user confirms the preview in Phase C4.*
+
 **Implement** `src/broker/execution.py`
-- Build **market orders**; set algo preference (`adaptive`/`midprice`) where supported; else **fallback to plain market**.  
-- Batch submit; track order IDs; poll until Filled/Rejected/Cancelled.  
-- Respect `prefer_rth` (initially block with message if outside RTH).
+- Build **market orders**; set algo preference (`adaptive`/`midprice`) where supported; else **fallback to plain market**.
+- Batch submit; track order IDs; poll until Filled/Rejected/Cancelled.
+- Query server clock and block outside 09:30–16:00 America/New_York when `prefer_rth` is true.
 
 **Tests**
-- Integration (paper): tiny trade on a liquid ETF (e.g., SPY/IAU).  
+- Integration (paper): run `pytest tests/integration/test_execution_paper.py` with `IBKR_HOST/PORT/CLIENT_ID` set.
 - Unit/mocked: rejection paths, partial fills.
 
 **Acceptance**
