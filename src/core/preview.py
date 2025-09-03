@@ -7,9 +7,10 @@ side effects beyond returning the rendered string.
 
 from __future__ import annotations
 
+from typing import Mapping
+
 from rich.console import Console
 from rich.table import Table
-from typing import Mapping
 
 from .drift import Drift
 from .sizing import SizedTrade
