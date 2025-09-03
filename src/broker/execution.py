@@ -14,7 +14,9 @@ from ib_async.order import MarketOrder, TagValue
 from src.core.sizing import SizedTrade as Trade
 from src.io.config_loader import AppConfig as Config
 
-from .ibkr_client import IBKRClient, IBKRError
+from .errors import IBKRError
+from .ibkr_client import IBKRClient
+from .utils import retry_async
 
 log = logging.getLogger(__name__)
 
@@ -83,18 +85,20 @@ async def submit_batch(
             elif algo_pref == "midprice":
                 order.algoStrategy = "ArrivalPx"
                 order.algoParams = [TagValue("strategyType", "Midpoint")]
-        ib_trade = None
+        ib_trade: Any = await retry_async(
+            lambda: ib.placeOrder(contract, order),
+            action=f"order submission for {st.symbol}",
+        )
+        log.info(
+            "Submitted order %s for %s",
+            getattr(ib_trade.order, "orderId", None),
+            st.symbol,
+        )
         status = ""
         try:
-            ib_trade = ib.placeOrder(contract, order)
-            log.info(
-                "Submitted order %s for %s",
-                getattr(ib_trade.order, "orderId", None),
-                st.symbol,
-            )
             status = await _wait(ib_trade, st.symbol)
-        except Exception:  # pragma: no cover - network errors
-            status = "Error"
+        except Exception as exc:  # pragma: no cover - network errors
+            raise IBKRError(f"order submission for {st.symbol} failed: {exc}") from exc
         if (
             algo_used
             and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive", "Error"}
@@ -107,13 +111,15 @@ async def submit_batch(
                 status,
             )
             try:
-                if ib_trade is not None:
-                    ib.cancelOrder(ib_trade.order)
-                    await _wait(ib_trade, st.symbol)
+                ib.cancelOrder(ib_trade.order)
+                await _wait(ib_trade, st.symbol)
             except Exception:  # pragma: no cover - network errors
                 pass
             plain = MarketOrder(st.action, st.quantity)
-            ib_trade = ib.placeOrder(contract, plain)
+            ib_trade = await retry_async(
+                lambda: ib.placeOrder(contract, plain),
+                action=f"fallback order submission for {st.symbol}",
+            )
             log.info(
                 "Submitted fallback order %s for %s",
                 getattr(ib_trade.order, "orderId", None),
@@ -122,120 +128,114 @@ async def submit_batch(
             status = await _wait(ib_trade, st.symbol)
         commission_placeholder = False
         exec_commissions: dict[str, float] = {}
-        if ib_trade is not None:
-            timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
+        timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
 
-            def _record_reports() -> None:
-                reports = []
-                report_attr = getattr(ib_trade, "commissionReport", None)
-                if report_attr is not None:
-                    reports.append(report_attr)
-                reports.extend(getattr(ib_trade, "commissionReports", []) or [])
-                client = getattr(ib, "client", None)
-                reports.extend(getattr(client, "commissionReports", []) or [])
-                for report in reports:
-                    exec_id = getattr(report, "execId", "")
-                    if exec_id and exec_id not in exec_commissions:
-                        exec_commissions[exec_id] = abs(
-                            getattr(report, "commission", 0.0)
-                        )
+        def _record_reports() -> None:
+            reports = []
+            report_attr = getattr(ib_trade, "commissionReport", None)
+            if report_attr is not None:
+                reports.append(report_attr)
+            reports.extend(getattr(ib_trade, "commissionReports", []) or [])
+            client = getattr(ib, "client", None)
+            reports.extend(getattr(client, "commissionReports", []) or [])
+            for report in reports:
+                exec_id = getattr(report, "execId", "")
+                if exec_id and exec_id not in exec_commissions:
+                    exec_commissions[exec_id] = abs(getattr(report, "commission", 0.0))
 
-            try:
-                loop = asyncio.get_running_loop()
-                deadline = loop.time() + timeout
-                poll_interval = min(0.05, timeout)
-                client_obj = getattr(ib, "client", None)
-                trade_event = getattr(ib_trade, "commissionReportEvent", None)
-                client_event = getattr(client_obj, "commissionReportEvent", None)
+        try:
+            loop = asyncio.get_running_loop()
+            deadline = loop.time() + timeout
+            poll_interval = min(0.05, timeout)
+            client_obj = getattr(ib, "client", None)
+            trade_event = getattr(ib_trade, "commissionReportEvent", None)
+            client_event = getattr(client_obj, "commissionReportEvent", None)
 
-                while True:
-                    fills = getattr(ib_trade, "fills", []) or []
-                    _record_reports()
-                    remaining = deadline - loop.time()
-                    if remaining <= 0:
-                        break
-
-                    wait_timeout = min(poll_interval, remaining)
-                    if trade_event is not None:
-                        trade_event.clear()
-                    if client_event is not None:
-                        client_event.clear()
-                    events = [
-                        asyncio.create_task(e.wait())
-                        for e in (trade_event, client_event)
-                        if e is not None
-                    ]
-                    if events:
-                        done, pending = await asyncio.wait(
-                            events,
-                            timeout=wait_timeout,
-                            return_when=asyncio.FIRST_COMPLETED,
-                        )
-                        for p in pending:
-                            p.cancel()
-                        if done:
-                            deadline = loop.time() + timeout
-                    else:
-                        await asyncio.sleep(wait_timeout)
-            except Exception:  # pragma: no cover - defensive
+            while True:
                 fills = getattr(ib_trade, "fills", []) or []
-            else:
-                fills = getattr(ib_trade, "fills", []) or []
+                _record_reports()
+                remaining = deadline - loop.time()
+                if remaining <= 0:
+                    break
 
-            exec_ids = {
-                getattr(getattr(f, "execution", None), "execId", "") for f in fills
-            } - {""}
-            if exec_ids and not exec_commissions:
+                wait_timeout = min(poll_interval, remaining)
+                if trade_event is not None:
+                    trade_event.clear()
+                if client_event is not None:
+                    client_event.clear()
+                events = [
+                    asyncio.create_task(e.wait())
+                    for e in (trade_event, client_event)
+                    if e is not None
+                ]
+                if events:
+                    done, pending = await asyncio.wait(
+                        events,
+                        timeout=wait_timeout,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for p in pending:
+                        p.cancel()
+                    if done:
+                        deadline = loop.time() + timeout
+                else:
+                    await asyncio.sleep(wait_timeout)
+        except Exception:  # pragma: no cover - defensive
+            fills = getattr(ib_trade, "fills", []) or []
+        else:
+            fills = getattr(ib_trade, "fills", []) or []
+
+        exec_ids = {
+            getattr(getattr(f, "execution", None), "execId", "") for f in fills
+        } - {""}
+        if exec_ids and not exec_commissions:
+            log.warning(
+                "No commission reports received for order %s",
+                getattr(ib_trade.order, "orderId", None),
+            )
+
+        missing_execs: list[str] = []
+        for idx, f in enumerate(fills):
+            exec_obj = getattr(f, "execution", None)
+            exec_id = getattr(exec_obj, "execId", "")
+            if exec_id and exec_id not in exec_commissions:
                 log.warning(
-                    "No commission reports received for order %s",
+                    "No commission report for execId %s in fill %d for order %s",
+                    exec_id,
+                    idx,
                     getattr(ib_trade.order, "orderId", None),
                 )
-
-            missing_execs: list[str] = []
-            for idx, f in enumerate(fills):
-                exec_obj = getattr(f, "execution", None)
-                exec_id = getattr(exec_obj, "execId", "")
-                if exec_id and exec_id not in exec_commissions:
-                    log.warning(
-                        "No commission report for execId %s in fill %d for order %s",
-                        exec_id,
-                        idx,
-                        getattr(ib_trade.order, "orderId", None),
-                    )
-                    commission_placeholder = True
-                    missing_execs.append(exec_id)
-        filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
-        avg_price = (
-            getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
-        )
+                commission_placeholder = True
+                missing_execs.append(exec_id)
+        filled = getattr(ib_trade.orderStatus, "filled", 0.0)
+        avg_price = getattr(ib_trade.orderStatus, "avgFillPrice", 0.0)
         fill_time = None
         commission = sum(exec_commissions.values())
-        if ib_trade is not None:
-            try:
-                fills = getattr(ib_trade, "fills", []) or []
-                for fill in fills:
-                    exec_obj = getattr(fill, "execution", None)
-                    if exec_obj is not None:
-                        ts = getattr(exec_obj, "time", None)
-                        if ts is not None:
-                            fill_time = (
-                                ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
-                            )
-                if fill_time is None:
-                    ts_attr = getattr(
-                        ib_trade.orderStatus, "completedTime", None
-                    ) or getattr(ib_trade.orderStatus, "lastTradeTime", None)
-                    if ts_attr is not None:
+        try:
+            fills = getattr(ib_trade, "fills", []) or []
+            for fill in fills:
+                exec_obj = getattr(fill, "execution", None)
+                if exec_obj is not None:
+                    ts = getattr(exec_obj, "time", None)
+                    if ts is not None:
                         fill_time = (
-                            ts_attr.isoformat()
-                            if hasattr(ts_attr, "isoformat")
-                            else str(ts_attr)
+                            ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
                         )
-            except Exception:  # pragma: no cover - defensive
-                pass
+            if fill_time is None:
+                ts_attr = getattr(
+                    ib_trade.orderStatus, "completedTime", None
+                ) or getattr(ib_trade.orderStatus, "lastTradeTime", None)
+                if ts_attr is not None:
+                    fill_time = (
+                        ts_attr.isoformat()
+                        if hasattr(ts_attr, "isoformat")
+                        else str(ts_attr)
+                    )
+        except Exception:  # pragma: no cover - defensive
+            pass
         return {
             "symbol": st.symbol,
-            "order_id": getattr(ib_trade.order, "orderId", None) if ib_trade else None,
+            "order_id": getattr(ib_trade.order, "orderId", None),
             "status": status,
             "filled": filled,
             "avg_fill_price": avg_price,

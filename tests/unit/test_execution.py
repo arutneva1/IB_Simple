@@ -8,8 +8,9 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
+import src.broker.utils as broker_utils
+from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
-from src.broker.ibkr_client import IBKRError
 from src.core.drift import Drift
 from src.core.sizing import SizedTrade
 from src.io.reporting import write_post_trade_report
@@ -452,3 +453,34 @@ def test_client_level_commission_report(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["commission"] == pytest.approx(0.5)
     assert res[0]["commission_placeholder"] is False
+
+
+def test_submit_order_retries_exhausted(monkeypatch):
+    """Failures after all retries raise IBKRError with concise message."""
+
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    calls = {"n": 0}
+
+    def failing_place(*_a, **_k):
+        calls["n"] += 1
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(ib, "placeOrder", failing_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg()
+
+    sleeps: list[float] = []
+
+    async def fake_sleep(delay):
+        sleeps.append(delay)
+
+    monkeypatch.setattr(broker_utils.asyncio, "sleep", fake_sleep)
+
+    with pytest.raises(IBKRError) as exc:
+        asyncio.run(submit_batch(client, [trade], cfg))
+    assert "order submission for AAA failed" in str(exc.value)
+    assert calls["n"] == 3
+    assert sleeps == [0.5, 1.0]

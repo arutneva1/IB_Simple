@@ -11,8 +11,9 @@ from pathlib import Path
 
 from rich import print
 
+from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
-from src.broker.ibkr_client import IBKRError, IBKRClient
+from src.broker.ibkr_client import IBKRClient
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price

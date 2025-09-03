@@ -7,7 +7,8 @@ from pathlib import Path
 
 from rich import print
 
-from src.broker.ibkr_client import IBKRClient, IBKRError
+from src.broker.errors import IBKRError
+from src.broker.ibkr_client import IBKRClient
 from src.io.config_loader import ConfigError, load_config
 
 
