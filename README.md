@@ -99,7 +99,9 @@ algo is rejected and `fallback_plain_market` is true, it retries with a plain
 market order. When `rebalance.prefer_rth` is enabled, the module queries the
 IBKR server clock and only proceeds between 09:30 and 16:00
 America/New_York. Order submissions log each status transition with the symbol
-and order ID, including retries when falling back to plain market orders.
+and order ID, including retries when falling back to plain market orders. The
+module waits up to `execution.commission_report_timeout` seconds for commission
+reports before defaulting to zero commission.
 
 ### Execution integration test
 Verify end-to-end submission against a paper account:

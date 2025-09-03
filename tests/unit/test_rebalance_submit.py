@@ -25,6 +25,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
             order_type="MKT",
             algo_preference="adaptive",
             fallback_plain_market=False,
+            commission_report_timeout=5.0,
         ),
         io=SimpleNamespace(report_dir="reports", log_level="INFO"),
     )
