@@ -19,6 +19,8 @@ def render(
     trades: list[SizedTrade] | None = None,
     pre_gross_exposure: float = 0.0,
     pre_leverage: float = 0.0,
+    post_gross_exposure: float = 0.0,
+    post_leverage: float = 0.0,
 ) -> str:
     """Return a formatted table for the given drift plan.
 
@@ -33,6 +35,10 @@ def render(
         Portfolio gross exposure before applying the trades.
     pre_leverage:
         Portfolio leverage before applying the trades.
+    post_gross_exposure:
+        Projected portfolio gross exposure after applying the trades.
+    post_leverage:
+        Projected portfolio leverage after applying the trades.
 
     Returns
     -------
@@ -75,10 +81,6 @@ def render(
     gross_buy = sum(t.notional for t in (trades or []) if t.action == "BUY")
     gross_sell = sum(t.notional for t in (trades or []) if t.action == "SELL")
 
-    post_gross_exposure = pre_gross_exposure + gross_buy - gross_sell
-    net_liq = pre_gross_exposure / pre_leverage if pre_leverage else 0.0
-    post_leverage = post_gross_exposure / net_liq if net_liq else 0.0
-
     summary = Table(title="Batch Summary", show_header=False)
     summary.add_column("Metric")
     summary.add_column("Value", justify="right")
@@ -103,4 +105,8 @@ if __name__ == "__main__":  # pragma: no cover - convenience demo
         SizedTrade("AAA", "SELL", 6.4, 640.0),
         SizedTrade("BBB", "BUY", 7.111111, 640.0),
     ]
-    print(render(sample_plan, sample_trades, 1000.0, 1.0))
+    pre_exp = 1000.0
+    pre_lev = 1.0
+    post_exp = pre_exp - 640.0 + 640.0  # no change in this demo
+    post_lev = post_exp / (pre_exp / pre_lev)
+    print(render(sample_plan, sample_trades, pre_exp, pre_lev, post_exp, post_lev))
