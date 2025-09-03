@@ -20,7 +20,7 @@ def _format_ts(ts: datetime) -> str:
     return ts.strftime("%Y%m%d_%H%M%S")
 
 
-def setup_logging(report_dir: Path, level: str, ts: datetime) -> Path:
+def setup_logging(report_dir: Path, level: str, ts: datetime | str) -> Path:
     """Configure root logging to a timestamped file.
 
     Parameters
@@ -40,7 +40,8 @@ def setup_logging(report_dir: Path, level: str, ts: datetime) -> Path:
     """
 
     report_dir.mkdir(parents=True, exist_ok=True)
-    log_path = report_dir / f"rebalance_{_format_ts(ts)}.log"
+    ts_str = ts if isinstance(ts, str) else _format_ts(ts)
+    log_path = report_dir / f"rebalance_{ts_str}.log"
     numeric_level = getattr(logging, level.upper(), logging.INFO)
     logging.basicConfig(
         filename=str(log_path),

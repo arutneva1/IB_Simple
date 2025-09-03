@@ -16,11 +16,17 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
         rebalance=SimpleNamespace(
-            min_order_usd=1, allow_fractional=True, cash_buffer_pct=0, max_leverage=2
+            min_order_usd=1,
+            allow_fractional=True,
+            cash_buffer_pct=0,
+            max_leverage=2,
         ),
         execution=SimpleNamespace(
-            algo_preference="adaptive", fallback_plain_market=False
+            order_type="MKT",
+            algo_preference="adaptive",
+            fallback_plain_market=False,
         ),
+        io=SimpleNamespace(report_dir="reports", log_level="INFO"),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
