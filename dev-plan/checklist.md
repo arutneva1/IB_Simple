@@ -102,12 +102,14 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 ## Milestone D — Execution & Reporting
 
 ### Phase D1 — Order Submission
-- [ ] `src/broker/execution.py` implemented
-- [ ] Market orders with preferred algo; fallback plain market
-- [ ] Batch submission; track order IDs
-- [ ] Respect `prefer_rth` (block outside RTH)
-- [ ] Integration test with tiny paper trade
-- [ ] Unit tests for rejection/partial fill paths
+- [x] `src/broker/execution.py` implemented
+- [x] Market orders with preferred algo; fallback plain market
+- [x] Batch submission; track order IDs
+- [x] Respect `prefer_rth` (block outside RTH)
+- [x] Integration test with tiny paper trade
+- [x] Unit tests for rejection/partial fill paths
+
+_Follow-up:_ capture partial fill metrics and consider extended-hours support.
 
 ### Phase D2 — Reporting & Logging
 - [ ] `src/io/reporting.py` implemented

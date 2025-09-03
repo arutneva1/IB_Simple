@@ -82,3 +82,24 @@ Skips the confirmation prompt and submits orders immediately.
 python src/rebalance.py --read-only --config config/settings.ini --csv data/portfolios.csv
 ```
 Forces preview-only mode even if `--yes` is used.
+
+### Order execution module
+`src/broker/execution.py` submits the confirmed trades and supports IBKR's
+Adaptive or Midprice algos via `execution.algo_preference`. If the selected
+algo is rejected and `fallback_plain_market` is true, it retries with a plain
+market order. When `rebalance.prefer_rth` is enabled, the module queries the
+IBKR server clock and only proceeds between 09:30 and 16:00
+America/New_York.
+
+### Execution integration test
+Verify end-to-end submission against a paper account:
+
+```powershell
+$env:IBKR_HOST="127.0.0.1"
+$env:IBKR_PORT="4002"
+$env:IBKR_CLIENT_ID="7"
+pytest -q tests/integration/test_execution_paper.py
+```
+
+The test skips if the connection variables are missing or, with
+`rebalance.prefer_rth=true`, when run outside regular trading hours.
