@@ -120,17 +120,24 @@ async def submit_batch(
                 st.symbol,
             )
             status = await _wait(ib_trade, st.symbol)
+        commission_placeholder = False
         if ib_trade is not None:
             timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
+
+            def _has_commission(f: Any) -> bool:
+                cr = getattr(f, "commissionReport", None)
+                if cr is None:
+                    return False
+                return bool(
+                    getattr(cr, "execId", "")
+                    or getattr(cr, "commission", 0.0)
+                )
+
             try:
                 fills = getattr(ib_trade, "fills", []) or []
                 last_counts = (
                     len(fills),
-                    sum(
-                        1
-                        for f in fills
-                        if getattr(f, "commissionReport", None) is not None
-                    ),
+                    sum(1 for f in fills if _has_commission(f)),
                 )
                 while True:
                     ib_trade.commissionReportEvent.clear()
@@ -142,11 +149,7 @@ async def submit_batch(
                         fills = getattr(ib_trade, "fills", []) or []
                         counts = (
                             len(fills),
-                            sum(
-                                1
-                                for f in fills
-                                if getattr(f, "commissionReport", None) is not None
-                            ),
+                            sum(1 for f in fills if _has_commission(f)),
                         )
                         if counts == last_counts:
                             if counts[1] == 0:
@@ -160,14 +163,20 @@ async def submit_batch(
                         fills = getattr(ib_trade, "fills", []) or []
                         last_counts = (
                             len(fills),
-                            sum(
-                                1
-                                for f in fills
-                                if getattr(f, "commissionReport", None) is not None
-                            ),
+                            sum(1 for f in fills if _has_commission(f)),
                         )
             except Exception:  # pragma: no cover - defensive
                 fills = getattr(ib_trade, "fills", []) or []
+
+            for idx, f in enumerate(fills):
+                cr = getattr(f, "commissionReport", None)
+                if cr is not None and not _has_commission(f):
+                    log.warning(
+                        "Fill %d for order %s has placeholder commission report",
+                        idx,
+                        getattr(ib_trade.order, "orderId", None),
+                    )
+                    commission_placeholder = True
         filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
         avg_price = (
             getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
@@ -210,6 +219,7 @@ async def submit_batch(
             "fill_price": avg_price,
             "fill_time": fill_time,
             "commission": commission,
+            "commission_placeholder": commission_placeholder,
         }
 
     # Final safeguard: collapse trades with identical symbols and actions.

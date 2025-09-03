@@ -172,6 +172,7 @@ def write_post_trade_report(
         "fill_price",
         "fill_timestamp",
         "commission",
+        "commission_placeholder",
         "status",
         "error",
         "notes",
@@ -217,6 +218,7 @@ def write_post_trade_report(
                 fill_ts = str(fill_ts_any)
 
             commission = res.get("commission", 0.0)
+            commission_placeholder = res.get("commission_placeholder", False)
 
             value = fill_qty * fill_price
             writer.writerow(
@@ -243,6 +245,7 @@ def write_post_trade_report(
                     "fill_price": fill_price,
                     "fill_timestamp": fill_ts or "",
                     "commission": commission,
+                    "commission_placeholder": commission_placeholder,
                     "status": res.get("status", ""),
                     "error": res.get("error", ""),
                     "notes": res.get("notes", ""),

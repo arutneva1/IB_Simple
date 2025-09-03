@@ -84,6 +84,7 @@ def test_rejected_order_returns_status(monkeypatch):
             "fill_price": 0.0,
             "fill_time": None,
             "commission": 0.0,
+            "commission_placeholder": False,
         }
     ]
 
@@ -297,3 +298,30 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
     cfg = _base_cfg()
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["commission"] == pytest.approx(1.2)
+
+
+def test_placeholder_commission_logs_warning(monkeypatch, caplog):
+    """Placeholder commission reports trigger warning and zero commission."""
+
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission(status="Filled", filled=5.0)
+        fill = SimpleNamespace(
+            execution=SimpleNamespace(time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))),
+            commissionReport=SimpleNamespace(execId="", commission=0.0),
+        )
+        trade.fills.append(fill)
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
+    cfg = _base_cfg()
+    caplog.set_level(logging.WARNING)
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["commission"] == pytest.approx(0.0)
+    assert res[0]["commission_placeholder"] is True
+    messages = [rec.message for rec in caplog.records]
+    assert any("placeholder commission report" in m for m in messages)
