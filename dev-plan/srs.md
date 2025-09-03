@@ -74,10 +74,10 @@ trigger_mode = per_holding        ; per_holding | total_drift
 per_holding_band_bps = 50         ; trade if |drift| > 0.50%
 portfolio_total_band_bps = 100    ; used when trigger_mode=total_drift
 min_order_usd = 500               ; ignore smaller trades
-cash_buffer_pct = 1               ; reserve 1% of NetLiq as cash (1 = 1%)
+cash_buffer_pct = 0.01            ; reserve 1% of NetLiq as cash (0.01 = 1%)
 allow_fractional = false          ; set true only if account supports it
 max_leverage = 1.50               ; hard cap on gross (e.g., 150%)
-maintenance_buffer_pct = 10       ; not used (rely on max_leverage)
+maintenance_buffer_pct = 0.10     ; not used (rely on max_leverage)
 prefer_rth = true                 ; place orders only during RTH by default
 
 [pricing]

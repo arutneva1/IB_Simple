@@ -35,10 +35,10 @@ trigger_mode = per_holding
 per_holding_band_bps = 50
 portfolio_total_band_bps = 100
 min_order_usd = 500
-cash_buffer_pct = 1
+cash_buffer_pct = 0.01
 allow_fractional = false
 max_leverage = 1.50
-maintenance_buffer_pct = 10
+maintenance_buffer_pct = 0.10
 prefer_rth = true
 
 [pricing]
@@ -83,7 +83,7 @@ def test_load_valid_config(config_file: Path) -> None:
             cash_buffer_pct=0.01,
             allow_fractional=False,
             max_leverage=1.50,
-            maintenance_buffer_pct=10,
+            maintenance_buffer_pct=0.10,
             prefer_rth=True,
         ),
         pricing=Pricing(price_source="last", fallback_to_snapshot=True),
@@ -128,6 +128,26 @@ def test_non_numeric_port(tmp_path: Path) -> None:
 def test_negative_per_holding_band_bps(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace(
         "per_holding_band_bps = 50", "per_holding_band_bps = -5"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_cash_buffer_pct_out_of_range(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "cash_buffer_pct = 0.01", "cash_buffer_pct = 1.5"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_cash_buffer_pct_negative(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "cash_buffer_pct = 0.01", "cash_buffer_pct = -0.2"
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)
