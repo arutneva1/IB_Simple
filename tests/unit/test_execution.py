@@ -16,7 +16,7 @@ class DummyTrade:
             status=status, filled=filled, avgFillPrice=0.0
         )
         self.order = SimpleNamespace(orderId=1)
-        self.updateEvent = asyncio.Event()
+        self.statusEvent = asyncio.Event()
 
 
 class FakeClient:
@@ -75,11 +75,11 @@ def test_partial_fill_reports_final_quantity(monkeypatch):
             await asyncio.sleep(0)
             trade.orderStatus.status = "PartiallyFilled"
             trade.orderStatus.filled = 5.0
-            trade.updateEvent.set()
+            trade.statusEvent.set()
             await asyncio.sleep(0)
             trade.orderStatus.status = "Filled"
             trade.orderStatus.filled = 10.0
-            trade.updateEvent.set()
+            trade.statusEvent.set()
 
         asyncio.create_task(updates())
         return trade
