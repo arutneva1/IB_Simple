@@ -14,6 +14,9 @@ from src.core.sizing import SizedTrade
 from .config_loader import AppConfig
 
 
+log = logging.getLogger(__name__)
+
+
 def _format_ts(ts: datetime) -> str:
     """Return a filesystem-friendly timestamp string."""
 
@@ -125,6 +128,7 @@ def write_pre_trade_report(
                     "post_leverage": post_leverage,
                 }
             )
+    log.info("Pre-trade report written to %s", path)
     return path
 
 
@@ -219,6 +223,7 @@ def write_post_trade_report(
                     "notes": res.get("notes", ""),
                 }
             )
+    log.info("Post-trade report written to %s", path)
     return path
 
 

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import datetime
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -68,8 +69,8 @@ def test_rejected_order_returns_status(monkeypatch):
     ]
 
 
-def test_partial_fill_reports_final_quantity(monkeypatch):
-    """Partial fill updates are reflected in final result."""
+def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
+    """Partial fill updates are reflected in final result and logged."""
     ib = SimpleNamespace()
     monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
@@ -93,9 +94,13 @@ def test_partial_fill_reports_final_quantity(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 10.0, 100.0)
     cfg = _base_cfg()
+    caplog.set_level(logging.INFO)
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(10.0)
+    messages = "\n".join(r.message for r in caplog.records)
+    assert "transitioned to PartiallyFilled" in messages
+    assert "transitioned to Filled" in messages
 
 
 def test_algo_order_falls_back_to_plain_market(monkeypatch):
