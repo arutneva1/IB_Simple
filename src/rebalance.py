@@ -84,7 +84,7 @@ async def _run(args: argparse.Namespace) -> None:
     print("[blue]Sizing orders[/blue]")
     trades, *_ = size_orders(prioritized, prices, current["CASH"], cfg)
     print("[blue]Rendering preview[/blue]")
-    table = render_preview(prioritized, trades)
+    table = render_preview(prioritized, trades, prices)
     print(table)
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")
