@@ -84,6 +84,7 @@ def test_rejected_order_returns_status(monkeypatch):
             "fill_price": 0.0,
             "fill_time": None,
             "commission": 0.0,
+            "exec_commissions": {},
             "commission_placeholder": False,
             "missing_exec_ids": [],
         }
@@ -310,6 +311,45 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
     cfg = _base_cfg()
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["commission"] == pytest.approx(1.2)
+
+
+def test_commission_report_before_wait(monkeypatch, caplog):
+    """Reports arriving before the wait loop are captured without warning."""
+
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission()
+
+        async def updates() -> None:
+            fill = SimpleNamespace(
+                execution=SimpleNamespace(
+                    execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=None,
+            )
+            trade.fills.append(fill)
+            trade.orderStatus.status = "Filled"
+            trade.orderStatus.filled = 5.0
+            trade.statusEvent.set()
+            fill.commissionReport = SimpleNamespace(execId="1", commission=-0.5)
+            trade.commissionReport = fill.commissionReport
+            trade.commissionReports = [fill.commissionReport]
+            trade.commissionReportEvent.set()
+
+        asyncio.create_task(updates())
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
+    cfg = _base_cfg()
+    caplog.set_level(logging.WARNING)
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["commission"] == pytest.approx(0.5)
+    warnings = [rec.message for rec in caplog.records if rec.levelno >= logging.WARNING]
+    assert not any("No commission report" in msg for msg in warnings)
 
 
 def test_placeholder_commission_logs_warning(monkeypatch, caplog):

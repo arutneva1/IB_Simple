@@ -125,60 +125,59 @@ async def submit_batch(
         if ib_trade is not None:
             timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
 
-            def _has_commission(f: Any) -> bool:
-                cr = getattr(f, "commissionReport", None)
-                if cr is None:
-                    return False
-                return bool(getattr(cr, "execId", "") or getattr(cr, "commission", 0.0))
-
-            def _record_commission() -> None:
-                report = getattr(ib_trade, "commissionReport", None)
-                if report is None:
-                    reports = getattr(ib_trade, "commissionReports", None)
-                    if reports:
-                        report = reports[-1]
-                if report is None:
-                    return
-                exec_id = getattr(report, "execId", "")
-                if exec_id and exec_id not in exec_commissions:
-                    exec_commissions[exec_id] = abs(getattr(report, "commission", 0.0))
+            def _record_reports() -> None:
+                reports = []
+                report_attr = getattr(ib_trade, "commissionReport", None)
+                if report_attr is not None:
+                    reports.append(report_attr)
+                reports.extend(getattr(ib_trade, "commissionReports", []) or [])
+                client = getattr(ib, "client", None)
+                reports.extend(getattr(client, "commissionReports", []) or [])
+                for report in reports:
+                    exec_id = getattr(report, "execId", "")
+                    if exec_id and exec_id not in exec_commissions:
+                        exec_commissions[exec_id] = abs(
+                            getattr(report, "commission", 0.0)
+                        )
 
             try:
-                fills = getattr(ib_trade, "fills", []) or []
-                last_counts = (
-                    len(fills),
-                    sum(1 for f in fills if _has_commission(f)),
-                )
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + timeout
                 while True:
+                    fills = getattr(ib_trade, "fills", []) or []
+                    exec_ids = {
+                        getattr(getattr(f, "execution", None), "execId", "")
+                        for f in fills
+                    } - {""}
+                    _record_reports()
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
                     ib_trade.commissionReportEvent.clear()
                     try:
                         await asyncio.wait_for(
-                            ib_trade.commissionReportEvent.wait(), timeout=timeout
+                            ib_trade.commissionReportEvent.wait(),
+                            timeout=remaining,
                         )
                     except asyncio.TimeoutError:
-                        fills = getattr(ib_trade, "fills", []) or []
-                        counts = (
-                            len(fills),
-                            sum(1 for f in fills if _has_commission(f)),
-                        )
-                        _record_commission()
-                        if counts == last_counts:
-                            if counts[1] == 0 and not exec_commissions:
-                                log.warning(
-                                    "No commission reports received for order %s",
-                                    getattr(ib_trade.order, "orderId", None),
-                                )
-                            break
-                        last_counts = counts
+                        _record_reports()
+                        break
                     else:
-                        fills = getattr(ib_trade, "fills", []) or []
-                        last_counts = (
-                            len(fills),
-                            sum(1 for f in fills if _has_commission(f)),
-                        )
-                        _record_commission()
+                        deadline = loop.time() + timeout
             except Exception:  # pragma: no cover - defensive
                 fills = getattr(ib_trade, "fills", []) or []
+            else:
+                fills = getattr(ib_trade, "fills", []) or []
+
+            exec_ids = {
+                getattr(getattr(f, "execution", None), "execId", "")
+                for f in fills
+            } - {""}
+            if exec_ids and not exec_commissions:
+                log.warning(
+                    "No commission reports received for order %s",
+                    getattr(ib_trade.order, "orderId", None),
+                )
 
             missing_execs: list[str] = []
             for idx, f in enumerate(fills):
@@ -232,6 +231,7 @@ async def submit_batch(
             "fill_price": avg_price,
             "fill_time": fill_time,
             "commission": commission,
+            "exec_commissions": exec_commissions,
             "commission_placeholder": commission_placeholder,
             "missing_exec_ids": missing_execs,
         }

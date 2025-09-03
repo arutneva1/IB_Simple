@@ -223,7 +223,11 @@ def write_post_trade_report(
             else:
                 fill_ts = str(fill_ts_any)
 
-            commission = res.get("commission", 0.0)
+            exec_comms = res.get("exec_commissions")
+            if isinstance(exec_comms, dict) and exec_comms:
+                commission = sum(exec_comms.values())
+            else:
+                commission = res.get("commission", 0.0)
             commission_placeholder = res.get("commission_placeholder", False)
             notes = res.get("notes", "")
             if commission_placeholder:
