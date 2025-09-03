@@ -8,6 +8,7 @@ contribution of each model to the final allocation.
 from __future__ import annotations
 
 import argparse
+import asyncio
 from math import isclose
 from pathlib import Path
 
@@ -63,14 +64,14 @@ def build_targets(
     return targets
 
 
-def main(argv=None):
+async def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--csv", type=Path, required=True)
     ns = parser.parse_args(argv)
 
     cfg = load_config(ns.config)
-    models = load_portfolios(
+    models = await load_portfolios(
         ns.csv, host=cfg.ibkr.host, port=cfg.ibkr.port, client_id=cfg.ibkr.client_id
     )
     targets = build_targets(models, cfg.models)
@@ -82,4 +83,4 @@ __all__ = ["TargetError", "build_targets"]
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

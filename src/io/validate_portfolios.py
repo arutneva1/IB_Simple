@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from .config_loader import ConfigError, load_config
 from .portfolio_csv import PortfolioCSVError, load_portfolios
 
 
-def main(path: str, *, config_path: str) -> None:
+async def main(path: str, *, config_path: str) -> None:
     """Validate and load ``path`` printing ``OK`` on success."""
 
     try:
@@ -18,7 +19,7 @@ def main(path: str, *, config_path: str) -> None:
         raise SystemExit(1)
 
     try:
-        load_portfolios(
+        await load_portfolios(
             Path(path),
             host=cfg.ibkr.host,
             port=cfg.ibkr.port,
@@ -37,4 +38,4 @@ if __name__ == "__main__":  # pragma: no cover - CLI utility
     parser.add_argument("csv_path", help="Portfolio CSV to validate")
     parser.add_argument("--config", required=True, help="Path to settings.ini")
     args = parser.parse_args()
-    main(args.csv_path, config_path=args.config)
+    asyncio.run(main(args.csv_path, config_path=args.config))

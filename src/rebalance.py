@@ -20,7 +20,7 @@ async def _run(args: argparse.Namespace) -> None:
     csv_path = Path(args.csv)
 
     cfg = load_config(cfg_path)
-    portfolios = load_portfolios(
+    portfolios = await load_portfolios(
         csv_path,
         host=cfg.ibkr.host,
         port=cfg.ibkr.port,

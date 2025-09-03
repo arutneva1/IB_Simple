@@ -38,7 +38,7 @@ def _parse_percent(value: str, *, symbol: str, model: str) -> float:
     return pct
 
 
-def validate_symbols(
+async def validate_symbols(
     symbols: Iterable[str], *, host: str, port: int, client_id: int
 ) -> None:
     """Ensure ``symbols`` are valid USD-denominated ETFs.
@@ -62,9 +62,11 @@ def validate_symbols(
 
     ib = IB()
     try:
-        ib.connect(host, port, clientId=client_id)
+        await ib.connectAsync(host, port, clientId=client_id)
         for symbol in symbols_to_check:
-            details = ib.reqContractDetails(Stock(symbol=symbol, currency="USD"))
+            details = await ib.reqContractDetailsAsync(
+                Stock(symbol=symbol, currency="USD")
+            )
             if not details:
                 raise PortfolioCSVError(f"Unknown ETF symbol: {symbol}")
             cd = details[0]
@@ -85,7 +87,7 @@ def validate_symbols(
             ib.disconnect()
 
 
-def load_portfolios(
+async def load_portfolios(
     path: Path, *, host: str, port: int, client_id: int
 ) -> dict[str, dict[str, float]]:
     """Load portfolio model weights from ``path``.
@@ -130,7 +132,7 @@ def load_portfolios(
                 weights[model.lower()] = weight
             portfolios[symbol] = weights
 
-    validate_symbols(portfolios.keys(), host=host, port=port, client_id=client_id)
+    await validate_symbols(portfolios.keys(), host=host, port=port, client_id=client_id)
 
     totals = {"smurf": 0.0, "badass": 0.0, "gltr": 0.0}
     for symbol, weights in portfolios.items():

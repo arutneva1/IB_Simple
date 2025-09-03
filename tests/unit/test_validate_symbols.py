@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from pathlib import Path
 
@@ -23,12 +24,14 @@ class FakeIB:
         self.calls: list[str] = []
         self.connected: bool = False
 
-    def reqContractDetails(self, contract):
+    async def reqContractDetailsAsync(self, contract):
         self.calls.append(contract.symbol)
         detail = self.mapping.get(contract.symbol)
         return [detail] if detail else []
 
-    def connect(self, host, port, clientId):  # noqa: N803 (upstream uses camelCase)
+    async def connectAsync(
+        self, host, port, clientId
+    ):  # noqa: N803 (upstream uses camelCase)
         self.connected = True
 
     def disconnect(self):
@@ -43,8 +46,10 @@ def setup_fake_ib(monkeypatch) -> FakeIB:
 
 def test_validate_symbols_valid(monkeypatch) -> None:
     ib = setup_fake_ib(monkeypatch)
-    portfolio_csv.validate_symbols(
-        ["BLOK", "SPY"], host="127.0.0.1", port=4001, client_id=1
+    asyncio.run(
+        portfolio_csv.validate_symbols(
+            ["BLOK", "SPY"], host="127.0.0.1", port=4001, client_id=1
+        )
     )
     assert ib.calls == ["BLOK", "SPY"]
 
@@ -52,15 +57,19 @@ def test_validate_symbols_valid(monkeypatch) -> None:
 def test_validate_symbols_unknown(monkeypatch) -> None:
     ib = setup_fake_ib(monkeypatch)
     with pytest.raises(PortfolioCSVError):
-        portfolio_csv.validate_symbols(
-            ["BLOK", "BAD"], host="127.0.0.1", port=4001, client_id=1
+        asyncio.run(
+            portfolio_csv.validate_symbols(
+                ["BLOK", "BAD"], host="127.0.0.1", port=4001, client_id=1
+            )
         )
     assert ib.calls == ["BLOK", "BAD"]
 
 
 def test_validate_symbols_skips_cash(monkeypatch) -> None:
     ib = setup_fake_ib(monkeypatch)
-    portfolio_csv.validate_symbols(
-        ["CASH", "SPY"], host="127.0.0.1", port=4001, client_id=1
+    asyncio.run(
+        portfolio_csv.validate_symbols(
+            ["CASH", "SPY"], host="127.0.0.1", port=4001, client_id=1
+        )
     )
     assert ib.calls == ["SPY"]
