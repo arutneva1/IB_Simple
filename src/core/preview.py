@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from io import StringIO
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
@@ -48,7 +49,12 @@ def render(
         Table rendering of the drift information followed by a batch summary.
     """
 
-    table = Table(show_header=True, header_style="bold")
+    # ``Rich``'s default table box style has changed across releases. Some
+    # versions render with the heavy box drawing characters we expect in the
+    # unit tests while others fall back to a light or square style. Explicitly
+    # request the ``HEAVY_HEAD`` box so the column separators are always the
+    # heavy vertical bar (``\u2503``) regardless of the ``rich`` version.
+    table = Table(show_header=True, header_style="bold", box=box.HEAVY_HEAD)
     table.add_column("Symbol")
     table.add_column("Target %", justify="right")
     table.add_column("Current %", justify="right")
