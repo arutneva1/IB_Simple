@@ -36,12 +36,14 @@ async def _run(args: argparse.Namespace) -> None:
 
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
         current["CASH"] = float(snapshot["cash"])
-        prices = {p["symbol"]: float(p["avg_cost"]) for p in snapshot["positions"]}
 
         symbols = set(current) | set(portfolios)
         symbols.discard("CASH")
-        missing = symbols - set(prices)
-        for symbol in missing:
+        prices: dict[str, float] = {}
+
+        # Use market prices for all symbols, including those already held, to
+        # ensure consistent valuation across the portfolio.
+        for symbol in symbols:
             try:
                 prices[symbol] = await get_price(
                     client._ib,

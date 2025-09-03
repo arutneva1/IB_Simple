@@ -67,18 +67,18 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
     return captured
 
 
-def test_run_fetches_missing_prices(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_fetches_prices_for_all_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _setup_common(monkeypatch)
 
     async def fake_get_price(ib, symbol, *, price_source, fallback_to_snapshot):
-        return 20.0
+        return {"AAA": 15.0, "BBB": 20.0}[symbol]
 
     monkeypatch.setattr(rebalance, "get_price", fake_get_price)
 
     args = argparse.Namespace(config="cfg", csv="csv", dry_run=True, confirm=False)
     asyncio.run(rebalance._run(args))
 
-    assert captured["BBB"] == 20.0
+    assert captured == {"AAA": 15.0, "BBB": 20.0}
 
 
 def test_run_aborts_when_price_unavailable(
@@ -97,4 +97,4 @@ def test_run_aborts_when_price_unavailable(
 
     out, _ = capsys.readouterr()
     assert "bad price" in out
-    assert "BBB" not in captured
+    assert captured == {}
