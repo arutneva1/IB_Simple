@@ -20,8 +20,10 @@ from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 async def _run(args: argparse.Namespace) -> None:
     cfg_path = Path(args.config)
     csv_path = Path(args.csv)
-
+    print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg = load_config(cfg_path)
+
+    print(f"[blue]Loading portfolios from {csv_path}[/blue]")
     portfolios = await load_portfolios(
         csv_path,
         host=cfg.ibkr.host,
@@ -30,8 +32,12 @@ async def _run(args: argparse.Namespace) -> None:
     )
 
     client = IBKRClient()
+    print(
+        f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id})[/blue]"
+    )
     await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
     try:
+        print("[blue]Retrieving account snapshot[/blue]")
         snapshot = await client.snapshot(cfg.ibkr.account_id)
 
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
@@ -41,10 +47,12 @@ async def _run(args: argparse.Namespace) -> None:
         symbols.discard("CASH")
         prices: dict[str, float] = {}
 
+        print(f"[blue]Fetching prices for {len(symbols)} symbols[/blue]")
         # Use market prices for all symbols, including those already held, to
         # ensure consistent valuation across the portfolio.
-        for symbol in symbols:
+        for idx, symbol in enumerate(symbols, 1):
             try:
+                print(f"[blue]  ({idx}/{len(symbols)}) {symbol}[/blue]")
                 prices[symbol] = await get_price(
                     client._ib,
                     symbol,
@@ -69,9 +77,13 @@ async def _run(args: argparse.Namespace) -> None:
             + weights["gltr"] * cfg.models.gltr
         )
 
+    print("[blue]Computing drift[/blue]")
     drifts = compute_drift(current, targets, prices, net_liq, cfg)
+    print("[blue]Prioritizing trades[/blue]")
     prioritized = prioritize_by_drift(drifts, cfg)
+    print("[blue]Sizing orders[/blue]")
     trades, *_ = size_orders(prioritized, prices, current["CASH"], cfg)
+    print("[blue]Rendering preview[/blue]")
     table = render_preview(prioritized, trades, prices)
     print(table)
     if args.dry_run:
