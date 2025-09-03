@@ -86,6 +86,12 @@ async def submit_batch(
             and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive", "Error"}
             and cfg.execution.fallback_plain_market
         ):
+            try:
+                if ib_trade is not None:
+                    ib.cancelOrder(ib_trade.order)
+                    await _wait(ib_trade)
+            except Exception:  # pragma: no cover - network errors
+                pass
             plain = MarketOrder(st.action, st.quantity)
             ib_trade = ib.placeOrder(contract, plain)
             status = await _wait(ib_trade)
