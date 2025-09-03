@@ -17,10 +17,14 @@ class DummyIBKRClient:
     def __init__(self) -> None:
         type(self).disconnected = False
 
-    async def connect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def connect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         return None
 
-    async def disconnect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def disconnect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         type(self).disconnected = True
         return None
 
