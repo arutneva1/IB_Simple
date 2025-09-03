@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 from src.core.drift import Drift, prioritize_by_drift
 from src.core.preview import render
-from src.core.sizing import size_orders
+from src.core.sizing import SizedTrade, size_orders
 
 
 def _cfg(
@@ -60,14 +60,26 @@ def test_render_batch_summary() -> None:
         Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY"),
         Drift("BBB", 0.0, 0.0, 0.0, 50.0, "SELL"),
     ]
-    prices = {"AAA": 10.0, "BBB": 5.0}
-    cfg = _cfg(1)
+    trades = [
+        SizedTrade("AAA", "BUY", 10.0, 100.0),
+        SizedTrade("BBB", "SELL", 10.0, 50.0),
+    ]
 
-    prioritized = prioritize_by_drift(drifts, cfg)
-    trades, *_ = size_orders(prioritized, prices, cash=200.0, cfg=cfg)
-    table = render(prioritized, trades, 200.0, 1.0)
+    table = render(drifts, trades, pre_gross_exposure=500.0, pre_leverage=1.0)
+
+    header = table.splitlines()[1]
+    assert (
+        header
+        == "┃ Symbol ┃ Target % ┃ Current % ┃ Drift % ┃ Drift $ ┃ Action ┃   Qty ┃ Notional ┃"
+    )
 
     assert "Batch Summary" in table
-    assert "Gross Buy" in table
-    assert "Gross Sell" in table
-    assert "Post Leverage" in table
+    for line in [
+        "│ Gross Buy           │ 100.00 │",
+        "│ Gross Sell          │  50.00 │",
+        "│ Pre Gross Exposure  │ 500.00 │",
+        "│ Pre Leverage        │   1.00 │",
+        "│ Post Gross Exposure │ 550.00 │",
+        "│ Post Leverage       │   1.10 │",
+    ]:
+        assert line in table
