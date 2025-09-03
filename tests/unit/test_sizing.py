@@ -105,3 +105,15 @@ def test_rejects_non_finite_price_or_quantity() -> None:
     prices = {"BBB": 10.0}
     with pytest.raises(ValueError):
         size_orders([bad_drift], prices, cash=200.0, cfg=cfg)
+
+
+def test_duplicate_symbols_are_merged() -> None:
+    """Trades for the same symbol are aggregated into a single entry."""
+    net_liq = 1000.0
+    drifts = [_drift("AAA", -150.0, net_liq), _drift("AAA", -50.0, net_liq)]
+    prices = {"AAA": 10.0}
+    cfg = _cfg(allow_fractional=True)
+
+    trades, _gross, _lev = size_orders(drifts, prices, cash=500.0, cfg=cfg)
+
+    assert trades == [SizedTrade("AAA", "BUY", 20.0, 200.0)]

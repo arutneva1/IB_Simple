@@ -128,6 +128,31 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     assert events == ["algo", "cancel", "plain"]
 
 
+def test_submit_batch_merges_duplicate_trades(monkeypatch):
+    """Duplicate trades for the same symbol/action collapse into one order."""
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    calls = []
+
+    def fake_place(_contract, order):
+        calls.append(order.totalQuantity)
+        return DummyTrade(status="Filled", filled=order.totalQuantity)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trades = [
+        SizedTrade("AAA", "BUY", 1.0, 1.0),
+        SizedTrade("AAA", "BUY", 2.0, 2.0),
+    ]
+    cfg = _base_cfg()
+
+    res = asyncio.run(submit_batch(client, trades, cfg))
+
+    assert len(res) == 1
+    assert calls == [3.0]
+
+
 def test_rth_guard_raises_outside_hours(monkeypatch):
     ib = SimpleNamespace()
     monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_outside_rth, raising=False)
