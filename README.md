@@ -18,7 +18,7 @@ $env:PYTHONPATH = "."
 pytest -q -m "not integration"
 ```
 
-## Usage (placeholders)
+## Usage
 
 ### Validate configuration
 ```bash
@@ -56,6 +56,8 @@ python -m src.core.preview
 ```
 
 ### Dry run
+Launch IB Gateway or Trader Workstation, then run:
+
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
 ```
