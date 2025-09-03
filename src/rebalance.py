@@ -100,22 +100,21 @@ async def _run(args: argparse.Namespace) -> None:
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")
         return
-    if args.confirm:
-        if cfg.ibkr.read_only or args.read_only:
-            print(
-                "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
-            )
-            return
+
+    if cfg.ibkr.read_only or args.read_only:
+        print(
+            "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
+        )
+        return
+
+    if not args.yes:
         resp = input("Proceed? [y/N]: ").strip().lower()
-        if resp == "y":
-            print("[green]Submitting batch market orders (placeholder)...[/green]")
-            print(
-                "[green]Done. Report would be written to reports/ (placeholder).[/green]"
-            )
-        else:
+        if resp != "y":
             print("[yellow]Aborted by user.[/yellow]")
-    else:
-        print("[yellow]No --confirm provided; exiting after preview.[/yellow]")
+            return
+
+    print("[green]Submitting batch market orders (placeholder)...[/green]")
+    print("[green]Done. Report would be written to reports/ (placeholder).[/green]")
 
 
 def main() -> None:
@@ -132,9 +131,11 @@ def main() -> None:
         help="Render preview and exit without prompting or submitting orders",
     )
     parser.add_argument(
-        "--confirm",
+        "--yes",
+        "--no-confirm",
         action="store_true",
-        help="Prompt for confirmation before submitting orders",
+        dest="yes",
+        help="Submit orders without prompting for confirmation",
     )
     parser.add_argument(
         "--read-only",

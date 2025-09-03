@@ -59,7 +59,7 @@ def test_rebalance_dry_run(monkeypatch, capsys):
         config="config/settings.ini",
         csv="data/portfolios.csv",
         dry_run=True,
-        confirm=False,
+        yes=False,
         read_only=False,
     )
 
