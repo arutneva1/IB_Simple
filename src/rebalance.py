@@ -8,6 +8,7 @@ from pathlib import Path
 
 from rich import print
 
+from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRClient, IBKRError
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
@@ -113,8 +114,25 @@ async def _run(args: argparse.Namespace) -> None:
             print("[yellow]Aborted by user.[/yellow]")
             return
 
-    print("[green]Submitting batch market orders (placeholder)...[/green]")
-    print("[green]Done. Report would be written to reports/ (placeholder).[/green]")
+    trade_list = [
+        {"symbol": t.symbol, "action": t.action, "quantity": t.quantity}
+        for t in trades
+    ]
+
+    print("[blue]Submitting batch market orders[/blue]")
+    await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+    try:
+        results = await submit_batch(client, trade_list, cfg)
+    finally:
+        await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+
+    for res in results:
+        print(
+            f"[green]{res.get('symbol')}: {res.get('status')} "
+            f"{res.get('filled', 0)} @ {res.get('avg_fill_price', 0)}[/green]"
+        )
+    if any(r.get("status") != "Filled" for r in results):
+        raise SystemExit(1)
 
 
 def main() -> None:
