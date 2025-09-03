@@ -7,6 +7,8 @@ side effects beyond returning the rendered string.
 
 from __future__ import annotations
 
+from io import StringIO
+
 from rich.console import Console
 from rich.table import Table
 
@@ -72,8 +74,6 @@ def render(
             f"{qty:.2f}",
             f"{notional:.2f}",
         )
-
-    from io import StringIO
 
     # Rich will downgrade its output when the destination isn't a real
     # terminal (``isatty`` returns ``False``).  In the unit tests we render the
