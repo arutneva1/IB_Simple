@@ -58,15 +58,23 @@ async def get_price(
         If no price can be determined after the optional snapshot fallback.
     """
 
-    # Initial realtime market data request
-    tickers = await ib.reqTickersAsync(Stock(symbol=symbol, currency="USD"))
+    # Create and qualify the contract to populate ``conId`` and other details
+    contract = Stock(symbol=symbol, exchange="SMART", currency="USD")
+    qualified_contracts = await ib.qualifyContractsAsync(contract)
+
+    if not qualified_contracts:
+        raise PricingError(f"Could not qualify contract for {symbol}")
+
+    contract = qualified_contracts[0]
+
+    # Initial realtime market data request using the qualified contract
+    tickers = await ib.reqTickersAsync(contract)
     price = getattr(tickers[0], price_source, None) if tickers else None
 
-    # If no price and snapshot fallback is enabled, try again with snapshot
+    # If no price and snapshot fallback is enabled, try again with the same
+    # qualified contract but requesting delayed snapshot data
     if price is None and fallback_to_snapshot:
-        tickers = await ib.reqTickersAsync(
-            Stock(symbol=symbol, currency="USD"), snapshot=True
-        )
+        tickers = await ib.reqTickersAsync(contract, snapshot=True)
         price = getattr(tickers[0], price_source, None) if tickers else None
 
     if price is None:
