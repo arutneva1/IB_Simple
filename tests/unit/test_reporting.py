@@ -100,10 +100,10 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         {
             "symbol": "AAA",
             "status": "Filled",
-            "filled": 10.0,
-            "avg_fill_price": 100.0,
-            "fill_qty": 10.0,
-            "fill_price": 100.0,
+            "filled": 8.0,
+            "avg_fill_price": 110.0,
+            "fill_qty": 8.0,
+            "fill_price": 110.0,
             "fill_time": ts.isoformat(),
             "commission": 1.23,
         }
@@ -116,6 +116,7 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         [drift],
         trades,
         results,
+        prices,
         9000.0,
         0.9,
         10000.0,
@@ -141,8 +142,8 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
 
     for field in numeric_fields:
         assert float(row[field]) == pytest.approx(expected_values[field])
-    assert float(row["fill_qty"]) == pytest.approx(10.0)
-    assert float(row["fill_price"]) == pytest.approx(100.0)
+    assert float(row["fill_qty"]) == pytest.approx(8.0)
+    assert float(row["fill_price"]) == pytest.approx(110.0)
     assert row["fill_timestamp"] == ts.isoformat()
     assert float(row["commission"]) == pytest.approx(1.23)
     assert row["commission_placeholder"] == "False"
