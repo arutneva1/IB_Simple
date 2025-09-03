@@ -170,8 +170,7 @@ async def submit_batch(
                 fills = getattr(ib_trade, "fills", []) or []
 
             exec_ids = {
-                getattr(getattr(f, "execution", None), "execId", "")
-                for f in fills
+                getattr(getattr(f, "execution", None), "execId", "") for f in fills
             } - {""}
             if exec_ids and not exec_commissions:
                 log.warning(
