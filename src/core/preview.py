@@ -82,7 +82,17 @@ def render(
     # problematically, drops the header text.  Force terminal mode so that the
     # exported table is stable and always uses the Unicode box characters the
     # tests expect.
-    console = Console(file=StringIO(), record=True, force_terminal=True)
+    # ``Rich`` attempts to auto-detect terminal capabilities which can result
+    # in reduced widths or ASCII only tables when rendering to an in-memory
+    # ``StringIO`` buffer during testing.  Explicitly widen the virtual
+    # terminal to ensure that column headers are never truncated regardless of
+    # the executing environment.
+    console = Console(
+        file=StringIO(),
+        record=True,
+        force_terminal=True,
+        width=120,
+    )
     console.print(table)
 
     gross_buy = sum(t.notional for t in (trades or []) if t.action == "BUY")
