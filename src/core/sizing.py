@@ -88,9 +88,7 @@ def size_orders(
         exposure and leverage after applying the trades.
     """
 
-    min_order_usd, allow_fractional, cash_buffer_pct, max_leverage = _extract_cfg(
-        cfg
-    )
+    min_order_usd, allow_fractional, cash_buffer_pct, max_leverage = _extract_cfg(cfg)
 
     net_liq = _infer_net_liq(drifts, cash)
 
@@ -170,4 +168,3 @@ def size_orders(
 
 
 __all__ = ["SizedTrade", "size_orders"]
-
