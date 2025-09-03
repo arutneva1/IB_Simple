@@ -39,6 +39,7 @@ async def submit_batch(
         Structured execution results for each trade.
     """
 
+    log.info("Starting batch execution of %d trades", len(trades))
     ib = cast(Any, client._ib)
 
     if cfg.rebalance.prefer_rth:
@@ -140,7 +141,16 @@ async def submit_batch(
         else:
             combined[key] = Trade(t.symbol, t.action, t.quantity, t.notional)
 
-    return list(await asyncio.gather(*[_submit_one(t) for t in combined.values()]))
+    results = list(await asyncio.gather(*[_submit_one(t) for t in combined.values()]))
+    status_counts: dict[str, int] = {}
+    for res in results:
+        status_counts[res["status"]] = status_counts.get(res["status"], 0) + 1
+    log.info(
+        "Batch execution complete: %d orders with statuses %s",
+        len(results),
+        status_counts,
+    )
+    return results
 
 
 __all__ = ["submit_batch"]
