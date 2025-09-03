@@ -390,3 +390,12 @@ python rebalance.py --confirm --config config/settings.ini --csv data/portfolios
 - Start Milestone A (A1 → A2).  
 - I can scaffold the repo (folders, placeholders, CI, sample config/CSV) immediately and attach a zip, or we continue iterating on this plan if you want tweaks first.
 
+## Reporting & Logging
+
+Each run writes timestamped CSV reports to `reports/`:
+
+- `rebalance_pre_<timestamp>.csv`
+- `rebalance_post_<timestamp>.csv`
+
+Logs for the run are stored in `reports/rebalance_<timestamp>.log`.
+
