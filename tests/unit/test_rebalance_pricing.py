@@ -22,7 +22,11 @@ def _setup_common(
         ibkr=SimpleNamespace(host="h", port=1, client_id=1, account_id="a"),
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
-        execution=SimpleNamespace(order_type="MKT", algo_preference="adaptive"),
+        execution=SimpleNamespace(
+            order_type="MKT",
+            algo_preference="adaptive",
+            commission_report_timeout=5.0,
+        ),
         io=SimpleNamespace(report_dir="reports", log_level="INFO"),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)

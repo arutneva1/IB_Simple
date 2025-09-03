@@ -12,7 +12,11 @@ from src.io.reporting import write_post_trade_report, write_pre_trade_report
 
 def _cfg():
     return SimpleNamespace(
-        execution=SimpleNamespace(order_type="MKT", algo_preference="none")
+        execution=SimpleNamespace(
+            order_type="MKT",
+            algo_preference="none",
+            commission_report_timeout=5.0,
+        )
     )
 
 
