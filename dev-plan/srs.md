@@ -170,13 +170,14 @@ Proceed? [y/N]:
 
 ## 7) Reporting & Logging (CSV + logs per run)
 
-**One file per run (timestamped)** saved under `reports/`, e.g., `rebalance_2025-09-02_15-31-08.csv`.
+**Two files per run, timestamped**, saved under `reports/`:
+- **Pre-trade report** (`rebalance_pre_<timestamp>.csv`): current positions, target weights, drift, and proposed trades.
+- **Post-trade report** (`rebalance_post_<timestamp>.csv`): new positions, executed quantities/prices, and trade summaries.
 
 **CSV columns (initial schema):**
-- `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`,  
-- `action` (BUY/SELL/NONE), `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`,  
-- `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`,  
-- `status` (Planned/Submitted/Filled/Rejected/Skipped), `error` (if any), `notes`.
+- Shared: `timestamp_run`, `account_id`, `symbol`, `is_cash`
+- Pre-trade only (planned fields): `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action` (BUY/SELL/NONE), `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure` (est), `pre_leverage`, `post_leverage` (est)
+- Post-trade only (executed fields): `new_qty_shares`, `new_wt_pct`, `exec_qty_shares`, `exec_price`, `exec_value_usd`, `post_gross_exposure` (actual), `post_leverage` (actual), `status` (Submitted/Filled/Rejected/Skipped), `error` (if any), `notes`
 
 **Logs:** human-readable INFO/ERROR lines, including:
 - Validation outcomes and exact reasons for aborts.  
