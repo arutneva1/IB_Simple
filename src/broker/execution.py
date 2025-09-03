@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import time
 from typing import Any, cast
 from zoneinfo import ZoneInfo
@@ -14,6 +15,8 @@ from src.core.sizing import SizedTrade as Trade
 from src.io.config_loader import AppConfig as Config
 
 from .ibkr_client import IBKRClient, IBKRError
+
+log = logging.getLogger(__name__)
 
 
 async def submit_batch(
@@ -52,10 +55,15 @@ async def submit_batch(
                 "set rebalance.prefer_rth=False to override"
             )
 
-    async def _wait(trade: Any) -> str:
+    async def _wait(trade: Any, symbol: str) -> str:
         terminal = {"Filled", "Cancelled", "ApiCancelled", "Rejected", "Inactive"}
+        last_status = ""
+        order_id = getattr(getattr(trade, "order", None), "orderId", None)
         while True:
             status = getattr(trade.orderStatus, "status", "")
+            if status and status != last_status:
+                log.info("Order %s for %s transitioned to %s", order_id, symbol, status)
+                last_status = status
             if status in terminal:
                 return status
             await trade.statusEvent
@@ -78,7 +86,12 @@ async def submit_batch(
         status = ""
         try:
             ib_trade = ib.placeOrder(contract, order)
-            status = await _wait(ib_trade)
+            log.info(
+                "Submitted order %s for %s",
+                getattr(ib_trade.order, "orderId", None),
+                st.symbol,
+            )
+            status = await _wait(ib_trade, st.symbol)
         except Exception:  # pragma: no cover - network errors
             status = "Error"
         if (
@@ -86,15 +99,26 @@ async def submit_batch(
             and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive", "Error"}
             and cfg.execution.fallback_plain_market
         ):
+            log.info(
+                "Order %s for %s failed with status %s; falling back to plain market",
+                getattr(getattr(ib_trade, "order", None), "orderId", None),
+                st.symbol,
+                status,
+            )
             try:
                 if ib_trade is not None:
                     ib.cancelOrder(ib_trade.order)
-                    await _wait(ib_trade)
+                    await _wait(ib_trade, st.symbol)
             except Exception:  # pragma: no cover - network errors
                 pass
             plain = MarketOrder(st.action, st.quantity)
             ib_trade = ib.placeOrder(contract, plain)
-            status = await _wait(ib_trade)
+            log.info(
+                "Submitted fallback order %s for %s",
+                getattr(ib_trade.order, "orderId", None),
+                st.symbol,
+            )
+            status = await _wait(ib_trade, st.symbol)
         return {
             "symbol": st.symbol,
             "order_id": getattr(ib_trade.order, "orderId", None) if ib_trade else None,
