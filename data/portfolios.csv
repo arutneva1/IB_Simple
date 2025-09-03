@@ -1,3 +1,5 @@
+# Example portfolios with target weights for each model.
+# Percentages may include a trailing %, and blank cells mean a 0% allocation.
 ETF,SMURF,BADASS,GLTR
 BLOK,,0%,
 IBIT,,0%,

@@ -100,7 +100,11 @@ async def load_portfolios(
     """
 
     with path.open(newline="") as fh:
-        reader = csv.DictReader(fh)
+        # Allow top-of-file comments or blank lines in sample CSVs.
+        filtered = (
+            line for line in fh if line.strip() and not line.lstrip().startswith("#")
+        )
+        reader = csv.DictReader(filtered)
         fieldnames = reader.fieldnames
         if fieldnames is None:
             raise PortfolioCSVError("Missing header")

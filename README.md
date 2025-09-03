@@ -18,6 +18,20 @@ $env:PYTHONPATH = "."
 pytest -q -m "not integration"
 ```
 
+### Customize sample files
+
+The repository includes example `config/settings.ini` and `data/portfolios.csv`.
+Make copies of these files outside version control and edit them with your own
+IBKR host, account ID, and target weights:
+
+```bash
+cp config/settings.ini my_settings.ini
+cp data/portfolios.csv my_portfolios.csv
+```
+
+Blank cells in the CSV represent 0% allocations. Use the copied files via
+`--config my_settings.ini --csv my_portfolios.csv` when running the tools.
+
 ## Usage
 
 ### Validate configuration
