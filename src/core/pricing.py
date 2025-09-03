@@ -8,7 +8,10 @@ returned ticker.  Common values are ``"last"``, ``"close"``, ``"bid"`` and
 
 If the requested field is missing and ``fallback_to_snapshot`` is ``True`` the
 function retries the request with ``snapshot=True`` to obtain delayed market
-data.  A :class:`PricingError` is raised when no price can be determined.
+data.  Additionally when ``price_source`` is ``"last"`` and the last price is
+missing or non-finite, the ``"close"`` field is used as a fallback before
+resorting to the snapshot request.  A :class:`PricingError` is raised when no
+price can be determined.
 """
 
 from __future__ import annotations
@@ -32,6 +35,10 @@ async def get_price(
 ) -> float:
     """Return the price for ``symbol`` using market data from IB.
 
+    When ``price_source`` is ``"last"`` and the last price is missing or not a
+    finite number, the ``"close"`` price is tried before resorting to the
+    optional delayed snapshot request.
+
     Parameters
     ----------
     ib:
@@ -44,9 +51,9 @@ async def get_price(
         attribute present on the ticker is supported.
     fallback_to_snapshot:
         When ``True`` and the initial realtime request yields ``None`` for the
-        requested field, the function performs a second request with
-        ``snapshot=True`` to fetch delayed data.  The snapshot is not attempted
-        when set to ``False``.
+        requested field (after the ``"close"`` fallback, if applicable), the
+        function performs a second request with ``snapshot=True`` to fetch
+        delayed data.  The snapshot is not attempted when set to ``False``.
 
     Returns
     -------
@@ -68,17 +75,39 @@ async def get_price(
 
     contract = qualified_contracts[0]
 
+    def _extract_price(tickers: list[Any], field: str) -> float | None:
+        """Return a finite price from ``tickers`` using ``field``.
+
+        When ``field`` is ``"last"`` and the value is missing or non-finite,
+        the ``"close"`` field is checked as a secondary source.  ``None`` is
+        returned if no suitable value can be found.
+        """
+
+        if not tickers:
+            return None
+
+        value = getattr(tickers[0], field, None)
+        if value is None or not math.isfinite(value):
+            if field == "last":
+                value = getattr(tickers[0], "close", None)
+                if value is None or not math.isfinite(value):
+                    return None
+            else:
+                return None
+
+        return float(value)
+
     # Initial realtime market data request using the qualified contract
     tickers = await ib.reqTickersAsync(contract)
-    price = getattr(tickers[0], price_source, None) if tickers else None
+    price = _extract_price(tickers, price_source)
 
     # If no price and snapshot fallback is enabled, try again with the same
     # qualified contract but requesting delayed snapshot data
     if price is None and fallback_to_snapshot:
         tickers = await ib.reqTickersAsync(contract, snapshot=True)
-        price = getattr(tickers[0], price_source, None) if tickers else None
+        price = _extract_price(tickers, price_source)
 
     if price is None or not math.isfinite(price):
         raise PricingError(f"Invalid price for {symbol} using {price_source}")
 
-    return float(price)
+    return price

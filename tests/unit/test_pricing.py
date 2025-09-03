@@ -83,6 +83,75 @@ def test_get_price_falls_back_to_snapshot(monkeypatch: pytest.MonkeyPatch) -> No
     assert getattr(qualify_calls[0], "currency") == "USD"
 
 
+def test_get_price_falls_back_to_close(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Close price is used when last price is invalid."""
+
+    ib = SimpleNamespace()
+    qualify_calls: list = []
+    req_calls: list = []
+
+    qualified_contract = SimpleNamespace()
+
+    async def fake_qualify(contract):
+        qualify_calls.append(contract)
+        return [qualified_contract]
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        req_calls.append((contract, snapshot))
+        return [Ticker(last=float("nan"), close=80.0)]
+
+    monkeypatch.setattr(ib, "qualifyContractsAsync", fake_qualify, raising=False)
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
+    price = asyncio.run(
+        get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=False)
+    )
+
+    assert price == 80.0
+    assert len(qualify_calls) == 1
+    assert req_calls == [(qualified_contract, False)]
+    assert getattr(qualify_calls[0], "symbol") == "AAPL"
+    assert getattr(qualify_calls[0], "exchange") == "SMART"
+    assert getattr(qualify_calls[0], "currency") == "USD"
+
+
+def test_get_price_snapshot_falls_back_to_close(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Snapshot close price is used when both live last and close are invalid."""
+
+    ib = SimpleNamespace()
+    qualify_calls: list = []
+    req_calls: list = []
+
+    qualified_contract = SimpleNamespace()
+
+    async def fake_qualify(contract):
+        qualify_calls.append(contract)
+        return [qualified_contract]
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        req_calls.append((contract, snapshot))
+        if snapshot:
+            return [Ticker(last=None, close=70.0)]
+        return [Ticker(last=None, close=None)]
+
+    monkeypatch.setattr(ib, "qualifyContractsAsync", fake_qualify, raising=False)
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
+    price = asyncio.run(
+        get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=True)
+    )
+
+    assert price == 70.0
+    assert len(qualify_calls) == 1
+    assert req_calls == [
+        (qualified_contract, False),
+        (qualified_contract, True),
+    ]
+    assert getattr(qualify_calls[0], "symbol") == "AAPL"
+    assert getattr(qualify_calls[0], "exchange") == "SMART"
+    assert getattr(qualify_calls[0], "currency") == "USD"
+
+
 def test_get_price_raises_when_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     """PricingError is raised when both live and snapshot prices are missing."""
 
