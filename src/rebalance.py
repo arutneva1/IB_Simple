@@ -82,16 +82,30 @@ async def _run(args: argparse.Namespace) -> None:
     print("[blue]Prioritizing trades[/blue]")
     prioritized = prioritize_by_drift(drifts, cfg)
     print("[blue]Sizing orders[/blue]")
-    trades, _, _ = size_orders(prioritized, prices, current["CASH"], cfg)
+    trades, post_gross_exposure, post_leverage = size_orders(
+        prioritized, prices, current["CASH"], cfg
+    )
     pre_gross_exposure = net_liq - current["CASH"]
     pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
     print("[blue]Rendering preview[/blue]")
-    table = render_preview(prioritized, trades, pre_gross_exposure, pre_leverage)
+    table = render_preview(
+        prioritized,
+        trades,
+        pre_gross_exposure,
+        pre_leverage,
+        post_gross_exposure,
+        post_leverage,
+    )
     print(table)
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")
         return
     if args.confirm:
+        if cfg.ibkr.read_only or args.read_only:
+            print(
+                "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
+            )
+            return
         resp = input("Proceed? [y/N]: ").strip().lower()
         if resp == "y":
             print("[green]Submitting batch market orders (placeholder)...[/green]")
@@ -106,15 +120,28 @@ async def _run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="IBKR ETF Rebalancer (scaffold)")
-    parser.add_argument("--config", default="config/settings.ini")
-    parser.add_argument("--csv", default="data/portfolios.csv")
-    parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--confirm", action="store_true")
-    parser.add_argument("--read-only", action="store_true")
+    parser.add_argument(
+        "--config", default="config/settings.ini", help="Path to settings file"
+    )
+    parser.add_argument(
+        "--csv", default="data/portfolios.csv", help="Path to portfolio CSV"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render preview and exit without prompting or submitting orders",
+    )
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Prompt for confirmation before submitting orders",
+    )
+    parser.add_argument(
+        "--read-only",
+        action="store_true",
+        help="Force read-only mode; block order submission",
+    )
     args = parser.parse_args()
-
-    if args.read_only and args.confirm:
-        print("[yellow]Read-only is enabled; trading will be blocked.[/yellow]")
 
     try:
         asyncio.run(_run(args))
