@@ -19,6 +19,8 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
         ibkr=SimpleNamespace(host="h", port=1, client_id=1, account_id="a"),
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
+        execution=SimpleNamespace(order_type="MKT", algo_preference="adaptive"),
+        io=SimpleNamespace(report_dir="reports", log_level="INFO"),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
