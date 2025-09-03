@@ -81,12 +81,12 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] Unit tests cover trigger modes, min-order filtering, and prioritization
 
 ### Phase C3 — Sizing, Leverage Guard, Rounding, Cash Buffer
-- [ ] `src/core/sizing.py` implemented
-- [ ] Reserves `cash_buffer_pct`
-- [ ] Rounds if `allow_fractional=false`
-- [ ] Enforces leverage ≤ `max_leverage`
-- [ ] Partial scaling by priority when needed
-- [ ] Unit tests for cash/leverage/rounding edge cases
+- [x] `src/core/sizing.py` implemented
+- [x] Reserves `cash_buffer_pct`
+- [x] Rounds if `allow_fractional=false`
+- [x] Enforces leverage ≤ `max_leverage`
+- [x] Partial scaling by priority when needed
+- [x] Unit tests for cash/leverage/rounding edge cases
 - [ ] Unit tests enforce `min_order_usd` after rounding
 
 ### Phase C4 — Preview & CLI Confirmation
