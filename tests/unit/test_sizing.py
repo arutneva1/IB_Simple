@@ -83,4 +83,3 @@ def test_rounds_and_drops_orders_below_min() -> None:
     assert trades == []
     assert gross == 400.0  # exposure unchanged
     assert lev == 0.4
-
