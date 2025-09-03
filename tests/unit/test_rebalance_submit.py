@@ -68,7 +68,7 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
     args = argparse.Namespace(config="cfg", csv="csv", dry_run=False, yes=True, read_only=False)
     asyncio.run(rebalance._run(args))
 
-    assert recorded["trades"] == [{"symbol": "AAA", "action": "BUY", "quantity": 5.0}]
+    assert recorded["trades"] == [SizedTrade("AAA", "BUY", 5.0, 50.0)]
     out, _ = capsys.readouterr()
     assert "AAA" in out and "Filled" in out
 

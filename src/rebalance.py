@@ -114,15 +114,10 @@ async def _run(args: argparse.Namespace) -> None:
             print("[yellow]Aborted by user.[/yellow]")
             return
 
-    trade_list = [
-        {"symbol": t.symbol, "action": t.action, "quantity": t.quantity}
-        for t in trades
-    ]
-
     print("[blue]Submitting batch market orders[/blue]")
     await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
     try:
-        results = await submit_batch(client, trade_list, cfg)
+        results = await submit_batch(client, trades, cfg)
     finally:
         await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
 
