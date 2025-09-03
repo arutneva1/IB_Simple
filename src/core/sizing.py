@@ -32,7 +32,10 @@ class SizedTrade:
 
 
 def _extract_cfg(cfg: Any) -> tuple[int, bool, float, float]:
-    """Return relevant rebalance configuration values."""
+    """Return relevant rebalance configuration values.
+
+    ``cash_buffer_pct`` is expected as a decimal fraction (e.g., ``0.01`` for 1%).
+    """
 
     try:
         reb = cfg.rebalance  # type: ignore[attr-defined]
@@ -92,7 +95,7 @@ def size_orders(
 
     net_liq = _infer_net_liq(drifts, cash)
 
-    reserve = net_liq * cash_buffer_pct
+    reserve = net_liq * cash_buffer_pct  # cfg.cash_buffer_pct is already a decimal
     available = cash - reserve
 
     trades: list[SizedTrade] = []
