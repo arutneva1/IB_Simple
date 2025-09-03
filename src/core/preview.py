@@ -7,8 +7,6 @@ side effects beyond returning the rendered string.
 
 from __future__ import annotations
 
-from typing import Mapping
-
 from rich.console import Console
 from rich.table import Table
 
@@ -19,7 +17,8 @@ from .sizing import SizedTrade
 def render(
     plan: list[Drift],
     trades: list[SizedTrade] | None = None,
-    prices: Mapping[str, float] | None = None,
+    pre_gross_exposure: float = 0.0,
+    pre_leverage: float = 0.0,
 ) -> str:
     """Return a formatted table for the given drift plan.
 
@@ -27,11 +26,18 @@ def render(
     ----------
     plan:
         Drift records, typically already filtered and prioritised.
+    trades:
+        Optional sized trade information used to display quantities and
+        notionals.
+    pre_gross_exposure:
+        Portfolio gross exposure before applying the trades.
+    pre_leverage:
+        Portfolio leverage before applying the trades.
 
     Returns
     -------
     str
-        Table rendering of the drift information.
+        Table rendering of the drift information followed by a batch summary.
     """
 
     table = Table(show_header=True, header_style="bold")
@@ -40,31 +46,51 @@ def render(
     table.add_column("Current %", justify="right")
     table.add_column("Drift %", justify="right")
     table.add_column("Drift $", justify="right")
-    table.add_column("Price", justify="right")
-    table.add_column("Qty", justify="right")
     table.add_column("Action")
+    table.add_column("Qty", justify="right")
+    table.add_column("Notional", justify="right")
 
     qty_lookup = {t.symbol: t.quantity for t in (trades or [])}
-    price_lookup = prices or {}
+    notional_lookup = {t.symbol: t.notional for t in (trades or [])}
 
     for d in plan:
         qty = qty_lookup.get(d.symbol, 0.0)
-        price = price_lookup.get(d.symbol)
+        notional = notional_lookup.get(d.symbol, 0.0)
         table.add_row(
             d.symbol,
             f"{d.target_wt_pct:.2f}",
             f"{d.current_wt_pct:.2f}",
             f"{d.drift_pct:.2f}",
             f"{d.drift_usd:.2f}",
-            f"{price:.2f}" if price is not None else "-",
-            f"{qty:.2f}",
             d.action,
+            f"{qty:.2f}",
+            f"{notional:.2f}",
         )
 
     from io import StringIO
 
     console = Console(file=StringIO(), record=True)
     console.print(table)
+
+    gross_buy = sum(t.notional for t in (trades or []) if t.action == "BUY")
+    gross_sell = sum(t.notional for t in (trades or []) if t.action == "SELL")
+
+    post_gross_exposure = pre_gross_exposure + gross_buy - gross_sell
+    net_liq = pre_gross_exposure / pre_leverage if pre_leverage else 0.0
+    post_leverage = post_gross_exposure / net_liq if net_liq else 0.0
+
+    summary = Table(title="Batch Summary", show_header=False)
+    summary.add_column("Metric")
+    summary.add_column("Value", justify="right")
+    summary.add_row("Gross Buy", f"{gross_buy:.2f}")
+    summary.add_row("Gross Sell", f"{gross_sell:.2f}")
+    summary.add_row("Pre Gross Exposure", f"{pre_gross_exposure:.2f}")
+    summary.add_row("Pre Leverage", f"{pre_leverage:.2f}")
+    summary.add_row("Post Gross Exposure", f"{post_gross_exposure:.2f}")
+    summary.add_row("Post Leverage", f"{post_leverage:.2f}")
+
+    console.print()
+    console.print(summary)
     return console.export_text()
 
 
@@ -73,4 +99,8 @@ if __name__ == "__main__":  # pragma: no cover - convenience demo
         Drift("AAA", 50.0, 60.0, 10.0, 640.0, "SELL"),
         Drift("BBB", 50.0, 40.0, -10.0, -640.0, "BUY"),
     ]
-    print(render(sample_plan, prices={"AAA": 100.0, "BBB": 90.0}))
+    sample_trades = [
+        SizedTrade("AAA", "SELL", 6.4, 640.0),
+        SizedTrade("BBB", "BUY", 7.111111, 640.0),
+    ]
+    print(render(sample_plan, sample_trades, 1000.0, 1.0))
