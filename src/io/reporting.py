@@ -168,6 +168,10 @@ def write_post_trade_report(
         "post_gross_exposure",
         "pre_leverage",
         "post_leverage",
+        "fill_qty",
+        "fill_price",
+        "fill_timestamp",
+        "commission",
         "status",
         "error",
         "notes",
@@ -185,18 +189,36 @@ def write_post_trade_report(
         for d in sorted(drifts, key=lambda d: d.symbol):
             trade = trades_by_symbol.get(d.symbol)
             res = results_by_symbol.get(d.symbol, {})
-            filled = res.get("filled")
-            qty = filled if filled is not None else (trade.quantity if trade else 0.0)
-            avg_price = res.get("avg_fill_price")
-            if avg_price is not None:
-                price = avg_price
-            elif trade and trade.quantity:
-                price = trade.notional / trade.quantity
-            elif d.symbol == "CASH":
-                price = 1.0
+            planned_qty = trade.quantity if trade else 0.0
+            planned_price = (
+                trade.notional / trade.quantity if trade and trade.quantity else 0.0
+            )
+            if d.symbol == "CASH":
+                planned_price = 1.0
+
+            fill_qty = res.get("fill_qty")
+            if fill_qty is None:
+                fill_qty = res.get("filled")
+            if fill_qty is None:
+                fill_qty = planned_qty
+
+            fill_price = res.get("fill_price")
+            if fill_price is None:
+                fill_price = res.get("avg_fill_price")
+            if fill_price is None:
+                fill_price = planned_price
+
+            fill_ts_any = res.get("fill_time")
+            if isinstance(fill_ts_any, datetime):
+                fill_ts = fill_ts_any.isoformat()
+            elif fill_ts_any is None:
+                fill_ts = None
             else:
-                price = 0.0
-            value = qty * price
+                fill_ts = str(fill_ts_any)
+
+            commission = res.get("commission", 0.0)
+
+            value = fill_qty * fill_price
             writer.writerow(
                 {
                     "timestamp_run": timestamp_run,
@@ -208,8 +230,8 @@ def write_post_trade_report(
                     "drift_pct": d.drift_pct,
                     "drift_usd": d.drift_usd,
                     "action": d.action,
-                    "qty_shares": qty,
-                    "est_price": price,
+                    "qty_shares": fill_qty,
+                    "est_price": fill_price,
                     "order_type": order_type,
                     "algo": algo,
                     "est_value_usd": value,
@@ -217,6 +239,10 @@ def write_post_trade_report(
                     "post_gross_exposure": post_gross_exposure,
                     "pre_leverage": pre_leverage,
                     "post_leverage": post_leverage,
+                    "fill_qty": fill_qty,
+                    "fill_price": fill_price,
+                    "fill_timestamp": fill_ts or "",
+                    "commission": commission,
                     "status": res.get("status", ""),
                     "error": res.get("error", ""),
                     "notes": res.get("notes", ""),

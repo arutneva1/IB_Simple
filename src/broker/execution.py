@@ -120,14 +120,49 @@ async def submit_batch(
                 st.symbol,
             )
             status = await _wait(ib_trade, st.symbol)
+        filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
+        avg_price = (
+            getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
+        )
+        fill_time = None
+        commission = 0.0
+        if ib_trade is not None:
+            try:
+                fills = getattr(ib_trade, "fills", []) or []
+                last_fill = fills[-1] if fills else None
+                if last_fill is not None:
+                    exec_obj = getattr(last_fill, "execution", None)
+                    if exec_obj is not None:
+                        ts = getattr(exec_obj, "time", None)
+                        if ts is not None:
+                            fill_time = (
+                                ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+                            )
+                    comm_rep = getattr(last_fill, "commissionReport", None)
+                    if comm_rep is not None:
+                        commission = getattr(comm_rep, "commission", commission)
+                if fill_time is None:
+                    ts_attr = getattr(
+                        ib_trade.orderStatus, "completedTime", None
+                    ) or getattr(ib_trade.orderStatus, "lastTradeTime", None)
+                    if ts_attr is not None:
+                        fill_time = (
+                            ts_attr.isoformat()
+                            if hasattr(ts_attr, "isoformat")
+                            else str(ts_attr)
+                        )
+            except Exception:  # pragma: no cover - defensive
+                pass
         return {
             "symbol": st.symbol,
             "order_id": getattr(ib_trade.order, "orderId", None) if ib_trade else None,
             "status": status,
-            "filled": getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0,
-            "avg_fill_price": (
-                getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
-            ),
+            "filled": filled,
+            "avg_fill_price": avg_price,
+            "fill_qty": filled,
+            "fill_price": avg_price,
+            "fill_time": fill_time,
+            "commission": commission,
         }
 
     # Final safeguard: collapse trades with identical symbols and actions.
