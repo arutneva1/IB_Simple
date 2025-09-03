@@ -43,7 +43,7 @@ class Rebalance:
     per_holding_band_bps: int
     portfolio_total_band_bps: int
     min_order_usd: int
-    cash_buffer_pct: float
+    cash_buffer_pct: float  # decimal fraction (e.g., 0.01 = 1%)
     allow_fractional: bool
     max_leverage: float
     maintenance_buffer_pct: float
@@ -150,7 +150,7 @@ def load_config(path: Path) -> AppConfig:
         per_holding_band_bps = cp.getint("rebalance", "per_holding_band_bps")
         portfolio_total_band_bps = cp.getint("rebalance", "portfolio_total_band_bps")
         min_order_usd = cp.getint("rebalance", "min_order_usd")
-        cash_buffer_pct = cp.getfloat("rebalance", "cash_buffer_pct")
+        cash_buffer_pct = cp.getfloat("rebalance", "cash_buffer_pct") / 100.0
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")

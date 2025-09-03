@@ -35,7 +35,7 @@ trigger_mode = per_holding
 per_holding_band_bps = 50
 portfolio_total_band_bps = 100
 min_order_usd = 500
-cash_buffer_pct = 1.0
+cash_buffer_pct = 1
 allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 10
@@ -80,7 +80,7 @@ def test_load_valid_config(config_file: Path) -> None:
             per_holding_band_bps=50,
             portfolio_total_band_bps=100,
             min_order_usd=500,
-            cash_buffer_pct=1.0,
+            cash_buffer_pct=0.01,
             allow_fractional=False,
             max_leverage=1.50,
             maintenance_buffer_pct=10,
