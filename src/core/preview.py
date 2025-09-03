@@ -96,12 +96,15 @@ def render(
     # in reduced widths or ASCII only tables when rendering to an in-memory
     # ``StringIO`` buffer during testing.  Explicitly widen the virtual
     # terminal to ensure that column headers are never truncated regardless of
-    # the executing environment.
+    # the executing environment.  ``legacy_windows`` is disabled so that Rich
+    # doesn't substitute heavy box drawing characters on Windows, keeping the
+    # header separators consistent across platforms.
     console = Console(
         file=StringIO(),
         record=True,
         force_terminal=True,
         width=120,
+        legacy_windows=False,
     )
     console.print(table)
 
