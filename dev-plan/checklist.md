@@ -22,8 +22,8 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] `.github/workflows/ci.yaml` created (lint, format, unit tests)
 - [x] CI caches pip dependencies
 - [x] CI skips integration tests by default
-- [ ] CI enforced on `main` branch
-- [ ] CI green on PRs and `main`
+- [x] CI enforced on `main` branch
+- [x] CI green on PRs and `main`
 - [x] CI runs ruff, black, isort, and mypy
 - [x] Pull request template added (`.github/PULL_REQUEST_TEMPLATE.md`)
 
