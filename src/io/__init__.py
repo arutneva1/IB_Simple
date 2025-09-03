@@ -17,6 +17,7 @@ from .config_loader import (
     load_config,
 )
 from .portfolio_csv import PortfolioCSVError, load_portfolios, validate_symbols
+from .reporting import setup_logging, write_post_trade_report, write_pre_trade_report
 
 __all__ = [
     "AppConfig",
@@ -31,4 +32,7 @@ __all__ = [
     "PortfolioCSVError",
     "load_portfolios",
     "validate_symbols",
+    "setup_logging",
+    "write_pre_trade_report",
+    "write_post_trade_report",
 ]
