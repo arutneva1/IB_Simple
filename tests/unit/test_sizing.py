@@ -3,13 +3,15 @@
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
+from typing import Any
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 # ``src.__init__`` imports ``ib_async`` which isn't required for these tests.
-ib_async = ModuleType("ib_async")
+# The ``Any`` annotations silence mypy's attribute checks for these dummy modules.
+ib_async: Any = ModuleType("ib_async")
 ib_async.IB = object
-contract_mod = ModuleType("ib_async.contract")
+contract_mod: Any = ModuleType("ib_async.contract")
 contract_mod.Stock = object
 ib_async.contract = contract_mod
 sys.modules.setdefault("ib_async", ib_async)
@@ -83,4 +85,3 @@ def test_rounds_and_drops_orders_below_min() -> None:
     assert trades == []
     assert gross == 400.0  # exposure unchanged
     assert lev == 0.4
-
