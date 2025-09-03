@@ -15,8 +15,8 @@ ib_async.contract = contract_mod
 sys.modules.setdefault("ib_async", ib_async)
 sys.modules.setdefault("ib_async.contract", contract_mod)
 
-from src.core.drift import Drift
-from src.core.sizing import SizedTrade, size_orders
+from src.core.drift import Drift  # noqa: E402
+from src.core.sizing import SizedTrade, size_orders  # noqa: E402
 
 
 def _cfg(
