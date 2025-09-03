@@ -11,6 +11,7 @@ from rich import print
 from src.broker.ibkr_client import IBKRClient, IBKRError
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
+from src.core.pricing import PricingError, get_price
 from src.core.sizing import size_orders
 from src.io.config_loader import ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
@@ -32,15 +33,31 @@ async def _run(args: argparse.Namespace) -> None:
     await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
     try:
         snapshot = await client.snapshot(cfg.ibkr.account_id)
+
+        current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
+        current["CASH"] = float(snapshot["cash"])
+        prices = {p["symbol"]: float(p["avg_cost"]) for p in snapshot["positions"]}
+
+        symbols = set(current) | set(portfolios)
+        symbols.discard("CASH")
+        missing = symbols - set(prices)
+        for symbol in missing:
+            try:
+                prices[symbol] = await get_price(
+                    client._ib,
+                    symbol,
+                    price_source=cfg.pricing.price_source,
+                    fallback_to_snapshot=cfg.pricing.fallback_to_snapshot,
+                )
+            except PricingError as exc:
+                print(f"[red]{exc}[/red]")
+                raise SystemExit(1)
+
+        net_liq = snapshot["cash"] + sum(
+            prices[sym] * qty for sym, qty in current.items() if sym != "CASH"
+        )
     finally:
         await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-
-    current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
-    current["CASH"] = float(snapshot["cash"])
-    prices = {p["symbol"]: float(p["avg_cost"]) for p in snapshot["positions"]}
-    net_liq = snapshot["cash"] + sum(
-        prices[sym] * qty for sym, qty in current.items() if sym != "CASH"
-    )
 
     targets: dict[str, float] = {}
     for symbol, weights in portfolios.items():
