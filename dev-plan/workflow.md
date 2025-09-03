@@ -386,10 +386,11 @@ Proceed? [y/N]:
 ### D2. Reporting & logging
 
 **Implement** `src/io/reporting.py`
-- Write **timestamped CSV** per run under `reports/` with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes`.
+- Write timestamped **pre-trade** CSV under `reports/` after validation but before sending orders. Captures portfolio state and intended actions with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`.
+- Write timestamped **post-trade** CSV under `reports/` once orders complete, logging execution results with columns `timestamp_run`, `account_id`, `symbol`, `qty_shares`, `fill_price`, `fill_value_usd`, `post_gross_exposure`, `post_leverage`, `status`, `error`, `notes`.
 - Unified INFO/ERROR log lines; capture connection events, pacing/backoff messages, validation aborts, order states, and a final summary.
 
-**Tests**: schema round-trip; presence of all SRS columns; status transitions captured.
+**Tests**: schema round-trip for pre- and post-trade reports; presence of all SRS columns; status transitions captured.
 
 ---
 
