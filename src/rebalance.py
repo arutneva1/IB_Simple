@@ -18,6 +18,18 @@ from src.io.config_loader import ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 
 
+async def _fetch_price(ib, symbol: str, cfg) -> tuple[str, float]:
+    """Fetch a single symbol's price and return it with the symbol."""
+
+    price = await get_price(
+        ib,
+        symbol,
+        price_source=cfg.pricing.price_source,
+        fallback_to_snapshot=cfg.pricing.fallback_to_snapshot,
+    )
+    return symbol, price
+
+
 async def _run(args: argparse.Namespace) -> None:
     cfg_path = Path(args.config)
     csv_path = Path(args.csv)
@@ -51,18 +63,20 @@ async def _run(args: argparse.Namespace) -> None:
         print(f"[blue]Fetching prices for {len(symbols)} symbols[/blue]")
         # Use market prices for all symbols, including those already held, to
         # ensure consistent valuation across the portfolio.
-        for idx, symbol in enumerate(symbols, 1):
+        tasks = [
+            asyncio.create_task(_fetch_price(client._ib, sym, cfg)) for sym in symbols
+        ]
+        for idx, task in enumerate(asyncio.as_completed(tasks), 1):
             try:
-                print(f"[blue]  ({idx}/{len(symbols)}) {symbol}[/blue]")
-                prices[symbol] = await get_price(
-                    client._ib,
-                    symbol,
-                    price_source=cfg.pricing.price_source,
-                    fallback_to_snapshot=cfg.pricing.fallback_to_snapshot,
-                )
+                symbol, price = await task
             except PricingError as exc:
                 print(f"[red]{exc}[/red]")
+                for t in tasks:
+                    t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
                 raise SystemExit(1)
+            prices[symbol] = price
+            print(f"[blue]  ({idx}/{len(symbols)}) {symbol}[/blue]")
 
         net_liq = snapshot["cash"] + sum(
             prices[sym] * qty for sym, qty in current.items() if sym != "CASH"

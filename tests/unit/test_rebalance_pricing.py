@@ -68,10 +68,10 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
 def test_run_fetches_prices_for_all_symbols(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _setup_common(monkeypatch)
 
-    async def fake_get_price(ib, symbol, *, price_source, fallback_to_snapshot):
-        return {"AAA": 15.0, "BBB": 20.0}[symbol]
+    async def fake_fetch_price(ib, symbol, cfg):
+        return symbol, {"AAA": 15.0, "BBB": 20.0}[symbol]
 
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
         config="cfg", csv="csv", dry_run=True, yes=False, read_only=False
@@ -86,10 +86,10 @@ def test_run_aborts_when_price_unavailable(
 ) -> None:
     captured = _setup_common(monkeypatch)
 
-    async def fake_get_price(ib, symbol, *, price_source, fallback_to_snapshot):
+    async def fake_fetch_price(ib, symbol, cfg):
         raise PricingError("bad price")
 
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
         config="cfg", csv="csv", dry_run=True, yes=False, read_only=False

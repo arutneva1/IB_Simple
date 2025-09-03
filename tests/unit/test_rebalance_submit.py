@@ -44,10 +44,10 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(rebalance, "IBKRClient", lambda: FakeClient())
 
-    async def fake_get_price(ib, symbol, *, price_source, fallback_to_snapshot):
-        return 10.0
+    async def fake_fetch_price(ib, symbol, cfg):
+        return symbol, 10.0
 
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     monkeypatch.setattr(rebalance, "compute_drift", lambda *a, **k: [])
     monkeypatch.setattr(rebalance, "prioritize_by_drift", lambda drifts, cfg: [])
