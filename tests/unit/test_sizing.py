@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
+import math
+import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
@@ -85,3 +87,20 @@ def test_rounds_and_drops_orders_below_min() -> None:
     assert trades == []
     assert gross == 400.0  # exposure unchanged
     assert lev == 0.4
+
+
+def test_rejects_non_finite_price_or_quantity() -> None:
+    cfg = _cfg(allow_fractional=True)
+
+    # Non-finite price
+    net_liq = 1000.0
+    drifts = [_drift("AAA", -100.0, net_liq)]
+    prices = {"AAA": math.nan}
+    with pytest.raises(ValueError):
+        size_orders(drifts, prices, cash=200.0, cfg=cfg)
+
+    # Non-finite quantity
+    bad_drift = Drift("BBB", 0.0, 0.0, 0.0, math.nan, "BUY")
+    prices = {"BBB": 10.0}
+    with pytest.raises(ValueError):
+        size_orders([bad_drift], prices, cash=200.0, cfg=cfg)
