@@ -309,7 +309,9 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission(status="Filled", filled=5.0)
         fill = SimpleNamespace(
-            execution=SimpleNamespace(time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))),
+            execution=SimpleNamespace(
+                time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+            ),
             commissionReport=SimpleNamespace(execId="", commission=0.0),
         )
         trade.fills.append(fill)
