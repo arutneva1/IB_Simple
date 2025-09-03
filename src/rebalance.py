@@ -11,6 +11,7 @@ from rich import print
 from src.broker.ibkr_client import IBKRClient, IBKRError
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
+from src.core.sizing import size_orders
 from src.io.config_loader import ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 
@@ -51,7 +52,8 @@ async def _run(args: argparse.Namespace) -> None:
 
     drifts = compute_drift(current, targets, prices, net_liq, cfg)
     prioritized = prioritize_by_drift(drifts, cfg)
-    table = render_preview(prioritized)
+    trades, *_ = size_orders(prioritized, prices, current["CASH"], cfg)
+    table = render_preview(prioritized, trades)
     print(table)
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")

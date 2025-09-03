@@ -11,9 +11,10 @@ from rich.console import Console
 from rich.table import Table
 
 from .drift import Drift
+from .sizing import SizedTrade
 
 
-def render(plan: list[Drift]) -> str:
+def render(plan: list[Drift], trades: list[SizedTrade] | None = None) -> str:
     """Return a formatted table for the given drift plan.
 
     Parameters
@@ -33,15 +34,20 @@ def render(plan: list[Drift]) -> str:
     table.add_column("Current %", justify="right")
     table.add_column("Drift %", justify="right")
     table.add_column("Drift $", justify="right")
+    table.add_column("Qty", justify="right")
     table.add_column("Action")
 
+    qty_lookup = {t.symbol: t.quantity for t in (trades or [])}
+
     for d in plan:
+        qty = qty_lookup.get(d.symbol, 0.0)
         table.add_row(
             d.symbol,
             f"{d.target_wt_pct:.2f}",
             f"{d.current_wt_pct:.2f}",
             f"{d.drift_pct:.2f}",
             f"{d.drift_usd:.2f}",
+            f"{qty:.2f}",
             d.action,
         )
 
