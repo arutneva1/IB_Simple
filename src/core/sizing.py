@@ -177,8 +177,26 @@ def size_orders(
 
         gross_exposure = (net_liq - cash) + total_buy - total_sell
         leverage = gross_exposure / net_liq if net_liq else 0.0
+    # Collapse any duplicated trades by symbol, netting opposing actions.
+    aggregated_qty: dict[str, float] = {}
+    aggregated_notional: dict[str, float] = {}
+    for t in trades:
+        sign = 1.0 if t.action == "BUY" else -1.0
+        aggregated_qty[t.symbol] = aggregated_qty.get(t.symbol, 0.0) + sign * t.quantity
+        aggregated_notional[t.symbol] = (
+            aggregated_notional.get(t.symbol, 0.0) + sign * t.notional
+        )
 
-    return trades, gross_exposure, leverage
+    normalized: list[SizedTrade] = []
+    for symbol, qty in aggregated_qty.items():
+        notional = aggregated_notional[symbol]
+        if qty > 0 and notional > 0:
+            normalized.append(SizedTrade(symbol, "BUY", qty, notional))
+        elif qty < 0 and notional < 0:
+            normalized.append(SizedTrade(symbol, "SELL", -qty, -notional))
+        # else qty and notional cancel out -> no trade
+
+    return normalized, gross_exposure, leverage
 
 
 __all__ = ["SizedTrade", "size_orders"]

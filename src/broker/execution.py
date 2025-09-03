@@ -105,7 +105,18 @@ async def submit_batch(
             ),
         }
 
-    return list(await asyncio.gather(*[_submit_one(t) for t in trades]))
+    # Final safeguard: collapse trades with identical symbols and actions.
+    combined: dict[tuple[str, str], Trade] = {}
+    for t in trades:
+        key = (t.symbol, t.action)
+        if key in combined:
+            existing = combined[key]
+            existing.quantity += t.quantity
+            existing.notional += t.notional
+        else:
+            combined[key] = Trade(t.symbol, t.action, t.quantity, t.notional)
+
+    return list(await asyncio.gather(*[_submit_one(t) for t in combined.values()]))
 
 
 __all__ = ["submit_batch"]
