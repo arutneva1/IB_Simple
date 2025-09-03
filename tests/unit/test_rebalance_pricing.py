@@ -61,7 +61,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch) -> dict:
         rebalance, "size_orders", lambda prioritized, prices, cash, cfg: ([], [], [])
     )
     monkeypatch.setattr(
-        rebalance, "render_preview", lambda prioritized, trades: "TABLE"
+        rebalance, "render_preview", lambda prioritized, trades, prices: "TABLE"
     )
 
     return captured
