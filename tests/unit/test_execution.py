@@ -65,6 +65,10 @@ def test_rejected_order_returns_status(monkeypatch):
             "status": "Rejected",
             "filled": 0.0,
             "avg_fill_price": 0.0,
+            "fill_qty": 0.0,
+            "fill_price": 0.0,
+            "fill_time": None,
+            "commission": 0.0,
         }
     ]
 

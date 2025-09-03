@@ -181,16 +181,18 @@ async def _run(args: argparse.Namespace) -> None:
         await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
 
     for res in results:
+        qty = res.get("fill_qty", res.get("filled", 0))
+        price = res.get("fill_price", res.get("avg_fill_price", 0))
         print(
             f"[green]{res.get('symbol')}: {res.get('status')} "
-            f"{res.get('filled', 0)} @ {res.get('avg_fill_price', 0)}[/green]"
+            f"{qty} @ {price}[/green]"
         )
         logging.info(
             "%s: %s %s @ %s",
             res.get("symbol"),
             res.get("status"),
-            res.get("filled", 0),
-            res.get("avg_fill_price", 0),
+            qty,
+            price,
         )
     if any(r.get("status") != "Filled" for r in results):
         logging.error("One or more orders failed to fill")
@@ -201,8 +203,14 @@ async def _run(args: argparse.Namespace) -> None:
     results_by_symbol = {r.get("symbol"): r for r in results}
     for trade in trades:
         res = results_by_symbol.get(trade.symbol, {})
-        filled = res.get("filled", trade.quantity)
-        price = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
+        filled_any = res.get("fill_qty")
+        if filled_any is None:
+            filled_any = res.get("filled", trade.quantity)
+        filled = float(filled_any)
+        price_any = res.get("fill_price")
+        if price_any is None:
+            price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
+        price = float(price_any)
         if trade.action == "BUY":
             positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
             cash_after -= filled * price

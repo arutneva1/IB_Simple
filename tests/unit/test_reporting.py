@@ -97,7 +97,16 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         assert float(row[field]) == pytest.approx(expected_values[field])
 
     results = [
-        {"symbol": "AAA", "status": "Filled", "filled": 10.0, "avg_fill_price": 100.0}
+        {
+            "symbol": "AAA",
+            "status": "Filled",
+            "filled": 10.0,
+            "avg_fill_price": 100.0,
+            "fill_qty": 10.0,
+            "fill_price": 100.0,
+            "fill_time": ts.isoformat(),
+            "commission": 1.23,
+        }
     ]
 
     post_path = write_post_trade_report(
@@ -114,7 +123,15 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         cfg,
     )
 
-    expected_post_fields = expected_pre_fields + ["status", "error", "notes"]
+    expected_post_fields = expected_pre_fields + [
+        "fill_qty",
+        "fill_price",
+        "fill_timestamp",
+        "commission",
+        "status",
+        "error",
+        "notes",
+    ]
 
     with post_path.open() as f:
         reader = csv.DictReader(f)
@@ -123,6 +140,10 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
 
     for field in numeric_fields:
         assert float(row[field]) == pytest.approx(expected_values[field])
+    assert float(row["fill_qty"]) == pytest.approx(10.0)
+    assert float(row["fill_price"]) == pytest.approx(100.0)
+    assert row["fill_timestamp"] == ts.isoformat()
+    assert float(row["commission"]) == pytest.approx(1.23)
 
     messages = [rec.message for rec in caplog.records]
     assert f"Pre-trade report written to {pre_path}" in messages
