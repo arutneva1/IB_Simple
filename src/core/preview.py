@@ -54,7 +54,11 @@ def render(
     # unit tests while others fall back to a light or square style. Explicitly
     # request the ``HEAVY_HEAD`` box so the column separators are always the
     # heavy vertical bar (``\u2503``) regardless of the ``rich`` version.
-    table = Table(show_header=True, header_style="bold", box=box.HEAVY_HEAD)
+    table = Table(
+        show_header=True,
+        header_style="bold",
+        box=box.HEAVY_HEAD,  # ensure heavy vertical separators
+    )
     table.add_column("Symbol")
     table.add_column("Target %", justify="right")
     table.add_column("Current %", justify="right")
