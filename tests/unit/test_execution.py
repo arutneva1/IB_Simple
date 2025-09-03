@@ -52,7 +52,11 @@ async def _time_outside_rth():
 def _base_cfg(prefer_rth=False):
     return SimpleNamespace(
         rebalance=SimpleNamespace(prefer_rth=prefer_rth),
-        execution=SimpleNamespace(algo_preference="none", fallback_plain_market=False),
+        execution=SimpleNamespace(
+            algo_preference="none",
+            fallback_plain_market=False,
+            commission_report_timeout=0.01,
+        ),
     )
 
 
@@ -221,7 +225,10 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
     cfg = SimpleNamespace(
         rebalance=SimpleNamespace(prefer_rth=False),
         execution=SimpleNamespace(
-            algo_preference="none", fallback_plain_market=False, order_type="MKT"
+            algo_preference="none",
+            fallback_plain_market=False,
+            order_type="MKT",
+            commission_report_timeout=0.01,
         ),
     )
 
@@ -246,3 +253,47 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
     with post_path.open() as f:
         row = next(csv.DictReader(f))
     assert float(row["commission"]) == pytest.approx(1.2)
+
+
+def test_commission_report_arrives_after_initial_wait(monkeypatch):
+    """Commission reports arriving after the first wait are included."""
+
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission()
+
+        async def updates() -> None:
+            fill1 = SimpleNamespace(
+                execution=SimpleNamespace(
+                    time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=None,
+            )
+            trade.fills.append(fill1)
+            trade.orderStatus.status = "Filled"
+            trade.orderStatus.filled = 5.0
+            trade.statusEvent.set()
+            await asyncio.sleep(0)
+            fill1.commissionReport = SimpleNamespace(commission=-0.5)
+            trade.commissionReportEvent.set()
+            await asyncio.sleep(0)
+            fill2 = SimpleNamespace(
+                execution=SimpleNamespace(
+                    time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=SimpleNamespace(commission=-0.7),
+            )
+            trade.fills.append(fill2)
+            trade.commissionReportEvent.set()
+
+        asyncio.create_task(updates())
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
+    cfg = _base_cfg()
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["commission"] == pytest.approx(1.2)
