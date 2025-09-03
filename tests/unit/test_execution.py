@@ -412,3 +412,43 @@ def test_trade_level_commission_report(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg))
     assert res[0]["commission"] == pytest.approx(0.5)
     assert res[0]["commission_placeholder"] is False
+
+
+def test_client_level_commission_report(monkeypatch):
+    """Commission reports only emitted via client-level event are recorded."""
+
+    ib = SimpleNamespace()
+    ib.client = SimpleNamespace(
+        commissionReports=[], commissionReportEvent=AwaitableEvent()
+    )
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission()
+
+        async def updates() -> None:
+            fill = SimpleNamespace(
+                execution=SimpleNamespace(
+                    execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=None,
+            )
+            trade.fills.append(fill)
+            trade.orderStatus.status = "Filled"
+            trade.orderStatus.filled = 5.0
+            trade.statusEvent.set()
+            await asyncio.sleep(0)
+            report = SimpleNamespace(execId="1", commission=-0.5)
+            ib.client.commissionReports.append(report)
+            ib.client.commissionReportEvent.set()
+
+        asyncio.create_task(updates())
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
+    cfg = _base_cfg()
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["commission"] == pytest.approx(0.5)
+    assert res[0]["commission_placeholder"] is False
