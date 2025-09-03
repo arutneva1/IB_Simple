@@ -75,7 +75,14 @@ def render(
 
     from io import StringIO
 
-    console = Console(file=StringIO(), record=True)
+    # Rich will downgrade its output when the destination isn't a real
+    # terminal (``isatty`` returns ``False``).  In the unit tests we render the
+    # table to an in-memory ``StringIO`` which Rich interprets as a plain file
+    # and therefore falls back to an ASCII only box drawing style and, more
+    # problematically, drops the header text.  Force terminal mode so that the
+    # exported table is stable and always uses the Unicode box characters the
+    # tests expect.
+    console = Console(file=StringIO(), record=True, force_terminal=True)
     console.print(table)
 
     gross_buy = sum(t.notional for t in (trades or []) if t.action == "BUY")
