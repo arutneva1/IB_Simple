@@ -143,35 +143,47 @@ async def submit_batch(
             try:
                 loop = asyncio.get_running_loop()
                 deadline = loop.time() + timeout
+                poll_interval = min(0.05, timeout)
+                client_obj = getattr(ib, "client", None)
+                trade_event = getattr(ib_trade, "commissionReportEvent", None)
+                client_event = getattr(client_obj, "commissionReportEvent", None)
+
                 while True:
                     fills = getattr(ib_trade, "fills", []) or []
-                    exec_ids = {
-                        getattr(getattr(f, "execution", None), "execId", "")
-                        for f in fills
-                    } - {""}
                     _record_reports()
                     remaining = deadline - loop.time()
                     if remaining <= 0:
                         break
-                    ib_trade.commissionReportEvent.clear()
-                    try:
-                        await asyncio.wait_for(
-                            ib_trade.commissionReportEvent.wait(),
-                            timeout=remaining,
+
+                    wait_timeout = min(poll_interval, remaining)
+                    if trade_event is not None:
+                        trade_event.clear()
+                    if client_event is not None:
+                        client_event.clear()
+                    events = [
+                        asyncio.create_task(e.wait())
+                        for e in (trade_event, client_event)
+                        if e is not None
+                    ]
+                    if events:
+                        done, pending = await asyncio.wait(
+                            events,
+                            timeout=wait_timeout,
+                            return_when=asyncio.FIRST_COMPLETED,
                         )
-                    except asyncio.TimeoutError:
-                        _record_reports()
-                        break
+                        for p in pending:
+                            p.cancel()
+                        if done:
+                            deadline = loop.time() + timeout
                     else:
-                        deadline = loop.time() + timeout
+                        await asyncio.sleep(wait_timeout)
             except Exception:  # pragma: no cover - defensive
                 fills = getattr(ib_trade, "fills", []) or []
             else:
                 fills = getattr(ib_trade, "fills", []) or []
 
             exec_ids = {
-                getattr(getattr(f, "execution", None), "execId", "")
-                for f in fills
+                getattr(getattr(f, "execution", None), "execId", "") for f in fills
             } - {""}
             if exec_ids and not exec_commissions:
                 log.warning(
