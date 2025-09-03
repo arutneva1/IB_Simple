@@ -115,8 +115,7 @@ async def _run(args: argparse.Namespace) -> None:
             return
 
     trade_list = [
-        {"symbol": t.symbol, "action": t.action, "quantity": t.quantity}
-        for t in trades
+        {"symbol": t.symbol, "action": t.action, "quantity": t.quantity} for t in trades
     ]
 
     print("[blue]Submitting batch market orders[/blue]")
