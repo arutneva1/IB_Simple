@@ -141,9 +141,7 @@ async def submit_batch(
                     return
                 exec_id = getattr(report, "execId", "")
                 if exec_id and exec_id not in exec_commissions:
-                    exec_commissions[exec_id] = abs(
-                        getattr(report, "commission", 0.0)
-                    )
+                    exec_commissions[exec_id] = abs(getattr(report, "commission", 0.0))
 
             try:
                 fills = getattr(ib_trade, "fills", []) or []
