@@ -128,6 +128,7 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         "fill_price",
         "fill_timestamp",
         "commission",
+        "commission_placeholder",
         "status",
         "error",
         "notes",
@@ -144,6 +145,7 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
     assert float(row["fill_price"]) == pytest.approx(100.0)
     assert row["fill_timestamp"] == ts.isoformat()
     assert float(row["commission"]) == pytest.approx(1.23)
+    assert row["commission_placeholder"] == "False"
 
     messages = [rec.message for rec in caplog.records]
     assert f"Pre-trade report written to {pre_path}" in messages
