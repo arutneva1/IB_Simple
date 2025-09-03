@@ -92,7 +92,11 @@ def test_run_fetches_prices_only_for_trades(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
-        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False,
+        config="cfg",
+        csv="csv",
+        dry_run=True,
+        yes=False,
+        read_only=False,
     )
     asyncio.run(rebalance._run(args))
 
@@ -113,7 +117,11 @@ def test_run_aborts_when_trade_price_unavailable(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     args = argparse.Namespace(
-        config="cfg", csv="csv", dry_run=True, yes=False, read_only=False,
+        config="cfg",
+        csv="csv",
+        dry_run=True,
+        yes=False,
+        read_only=False,
     )
     with pytest.raises(SystemExit):
         asyncio.run(rebalance._run(args))
@@ -123,4 +131,3 @@ def test_run_aborts_when_trade_price_unavailable(
     assert pre == {"AAA": 10.0}
     assert fetched == ["AAA"]
     assert sizing == {}
-
