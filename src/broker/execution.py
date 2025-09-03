@@ -121,10 +121,53 @@ async def submit_batch(
             )
             status = await _wait(ib_trade, st.symbol)
         if ib_trade is not None:
+            timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
             try:
-                await asyncio.wait_for(ib_trade.commissionReportEvent.wait(), timeout=1)
-            except Exception:
-                pass
+                fills = getattr(ib_trade, "fills", []) or []
+                last_counts = (
+                    len(fills),
+                    sum(
+                        1
+                        for f in fills
+                        if getattr(f, "commissionReport", None) is not None
+                    ),
+                )
+                while True:
+                    ib_trade.commissionReportEvent.clear()
+                    try:
+                        await asyncio.wait_for(
+                            ib_trade.commissionReportEvent.wait(), timeout=timeout
+                        )
+                    except asyncio.TimeoutError:
+                        fills = getattr(ib_trade, "fills", []) or []
+                        counts = (
+                            len(fills),
+                            sum(
+                                1
+                                for f in fills
+                                if getattr(f, "commissionReport", None) is not None
+                            ),
+                        )
+                        if counts == last_counts:
+                            if counts[1] == 0:
+                                log.warning(
+                                    "No commission reports received for order %s",
+                                    getattr(ib_trade.order, "orderId", None),
+                                )
+                            break
+                        last_counts = counts
+                    else:
+                        fills = getattr(ib_trade, "fills", []) or []
+                        last_counts = (
+                            len(fills),
+                            sum(
+                                1
+                                for f in fills
+                                if getattr(f, "commissionReport", None) is not None
+                            ),
+                        )
+            except Exception:  # pragma: no cover - defensive
+                fills = getattr(ib_trade, "fills", []) or []
         filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
         avg_price = (
             getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
