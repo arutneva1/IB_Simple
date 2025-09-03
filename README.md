@@ -55,14 +55,24 @@ Generate a table of drift metrics:
 python -m src.core.preview
 ```
 
+The main rebalancer prints a batch summary preview before submitting trades.
+
 ### Dry run
 Launch IB Gateway or Trader Workstation, then run:
 
 ```bash
 python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
 ```
+Displays the batch summary and exits without placing orders.
 
 ### Confirmed execution
 ```bash
 python src/rebalance.py --confirm --config config/settings.ini --csv data/portfolios.csv
 ```
+Shows the same preview and waits for `y` before trading.
+
+### Read-only guard
+```bash
+python src/rebalance.py --read-only --config config/settings.ini --csv data/portfolios.csv
+```
+Forces preview-only mode even if `--confirm` is used.

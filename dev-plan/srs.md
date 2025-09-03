@@ -119,8 +119,8 @@ log_level = INFO
    - `allow_fractional` (generally false) → round to whole shares.  
    - **Leverage guard**: size partially so post-trade **gross exposure / NetLiq ≤ max_leverage**. If cannot meet, reduce orders proportionally by drift priority list.
 9. **Preview** (no orders yet):
-   - Produce a **trade plan** table with **% drift and $ drift**, target weights, estimated $ values, estimated post-trade weights.  
-   - Show **batch summary** (gross to buy/sell, est. exposure, leverage).  
+   - Produce a **trade plan** table with **% drift and $ drift**, target weights, estimated $ values, estimated post-trade weights.
+   - Show a **batch summary** (gross to buy/sell, est. exposure, leverage) before prompting.
    - Prompt **Y/N** at CLI.
 10. **Execute** (on `Y`):
     - Submit **batch market orders** with preferred **algo** (adaptive or midprice) when supported by IBKR; otherwise **fallback to plain market**.
@@ -130,9 +130,11 @@ log_level = INFO
 12. **Exit**.
 
 ### 4.2 Command-line UX
-- `python rebalance.py --confirm` → runs full flow with preview and Y/N prompt.  
-- `python rebalance.py --dry-run` → runs through preview only; **no orders** possible (overrides `--confirm`).  
-- `python rebalance.py --read-only` → enforce no trading even after Y (useful while testing).
+All runs display the batch-summary preview before asking for confirmation.
+
+- `python rebalance.py --confirm` → preview then optional order submission after Y/N prompt.
+- `python rebalance.py --dry-run` → preview only; **no orders** possible (overrides `--confirm`).
+- `python rebalance.py --read-only` → safety flag; shows preview but never trades even after Y.
 
 **Confirmation prompt example:**
 ```
@@ -260,7 +262,7 @@ Proceed? [y/N]:
 5. **Prioritization & leverage**
    - Greedy by |drift| when cash constrained; scaling to satisfy `max_leverage`.
 6. **Preview**
-   - Shows % and $ drift; batch summary; Y/N prompt; `--dry-run` prints only.
+   - Shows % and $ drift; batch summary; Y/N prompt; `--dry-run` and `--read-only` print only.
 7. **Execution**
    - Algo market OK; fallback to plain market when algo unavailable.
 8. **Reporting**

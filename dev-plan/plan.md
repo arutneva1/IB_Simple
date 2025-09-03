@@ -185,17 +185,18 @@ _Status: Implemented in [`src/core/pricing.py`](../src/core/pricing.py)._
 ---
 
 #### Phase C4: Preview & CLI confirmation
+_Status: Completed with batch-summary preview._
 **Deliverables**
-- `src/core/preview.py` renders a tabular **trade plan** (drift in % and $), batch summary (gross buy/sell, pre/post gross exposure & leverage)
+- `src/core/preview.py` renders a tabular **trade plan** (drift in % and $) and batch summary (gross buy/sell, pre/post gross exposure & leverage) before confirmation
 - `rebalance.py` orchestrates: load → snapshot → targets → drift → sizing → preview → **CLI Y/N**
-- `--dry-run` flag (no trading), `--read-only` guard
+- CLI flags: `--dry-run` (preview only), `--confirm` (execute after prompt), `--read-only` guard
 
 **Tests**
-- [ ] End-to-end dry-run on sample data  
-- [ ] Output formatting stable for CSV reporter
+- [x] End-to-end dry-run on sample data
+- [x] Output formatting stable for CSV reporter
 
 **Acceptance**
-- Preview shows correct math; prompt works as specified
+- Batch summary preview shows correct math; prompt works as specified
 
 ---
 
