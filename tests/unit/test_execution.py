@@ -44,10 +44,10 @@ def test_rejected_order_returns_status(monkeypatch):
     ib = SimpleNamespace()
     monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
-    async def fake_place(*_a, **_k):
+    def fake_place(*_a, **_k):
         return DummyTrade(status="Rejected")
 
-    monkeypatch.setattr(ib, "placeOrderAsync", fake_place, raising=False)
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
     cfg = _base_cfg()
@@ -68,7 +68,7 @@ def test_partial_fill_reports_final_quantity(monkeypatch):
     ib = SimpleNamespace()
     monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
-    async def fake_place(*_a, **_k):
+    def fake_place(*_a, **_k):
         trade = DummyTrade(status="Submitted")
 
         async def updates():
@@ -84,7 +84,7 @@ def test_partial_fill_reports_final_quantity(monkeypatch):
         asyncio.create_task(updates())
         return trade
 
-    monkeypatch.setattr(ib, "placeOrderAsync", fake_place, raising=False)
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 10.0, 100.0)
     cfg = _base_cfg()
@@ -100,14 +100,14 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
 
     calls = {"count": 0}
 
-    async def fake_place(*_a, **_k):
+    def fake_place(*_a, **_k):
         if calls["count"] == 0:
             calls["count"] += 1
             return DummyTrade(status="Rejected")
         calls["count"] += 1
         return DummyTrade(status="Filled", filled=1.0)
 
-    monkeypatch.setattr(ib, "placeOrderAsync", fake_place, raising=False)
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
     cfg = _base_cfg()

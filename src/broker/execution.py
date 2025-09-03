@@ -77,7 +77,7 @@ async def submit_batch(
         ib_trade = None
         status = ""
         try:
-            ib_trade = await ib.placeOrderAsync(contract, order)
+            ib_trade = ib.placeOrder(contract, order)
             status = await _wait(ib_trade)
         except Exception:  # pragma: no cover - network errors
             status = "Error"
@@ -87,7 +87,7 @@ async def submit_batch(
             and cfg.execution.fallback_plain_market
         ):
             plain = MarketOrder(st.action, st.quantity)
-            ib_trade = await ib.placeOrderAsync(contract, plain)
+            ib_trade = ib.placeOrder(contract, plain)
             status = await _wait(ib_trade)
         return {
             "symbol": st.symbol,
