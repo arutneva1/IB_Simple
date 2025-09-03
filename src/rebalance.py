@@ -82,9 +82,11 @@ async def _run(args: argparse.Namespace) -> None:
     print("[blue]Prioritizing trades[/blue]")
     prioritized = prioritize_by_drift(drifts, cfg)
     print("[blue]Sizing orders[/blue]")
-    trades, *_ = size_orders(prioritized, prices, current["CASH"], cfg)
+    trades, _, _ = size_orders(prioritized, prices, current["CASH"], cfg)
+    pre_gross_exposure = net_liq - current["CASH"]
+    pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
     print("[blue]Rendering preview[/blue]")
-    table = render_preview(prioritized, trades, prices)
+    table = render_preview(prioritized, trades, pre_gross_exposure, pre_leverage)
     print(table)
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")

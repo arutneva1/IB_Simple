@@ -30,26 +30,44 @@ def test_render_sorted_and_filtered() -> None:
         Drift("BBB", 0.0, 0.0, 0.0, 80.0, "SELL"),
         Drift("CCC", 0.0, 0.0, 0.0, 200.0, "SELL"),
     ]
-    prices = {"AAA": 1.0, "BBB": 2.0, "CCC": 3.0}
     cfg = _cfg(100)
 
     prioritized = prioritize_by_drift(drifts, cfg)
-    table = render(prioritized, prices=prices)
+    table = render(prioritized, [], 0.0, 0.0)
 
-    assert "Price" in table
+    assert "Drift %" in table
     assert "BBB" not in table
     assert table.index("CCC") < table.index("AAA")
 
 
-def test_render_shows_quantities() -> None:
+def test_render_shows_quantities_and_notional() -> None:
     drifts = [Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY")]
     prices = {"AAA": 25.0}
     cfg = _cfg(1)
 
     prioritized = prioritize_by_drift(drifts, cfg)
     trades, *_ = size_orders(prioritized, prices, cash=100.0, cfg=cfg)
-    table = render(prioritized, trades, prices)
+    table = render(prioritized, trades, 100.0, 1.0)
 
-    assert "Price" in table
     assert "Qty" in table
+    assert "Notional" in table
     assert "4.00" in table
+    assert "100.00" in table
+
+
+def test_render_batch_summary() -> None:
+    drifts = [
+        Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, 50.0, "SELL"),
+    ]
+    prices = {"AAA": 10.0, "BBB": 5.0}
+    cfg = _cfg(1)
+
+    prioritized = prioritize_by_drift(drifts, cfg)
+    trades, *_ = size_orders(prioritized, prices, cash=200.0, cfg=cfg)
+    table = render(prioritized, trades, 200.0, 1.0)
+
+    assert "Batch Summary" in table
+    assert "Gross Buy" in table
+    assert "Gross Sell" in table
+    assert "Post Leverage" in table
