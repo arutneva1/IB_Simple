@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from src.core.drift import Drift
-from src.core.sizing import SizedTrade, size_orders
+from src.core import Drift, SizedTrade, size_orders
 
 
 def _cfg(

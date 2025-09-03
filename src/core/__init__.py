@@ -4,7 +4,7 @@
 from .drift import Drift, compute_drift
 from .pricing import PricingError, get_price
 
-# Lazy re-export target building utilities for convenient access from ``core``.
+# Lazy re-export additional utilities for convenient access from ``core``.
 
 __all__ = [
     "get_price",
@@ -13,6 +13,8 @@ __all__ = [
     "Drift",
     "build_targets",
     "TargetError",
+    "size_orders",
+    "SizedTrade",
 ]
 
 
@@ -21,4 +23,8 @@ def __getattr__(name: str):
         from . import targets
 
         return getattr(targets, name)
+    if name in {"size_orders", "SizedTrade"}:
+        from . import sizing
+
+        return getattr(sizing, name)
     raise AttributeError(name)
