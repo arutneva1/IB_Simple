@@ -219,15 +219,18 @@ _Status: Completed with batch-summary preview._
 
 #### Phase D2: Reporting & logging
 **Deliverables**
-- `src/io/reporting.py` writes **timestamped CSV** per run under `reports/` with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`, `status`, `error`, `notes` (planned → submitted → filled)
+- `src/io/reporting.py` writes **timestamped CSV** reports per run under `reports/`:
+  - **pre-trade** with columns `timestamp_run`, `account_id`, `symbol`, `is_cash`, `target_wt_pct`, `current_wt_pct`, `drift_pct`, `drift_usd`, `action`, `qty_shares`, `est_price`, `order_type`, `algo`, `est_value_usd`, `pre_gross_exposure`, `post_gross_exposure`, `pre_leverage`, `post_leverage`
+  - **post-trade** with columns `timestamp_run`, `account_id`, `symbol`, `qty_shares`, `fill_price`, `fill_value_usd`, `post_gross_exposure`, `post_leverage`, `status`, `error`, `notes`
 - Unified logs (INFO/ERROR) embedded in main log
 
 **Tests**
-- [ ] CSV schema round-trips in tests
+- [ ] Pre-trade and post-trade CSV schemas round-trip in tests
+- [ ] Post-trade rows reflect executed orders (qty, fill price)
 - [ ] Log messages include IBKR connection events, pacing/backoff notices, validation failures, order states, and final run summaries
 
 **Acceptance**
-- A full run generates a CSV with expected rows/columns and statuses
+- A full run generates both pre-trade and post-trade CSVs with expected rows/columns and correct post-trade content
 
 ---
 
