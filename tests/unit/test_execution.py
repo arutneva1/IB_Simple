@@ -12,7 +12,9 @@ from src.core.sizing import SizedTrade
 
 class DummyTrade:
     def __init__(self, status="Submitted", filled=0.0):
-        self.orderStatus = SimpleNamespace(status=status, filled=filled, avgFillPrice=0.0)
+        self.orderStatus = SimpleNamespace(
+            status=status, filled=filled, avgFillPrice=0.0
+        )
         self.order = SimpleNamespace(orderId=1)
         self.updateEvent = asyncio.Event()
 
