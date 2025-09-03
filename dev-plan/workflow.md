@@ -139,10 +139,10 @@ trigger_mode = per_holding
 per_holding_band_bps = 50
 portfolio_total_band_bps = 100
 min_order_usd = 500
-cash_buffer_pct = 1
+cash_buffer_pct = 0.01
 allow_fractional = false
 max_leverage = 1.50
-maintenance_buffer_pct = 10
+maintenance_buffer_pct = 0.10
 prefer_rth = true
 
 [pricing]
