@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from io import StringIO
 
+from rich import box
 from rich.console import Console
 from rich.table import Table
-from rich import box
 
 from .drift import Drift
 from .sizing import SizedTrade
