@@ -1,14 +1,18 @@
 import asyncio
+import csv
 import logging
 from datetime import datetime
 from types import SimpleNamespace
+from typing import Any
 from zoneinfo import ZoneInfo
 
 import pytest
 
 from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRError
+from src.core.drift import Drift
 from src.core.sizing import SizedTrade
+from src.io.reporting import write_post_trade_report
 
 
 class AwaitableEvent(asyncio.Event):
@@ -23,6 +27,13 @@ class DummyTrade:
         )
         self.order = SimpleNamespace(orderId=1)
         self.statusEvent = AwaitableEvent()
+
+
+class DummyTradeWithCommission(DummyTrade):
+    def __init__(self, status: str = "Submitted", filled: float = 0.0):
+        super().__init__(status=status, filled=filled)
+        self.fills: list[Any] = []
+        self.commissionReportEvent = AwaitableEvent()
 
 
 class FakeClient:
@@ -169,3 +180,69 @@ def test_rth_guard_raises_outside_hours(monkeypatch):
     cfg = _base_cfg(prefer_rth=True)
     with pytest.raises(IBKRError):
         asyncio.run(submit_batch(client, [], cfg))
+
+
+def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
+    """Multiple fills with delayed commission reports are summed correctly."""
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission()
+
+        async def updates() -> None:
+            fill1 = SimpleNamespace(
+                execution=SimpleNamespace(
+                    time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=None,
+            )
+            fill2 = SimpleNamespace(
+                execution=SimpleNamespace(
+                    time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
+                ),
+                commissionReport=None,
+            )
+            trade.fills.extend([fill1, fill2])
+            trade.orderStatus.status = "Filled"
+            trade.orderStatus.filled = 10.0
+            trade.statusEvent.set()
+            await asyncio.sleep(0)
+            fill1.commissionReport = SimpleNamespace(commission=-0.5)
+            fill2.commissionReport = SimpleNamespace(commission=-0.7)
+            trade.commissionReportEvent.set()
+
+        asyncio.create_task(updates())
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    sized_trade = SizedTrade("AAA", "BUY", 10.0, 1000.0)
+    cfg = SimpleNamespace(
+        rebalance=SimpleNamespace(prefer_rth=False),
+        execution=SimpleNamespace(
+            algo_preference="none", fallback_plain_market=False, order_type="MKT"
+        ),
+    )
+
+    res = asyncio.run(submit_batch(client, [sized_trade], cfg))
+    assert res[0]["commission"] == pytest.approx(1.2)
+
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    ts = datetime(2023, 1, 1)
+    post_path = write_post_trade_report(
+        tmp_path,
+        ts,
+        "ACCT",
+        [drift],
+        [sized_trade],
+        res,
+        9000.0,
+        0.9,
+        10000.0,
+        1.0,
+        cfg,
+    )
+    with post_path.open() as f:
+        row = next(csv.DictReader(f))
+    assert float(row["commission"]) == pytest.approx(1.2)

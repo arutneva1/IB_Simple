@@ -120,6 +120,11 @@ async def submit_batch(
                 st.symbol,
             )
             status = await _wait(ib_trade, st.symbol)
+        if ib_trade is not None:
+            try:
+                await asyncio.wait_for(ib_trade.commissionReportEvent.wait(), timeout=1)
+            except Exception:
+                pass
         filled = getattr(ib_trade.orderStatus, "filled", 0.0) if ib_trade else 0.0
         avg_price = (
             getattr(ib_trade.orderStatus, "avgFillPrice", 0.0) if ib_trade else 0.0
@@ -129,18 +134,17 @@ async def submit_batch(
         if ib_trade is not None:
             try:
                 fills = getattr(ib_trade, "fills", []) or []
-                last_fill = fills[-1] if fills else None
-                if last_fill is not None:
-                    exec_obj = getattr(last_fill, "execution", None)
+                for fill in fills:
+                    exec_obj = getattr(fill, "execution", None)
                     if exec_obj is not None:
                         ts = getattr(exec_obj, "time", None)
                         if ts is not None:
                             fill_time = (
                                 ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
                             )
-                    comm_rep = getattr(last_fill, "commissionReport", None)
+                    comm_rep = getattr(fill, "commissionReport", None)
                     if comm_rep is not None:
-                        commission = getattr(comm_rep, "commission", commission)
+                        commission += abs(getattr(comm_rep, "commission", 0.0))
                 if fill_time is None:
                     ts_attr = getattr(
                         ib_trade.orderStatus, "completedTime", None
