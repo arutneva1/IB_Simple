@@ -85,6 +85,7 @@ def test_rejected_order_returns_status(monkeypatch):
             "fill_time": None,
             "commission": 0.0,
             "commission_placeholder": False,
+            "missing_exec_ids": [],
         }
     ]
 
@@ -198,13 +199,13 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
         async def updates() -> None:
             fill1 = SimpleNamespace(
                 execution=SimpleNamespace(
-                    time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                    execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
                 ),
                 commissionReport=None,
             )
             fill2 = SimpleNamespace(
                 execution=SimpleNamespace(
-                    time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
+                    execId="2", time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
                 ),
                 commissionReport=None,
             )
@@ -213,8 +214,14 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
             trade.orderStatus.filled = 10.0
             trade.statusEvent.set()
             await asyncio.sleep(0)
-            fill1.commissionReport = SimpleNamespace(commission=-0.5)
-            fill2.commissionReport = SimpleNamespace(commission=-0.7)
+            fill1.commissionReport = SimpleNamespace(execId="1", commission=-0.5)
+            trade.commissionReport = fill1.commissionReport
+            trade.commissionReports = [fill1.commissionReport]
+            trade.commissionReportEvent.set()
+            await asyncio.sleep(0)
+            fill2.commissionReport = SimpleNamespace(execId="2", commission=-0.7)
+            trade.commissionReport = fill2.commissionReport
+            trade.commissionReports.append(fill2.commissionReport)
             trade.commissionReportEvent.set()
 
         asyncio.create_task(updates())
@@ -269,7 +276,7 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
         async def updates() -> None:
             fill1 = SimpleNamespace(
                 execution=SimpleNamespace(
-                    time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                    execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
                 ),
                 commissionReport=None,
             )
@@ -278,16 +285,20 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
             trade.orderStatus.filled = 5.0
             trade.statusEvent.set()
             await asyncio.sleep(0)
-            fill1.commissionReport = SimpleNamespace(commission=-0.5)
+            fill1.commissionReport = SimpleNamespace(execId="1", commission=-0.5)
+            trade.commissionReport = fill1.commissionReport
+            trade.commissionReports = [fill1.commissionReport]
             trade.commissionReportEvent.set()
             await asyncio.sleep(0)
             fill2 = SimpleNamespace(
                 execution=SimpleNamespace(
-                    time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
+                    execId="2", time=datetime(2023, 1, 1, 0, 1, tzinfo=ZoneInfo("UTC"))
                 ),
-                commissionReport=SimpleNamespace(commission=-0.7),
+                commissionReport=SimpleNamespace(execId="2", commission=-0.7),
             )
             trade.fills.append(fill2)
+            trade.commissionReport = fill2.commissionReport
+            trade.commissionReports.append(fill2.commissionReport)
             trade.commissionReportEvent.set()
 
         asyncio.create_task(updates())
@@ -311,7 +322,7 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
         trade = DummyTradeWithCommission(status="Filled", filled=5.0)
         fill = SimpleNamespace(
             execution=SimpleNamespace(
-                time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+                execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
             ),
             commissionReport=SimpleNamespace(execId="", commission=0.0),
         )
@@ -327,4 +338,37 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
     assert res[0]["commission"] == pytest.approx(0.0)
     assert res[0]["commission_placeholder"] is True
     messages = [rec.message for rec in caplog.records]
-    assert any("placeholder commission report" in m for m in messages)
+    assert any("No commission report for execId" in m for m in messages)
+
+
+def test_trade_level_commission_report(monkeypatch):
+    """Trade-level commission reports are applied even if fills are placeholders."""
+
+    ib = SimpleNamespace()
+    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
+
+    def fake_place(*_a, **_k):
+        trade = DummyTradeWithCommission(status="Filled", filled=5.0)
+        fill = SimpleNamespace(
+            execution=SimpleNamespace(
+                execId="1", time=datetime(2023, 1, 1, tzinfo=ZoneInfo("UTC"))
+            ),
+            commissionReport=SimpleNamespace(execId="", commission=0.0),
+        )
+        trade.fills.append(fill)
+
+        async def send_report() -> None:
+            await asyncio.sleep(0)
+            trade.commissionReport = SimpleNamespace(execId="1", commission=-0.5)
+            trade.commissionReportEvent.set()
+
+        asyncio.create_task(send_report())
+        return trade
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
+    cfg = _base_cfg()
+    res = asyncio.run(submit_batch(client, [trade], cfg))
+    assert res[0]["commission"] == pytest.approx(0.5)
+    assert res[0]["commission_placeholder"] is False

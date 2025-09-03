@@ -151,3 +151,40 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
     messages = [rec.message for rec in caplog.records]
     assert f"Pre-trade report written to {pre_path}" in messages
     assert f"Post-trade report written to {post_path}" in messages
+
+
+def test_post_trade_missing_execid_notes(tmp_path):
+    ts = datetime(2023, 1, 1)
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    trades = [SizedTrade("AAA", "BUY", 10.0, 1000.0)]
+    results = [
+        {
+            "symbol": "AAA",
+            "status": "Filled",
+            "filled": 10.0,
+            "avg_fill_price": 100.0,
+            "commission": 1.0,
+            "commission_placeholder": True,
+            "missing_exec_ids": ["abc", "def"],
+        }
+    ]
+    prices = {"AAA": 100.0}
+    cfg = _cfg()
+    path = write_post_trade_report(
+        tmp_path,
+        ts,
+        "ACCT",
+        [drift],
+        trades,
+        results,
+        prices,
+        9000.0,
+        0.9,
+        10000.0,
+        1.0,
+        cfg,
+    )
+    with path.open() as f:
+        row = next(csv.DictReader(f))
+    assert row["commission_placeholder"] == "True"
+    assert row["notes"] == "missing commission execIds: abc, def"
