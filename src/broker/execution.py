@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import time
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from ib_async.contract import Stock
@@ -36,7 +36,7 @@ async def submit_batch(
         Structured execution results for each trade.
     """
 
-    ib = client._ib
+    ib = cast(Any, client._ib)
 
     if cfg.rebalance.prefer_rth:
         try:
