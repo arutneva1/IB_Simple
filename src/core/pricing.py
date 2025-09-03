@@ -14,6 +14,7 @@ data.  A :class:`PricingError` is raised when no price can be determined.
 from __future__ import annotations
 
 from typing import Any
+import math
 
 from ib_async.contract import Stock
 
@@ -77,7 +78,7 @@ async def get_price(
         tickers = await ib.reqTickersAsync(contract, snapshot=True)
         price = getattr(tickers[0], price_source, None) if tickers else None
 
-    if price is None:
-        raise PricingError(f"No price available for {symbol} using {price_source}")
+    if price is None or not math.isfinite(price):
+        raise PricingError(f"Invalid price for {symbol} using {price_source}")
 
     return float(price)
