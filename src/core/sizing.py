@@ -15,6 +15,7 @@ can be used for preview purposes.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
@@ -109,6 +110,8 @@ def size_orders(
             price = prices[d.symbol]
         except KeyError as exc:  # pragma: no cover - defensive
             raise KeyError(f"missing price for {d.symbol}") from exc
+        if not math.isfinite(price):
+            raise ValueError(f"non-finite price for {d.symbol}: {price}")
 
         notional = abs(d.drift_usd)
         if d.action == "BUY":
@@ -116,6 +119,8 @@ def size_orders(
             if spend <= 0:
                 continue
             qty = spend / price
+            if not math.isfinite(qty):
+                raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
             if not allow_fractional:
                 qty = float(int(qty))
                 spend = qty * price
@@ -126,6 +131,8 @@ def size_orders(
             total_buy += spend
         elif d.action == "SELL":
             qty = notional / price
+            if not math.isfinite(qty):
+                raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
             if not allow_fractional:
                 qty = float(int(qty))
                 notional = qty * price
@@ -149,7 +156,11 @@ def size_orders(
             reduction = min(trade.notional, excess)
             new_notional = trade.notional - reduction
             price = prices[trade.symbol]
+            if not math.isfinite(price):
+                raise ValueError(f"non-finite price for {trade.symbol}: {price}")
             qty = new_notional / price
+            if not math.isfinite(qty):
+                raise ValueError(f"non-finite quantity for {trade.symbol}: {qty}")
             if not allow_fractional:
                 qty = float(int(qty))
                 new_notional = qty * price
