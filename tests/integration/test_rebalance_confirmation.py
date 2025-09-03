@@ -44,10 +44,8 @@ class DummyIBKRClient:
         }
 
 
-async def fake_get_price(
-    ib, symbol, *, price_source, fallback_to_snapshot
-):  # noqa: ARG001
-    return 100.0
+async def fake_fetch_price(ib, symbol, cfg):  # noqa: ARG001
+    return symbol, 100.0
 
 
 async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001, D401
@@ -60,7 +58,7 @@ def test_prompt_default(
     """Default execution prompts and aborts when the user declines."""
 
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
     def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
@@ -90,13 +88,26 @@ def test_yes_skips_prompt(
     """The --yes flag suppresses the prompt and proceeds."""
 
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
     def fail_input(*args, **kwargs) -> str:  # pragma: no cover - should not be called
         raise AssertionError("input() should not be invoked when --yes is used")
 
     monkeypatch.setattr("builtins.input", fail_input)
+
+    async def fake_submit_batch(client, trades, cfg):  # noqa: ARG001
+        return [
+            {
+                "symbol": t.symbol,
+                "status": "Filled",
+                "filled": t.quantity,
+                "avg_fill_price": 0.0,
+            }
+            for t in trades
+        ]
+
+    monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
 
     args = Namespace(
         config="config/settings.ini",

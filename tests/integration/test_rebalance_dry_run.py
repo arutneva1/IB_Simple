@@ -40,10 +40,8 @@ class DummyIBKRClient:
         }
 
 
-async def fake_get_price(
-    ib, symbol, *, price_source, fallback_to_snapshot
-):  # noqa: ARG001
-    return 100.0
+async def fake_fetch_price(ib, symbol, cfg):  # noqa: ARG001
+    return symbol, 100.0
 
 
 async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001, D401
@@ -52,7 +50,7 @@ async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001
 
 def test_rebalance_dry_run(monkeypatch, capsys):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
-    monkeypatch.setattr(rebalance, "get_price", fake_get_price)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
     args = Namespace(
