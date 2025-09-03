@@ -9,10 +9,14 @@ current account state in a simplified dictionary form.
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import asdict, dataclass
 from typing import Any, Dict, List
 
 from ib_async import IB, Position
+
+
+log = logging.getLogger(__name__)
 
 
 class IBKRError(Exception):
@@ -42,12 +46,22 @@ class IBKRClient:
         """
 
         for attempt in range(2):
+            log.info(
+                "Attempt %d to connect to IBKR at %s:%s with client id %s",
+                attempt + 1,
+                host,
+                port,
+                client_id,
+            )
             try:
                 await self._ib.connectAsync(host, port, clientId=client_id)
+                log.info("Connected to IBKR on attempt %d", attempt + 1)
                 return
             except Exception as exc:  # pragma: no cover - ib connection errors
                 if attempt:
+                    log.error("Failed to connect to IBKR: %s", exc)
                     raise IBKRError("Failed to connect to IBKR") from exc
+                log.warning("Connect attempt %d failed: %s", attempt + 1, exc)
                 await asyncio.sleep(0.5)
 
     async def disconnect(self, host: str, port: int, client_id: int) -> None:
@@ -59,12 +73,16 @@ class IBKRClient:
         """
 
         for attempt in range(2):
+            log.info("Attempt %d to disconnect from IBKR", attempt + 1)
             try:
                 self._ib.disconnect()
+                log.info("Disconnected from IBKR on attempt %d", attempt + 1)
                 return
             except Exception as exc:  # pragma: no cover - ib disconnection errors
                 if attempt:
+                    log.error("Failed to disconnect from IBKR: %s", exc)
                     raise IBKRError("Failed to disconnect from IBKR") from exc
+                log.warning("Disconnect attempt %d failed: %s", attempt + 1, exc)
                 await asyncio.sleep(0.5)
 
     async def snapshot(self, account_id: str) -> Dict[str, Any]:
@@ -75,6 +93,7 @@ class IBKRClient:
         """
 
         try:
+            log.info("Starting account snapshot for %s", account_id)
             positions: List[Position] = await self._ib.reqPositionsAsync()
             usd_positions = [
                 {
@@ -109,7 +128,14 @@ class IBKRClient:
             snapshot = Snapshot(
                 positions=usd_positions, cash=cash_usd, net_liq=net_liq_usd
             )
+            log.info(
+                "Snapshot complete: %d USD positions, cash %.2f, net_liq %.2f",
+                len(usd_positions),
+                cash_usd,
+                net_liq_usd,
+            )
             return asdict(snapshot)
 
         except Exception as exc:  # pragma: no cover - snapshot errors
+            log.exception("Failed to create account snapshot for %s", account_id)
             raise IBKRError("Failed to create account snapshot") from exc
