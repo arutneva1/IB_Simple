@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, TypeVar, Union
+from typing import Any, Awaitable, Callable, TypeVar, Union, cast
 
 from .errors import IBKRError
 
@@ -39,8 +39,8 @@ async def retry_async(
         try:
             result = func(*args)
             if asyncio.iscoroutine(result):
-                result = await result
-            return result
+                result = await cast(Awaitable[T], result)
+            return cast(T, result)
         except Exception as exc:  # pragma: no cover - network errors
             if attempt == retries:
                 log.error("%s failed after %d attempts: %s", action, attempt, exc)
