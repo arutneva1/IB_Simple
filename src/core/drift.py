@@ -7,9 +7,9 @@ records drive later sizing and execution logic.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Mapping
-import logging
 
 
 @dataclass(frozen=True)

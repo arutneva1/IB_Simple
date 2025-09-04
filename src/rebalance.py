@@ -170,9 +170,7 @@ async def _run(args: argparse.Namespace) -> None:
                 post_leverage,
                 cfg,
             )
-            logging.info(
-                "Pre-trade report for %s written to %s", account_id, pre_path
-            )
+            logging.info("Pre-trade report for %s written to %s", account_id, pre_path)
             print("[blue]Rendering preview[/blue]")
             logging.info("Rendering preview for %s", account_id)
             table = render_preview(
