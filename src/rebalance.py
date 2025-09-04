@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -307,7 +308,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     return failures
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="IBKR ETF Rebalancer (scaffold)")
     parser.add_argument(
         "--config", default="config/settings.ini", help="Path to settings file"
@@ -332,7 +333,7 @@ def main() -> None:
         action="store_true",
         help="Force read-only mode; block order submission",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv if argv is not None else [])
 
     try:
         failures = asyncio.run(_run(args))
@@ -349,4 +350,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
