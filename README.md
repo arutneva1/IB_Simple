@@ -41,6 +41,7 @@ section:
 [accounts]
 ids = DU111111, DU222222
 confirm_mode = per_account        ; per_account | global
+pacing_sec = 1                    ; seconds to pause between accounts
 ```
 
 When present, this block takes precedence over the legacy `[ibkr] account_id`.
@@ -50,6 +51,8 @@ runtime via `--confirm-mode`:
 
 * `per_account` (default) previews and confirms each account separately.
 * `global` shows all account previews first, then prompts once for the batch.
+
+`pacing_sec` throttles between accounts by pausing for the specified number of seconds.
 
 Example forcing a global prompt:
 
