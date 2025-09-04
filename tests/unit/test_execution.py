@@ -255,6 +255,7 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
         [sized_trade],
         res,
         {"AAA": 100.0},
+        10000.0,
         9000.0,
         0.9,
         10000.0,
