@@ -87,6 +87,7 @@ def size_orders(
     trades: list[SizedTrade] = []
     total_buy = 0.0
     total_sell = 0.0
+    unmet_buys: list[tuple[str, float]] = []
 
     for d in drifts:
         if d.symbol == "CASH":
@@ -100,20 +101,22 @@ def size_orders(
 
         notional = abs(d.drift_usd)
         if d.action == "BUY":
-            spend = min(notional, max(0.0, available))
-            if spend <= 0:
-                continue
-            qty = spend / price
+            # Greedy spend limited by current availability.
+            spend_cap = min(notional, max(0.0, available))
+            qty = spend_cap / price if spend_cap > 0 else 0.0
             if not math.isfinite(qty):
                 raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
             if not allow_fractional:
                 qty = float(int(qty))
-                spend = qty * price
-            if spend < min_order_usd:
+                spend_cap = qty * price
+            if spend_cap < min_order_usd or qty == 0:
+                unmet_buys.append((d.symbol, notional))
                 continue
-            trades.append(SizedTrade(d.symbol, "BUY", qty, spend))
-            available -= spend
-            total_buy += spend
+            trades.append(SizedTrade(d.symbol, "BUY", qty, spend_cap))
+            available -= spend_cap
+            total_buy += spend_cap
+            if spend_cap < notional:
+                unmet_buys.append((d.symbol, notional - spend_cap))
         elif d.action == "SELL":
             qty = notional / price
             if not math.isfinite(qty):
@@ -126,6 +129,35 @@ def size_orders(
             trades.append(SizedTrade(d.symbol, "SELL", qty, notional))
             available += notional
             total_sell += notional
+
+    # If later sells freed cash, allocate it across previously unmet buys
+    # proportionally to their missing notional.
+    if available > 0 and unmet_buys:
+        total_unmet = sum(miss for _sym, miss in unmet_buys)
+        allocatable = min(available, total_unmet)
+        additional: list[SizedTrade] = []
+        for symbol, miss in unmet_buys:
+            portion = allocatable * (miss / total_unmet)
+            if portion <= 0:
+                continue
+            price = prices[symbol]
+            if not math.isfinite(price):
+                raise ValueError(f"non-finite price for {symbol}: {price}")
+            qty = portion / price
+            if not math.isfinite(qty):
+                raise ValueError(f"non-finite quantity for {symbol}: {qty}")
+            if not allow_fractional:
+                qty = float(int(qty))
+                portion = qty * price
+            if portion < min_order_usd or qty == 0:
+                continue
+            additional.append(SizedTrade(symbol, "BUY", qty, portion))
+
+        if additional:
+            added_notional = sum(t.notional for t in additional)
+            available -= added_notional
+            total_buy += added_notional
+            trades.extend(additional)
 
     gross_exposure = (net_liq - cash) + total_buy - total_sell
     leverage = gross_exposure / net_liq if net_liq else 0.0
