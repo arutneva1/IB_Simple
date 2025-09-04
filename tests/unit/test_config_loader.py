@@ -9,13 +9,14 @@ from src.io.config_loader import (  # noqa: E402
     IBKR,
     IO,
     Accounts,
-    account_overrides,
     AppConfig,
     ConfigError,
+    ConfirmMode,
     Execution,
     Models,
     Pricing,
     Rebalance,
+    account_overrides,
     load_config,
 )
 
@@ -103,7 +104,7 @@ def test_load_valid_config(config_file: Path) -> None:
         ),
         io=IO(report_dir="reports", log_level="INFO"),
         accounts=Accounts(
-            ids=["ACC1", "ACC2"], confirm_mode="per_account", pacing_sec=0.0
+            ids=["ACC1", "ACC2"], confirm_mode=ConfirmMode.PER_ACCOUNT, pacing_sec=0.0
         ),
     )
     assert cfg == expected

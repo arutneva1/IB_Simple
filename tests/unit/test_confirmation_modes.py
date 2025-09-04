@@ -8,6 +8,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.rebalance as rebalance
+from src.io import ConfirmMode
 
 
 class DummyClient:
@@ -92,7 +93,7 @@ def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys):
         dry_run=False,
         yes=False,
         read_only=False,
-        confirm_mode="global",
+        confirm_mode=ConfirmMode.GLOBAL.value,
     )
 
     asyncio.run(rebalance._run(args))

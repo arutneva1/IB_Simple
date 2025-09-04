@@ -11,6 +11,7 @@ from .config_loader import (
     Accounts,
     AppConfig,
     ConfigError,
+    ConfirmMode,
     Execution,
     Models,
     Pricing,
@@ -29,6 +30,7 @@ from .reporting import (
 __all__ = [
     "AppConfig",
     "Accounts",
+    "ConfirmMode",
     "ConfigError",
     "Execution",
     "IBKR",

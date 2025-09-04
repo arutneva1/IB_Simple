@@ -13,6 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.io.portfolio_csv as portfolio_csv
 import src.rebalance as rebalance
+from src.io import ConfirmMode
 
 pytestmark = pytest.mark.integration
 
@@ -148,7 +149,7 @@ def test_prompt_global(
         dry_run=False,
         yes=False,
         read_only=False,
-        confirm_mode="global",
+        confirm_mode=ConfirmMode.GLOBAL.value,
     )
 
     asyncio.run(rebalance._run(args))
@@ -191,7 +192,7 @@ def test_yes_skips_prompt_global(
         dry_run=False,
         yes=True,
         read_only=False,
-        confirm_mode="global",
+        confirm_mode=ConfirmMode.GLOBAL.value,
     )
 
     asyncio.run(rebalance._run(args))
