@@ -66,6 +66,28 @@ def test_greedy_fill_under_limited_cash() -> None:
     assert lev == 0.9
 
 
+def test_residual_cash_distributed_proportionally() -> None:
+    """Leftover cash from sells is split among unmet buys proportionally."""
+    net_liq = 1000.0
+    drifts = [
+        _drift("AAA", -100.0, net_liq),
+        _drift("BBB", -200.0, net_liq),
+        _drift("CCC", 300.0, net_liq),
+    ]
+    prices = {"AAA": 10.0, "BBB": 20.0, "CCC": 5.0}
+    cfg = _cfg()
+
+    trades, gross, lev = size_orders(drifts, prices, cash=0.0, net_liq=net_liq, cfg=cfg)
+
+    assert sorted(trades, key=lambda t: t.symbol) == [
+        SizedTrade("AAA", "BUY", 10.0, 100.0),
+        SizedTrade("BBB", "BUY", 10.0, 200.0),
+        SizedTrade("CCC", "SELL", 60.0, 300.0),
+    ]
+    assert gross == 1000.0
+    assert lev == 1.0
+
+
 def test_leverage_scaled_when_exceeding_max() -> None:
     net_liq = 1000.0
     drifts = [_drift("AAA", -100.0, net_liq), _drift("BBB", -100.0, net_liq)]
