@@ -44,6 +44,7 @@ allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 0.10
 trading_hours = rth
+max_passes = 3
 
 [pricing]
 price_source = last
@@ -93,6 +94,7 @@ def test_load_valid_config(config_file: Path) -> None:
             max_leverage=1.50,
             maintenance_buffer_pct=0.10,
             trading_hours="rth",
+            max_passes=3,
         ),
         pricing=Pricing(price_source="last", fallback_to_snapshot=True),
         execution=Execution(
