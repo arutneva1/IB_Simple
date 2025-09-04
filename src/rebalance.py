@@ -15,7 +15,7 @@ from rich import print
 from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRClient
-from src.core.drift import compute_drift, prioritize_by_drift
+from src.core.drift import Drift, compute_drift, prioritize_by_drift
 from src.core.errors import PlanningError
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
@@ -28,6 +28,21 @@ from src.io.reporting import (
     write_post_trade_report,
     write_pre_trade_report,
 )
+from typing import TypedDict
+
+
+class Plan(TypedDict):
+    account_id: str
+    drifts: list[Drift]
+    trades: list[SizedTrade]
+    prices: dict[str, float]
+    current: dict[str, float]
+    net_liq: float
+    pre_gross_exposure: float
+    pre_leverage: float
+    post_gross_exposure: float
+    post_leverage: float
+    table: str
 
 
 async def _fetch_price(ib, symbol: str, cfg) -> tuple[str, float]:
@@ -68,7 +83,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     accounts = cfg.accounts
     assert accounts is not None
     confirm_mode = getattr(accounts, "confirm_mode", "per_account")
-    plans = []
+    plans: list[Plan] = []
     for account_id in accounts.ids:
         trades: list[SizedTrade] = []
         planned_orders = 0
@@ -351,9 +366,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 buy_usd = 0.0
                 sell_usd = 0.0
                 for r in results:
-                    sym = r.get("symbol")
-                    trade = trades_by_symbol.get(sym)
-                    if not trade:
+                    sym_any = r.get("symbol")
+                    if not isinstance(sym_any, str):
+                        continue
+                    matched_trade = trades_by_symbol.get(sym_any)
+                    if matched_trade is None:
                         continue
                     qty_any = r.get("fill_qty")
                     if qty_any is None:
@@ -362,7 +379,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     if price_any is None:
                         price_any = r.get("avg_fill_price", 0.0)
                     value = float(qty_any) * float(price_any)
-                    if trade.action == "BUY":
+                    if matched_trade.action == "BUY":
                         buy_usd += value
                     else:
                         sell_usd += value
@@ -616,9 +633,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 buy_usd = 0.0
                 sell_usd = 0.0
                 for r in results:
-                    sym = r.get("symbol")
-                    trade = trades_by_symbol.get(sym)
-                    if not trade:
+                    sym_any = r.get("symbol")
+                    if not isinstance(sym_any, str):
+                        continue
+                    matched_trade = trades_by_symbol.get(sym_any)
+                    if matched_trade is None:
                         continue
                     qty_any = r.get("fill_qty")
                     if qty_any is None:
@@ -627,7 +646,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     if price_any is None:
                         price_any = r.get("avg_fill_price", 0.0)
                     value = float(qty_any) * float(price_any)
-                    if trade.action == "BUY":
+                    if matched_trade.action == "BUY":
                         buy_usd += value
                     else:
                         sell_usd += value
