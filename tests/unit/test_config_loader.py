@@ -188,6 +188,10 @@ ids = ACC1, ACC2, ACC1 , ACC3
         ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account"
     )
     assert cfg.ibkr.account_id == "ACC1"
+    # Existing fields remain unchanged
+    assert cfg.ibkr.host == "127.0.0.1"
+    assert cfg.models.gltr == 0.20
+    assert cfg.pricing.price_source == "last"
 
 
 def test_accounts_without_ibkr_account_id(tmp_path: Path) -> None:
@@ -288,3 +292,58 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
+
+
+def test_accounts_multiple_ids_whitespace(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids =   ACC1,ACC2  ,  ACC3   
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(
+        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account"
+    )
+    assert cfg.ibkr.account_id == "ACC1"
+    # Existing fields unaffected
+    assert cfg.execution.order_type == "market"
+
+
+def test_accounts_single_id_precedence(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG.replace("account_id = DUA071544", "account_id = SHOULD_IGNORE")
+        + """\
+
+[accounts]
+ids = ONLY
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(ids=["ONLY"], confirm_mode="per_account")
+    assert cfg.ibkr.account_id == "ONLY"
+    assert cfg.rebalance.min_order_usd == 500
+
+
+def test_accounts_unknown_keys_ignored(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = ACC1, ACC2
+unknown = something
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="per_account")
+    assert cfg.ibkr.account_id == "ACC1"
+    assert cfg.io.log_level == "INFO"
