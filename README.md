@@ -188,6 +188,18 @@ reports/rebalance_<timestamp>.log                 # INFO/ERROR log output
 timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_usd,pre_leverage,post_leverage,status,error
 ```
 
+### Operational notes & safeguards
+
+* **Client isolation** – Each account operates under its own IBKR client ID and
+  orders are tagged with the relevant account code so activity for one account
+  cannot leak into another.
+* **Pacing and backoff** – Requests are throttled to respect IBKR pacing limits.
+  The rebalancer backs off and retries when the API signals rate‑limit
+  violations.
+* **Failure exit semantics** – Fatal errors stop the run and exit with a
+  non‑zero status after logging the issue so operators can review the partial
+  state.
+
 ### Order execution module
 `src/broker/execution.py` submits the confirmed trades and supports IBKR's
 Adaptive or Midprice algos via `execution.algo_preference`. Submitted orders
@@ -213,3 +225,9 @@ pytest -q tests/integration/test_execution_paper.py
 
 The test skips if the connection variables are missing or, with
 `rebalance.trading_hours=rth`, when run outside regular trading hours.
+
+## Future Work
+
+Parallel execution or other concurrency features are intentionally left out of
+the v1 scope. The current design processes accounts sequentially to keep
+behavior predictable and easier to audit.
