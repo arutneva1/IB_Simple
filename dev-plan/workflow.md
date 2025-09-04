@@ -2,7 +2,7 @@
 
 **Audience:** You (Julian) and future contributors  
 **Source docs:** SRS (Detailed v1), plan.md (Project Plan)  
-**Goal:** Ship an MVP that **trades live on IBKR paper** with preview/confirm, market orders (adaptive/midprice preferred, fallback plain market), CSV reporting, and CI discipline.
+**Goal:** Ship an MVP that **trades live on IBKR paper** with preview/confirm, market orders (`none`, `adaptive`, or `midprice`; fallback plain market), CSV reporting, and CI discipline.
 
 ---
 
@@ -153,7 +153,7 @@ fallback_to_snapshot = true
 
 [execution]
 order_type = market
-algo_preference = adaptive
+algo_preference = none
 fallback_plain_market = true
 batch_orders = true
 
@@ -374,7 +374,7 @@ Proceed? [y/N]:
 *Runs after the user confirms the preview in Phase C4.*
 
 **Implement** `src/broker/execution.py`
-- Build **market orders**; set algo preference (`adaptive`/`midprice`) where supported; else **fallback to plain market**.
+- Build **market orders**; set `algo_preference` (`none`/`adaptive`/`midprice`) where supported; `none` or unsupported algos **fallback to plain market**.
 - Batch submit; track order IDs; poll until Filled/Rejected/Cancelled.
 - Set `outsideRth=True` when `trading_hours` is `eth`; rely on IBKR for `rth`.
 

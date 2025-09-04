@@ -269,13 +269,13 @@ This project is like a helpful robot that keeps an investment portfolio tidy. It
 
 ### `execution.algo_preference`
 **What it is**
-: Preferred IBKR algo, like `adaptive` or `midprice`.
+: Preferred IBKR algo: `none` for plain market orders, or `adaptive`/`midprice` for IBKR's algos.
 
 **Why it matters**
 : Algos can try to get better prices or faster fills.
 
 **Example with numbers**
-: With `algo_preference = adaptive`, IBKR may slice a 100-share order into smaller pieces automatically.
+: With `algo_preference = adaptive`, IBKR may slice a 100-share order into smaller pieces automatically; with `none`, the order is submitted as a plain market order.
 
 ### `execution.fallback_plain_market`
 **What it is**

@@ -202,7 +202,7 @@ timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_u
 
 ### Order execution module
 `src/broker/execution.py` submits the confirmed trades and supports IBKR's
-Adaptive or Midprice algos via `execution.algo_preference`. Submitted orders
+`none`, Adaptive, or Midprice algos via `execution.algo_preference`. Submitted orders
 are tagged with their account code so Interactive Brokers books them correctly.
 If the selected algo is rejected and `fallback_plain_market` is true, it retries
 with a plain market order. Trading hours are controlled by
