@@ -13,11 +13,7 @@ conda activate ibkr-rebal
 cd path\to\IB_Simple
 pre-commit run --all-files
 pytest -q
-python - <<"PY"
-from src.io import config_loader
-cfg = config_loader.load("config\\settings.ini")
-print(cfg.accounts.ids, cfg.accounts.confirm_mode)
-PY
+python -c "from src.io import load_config; cfg = load_config('config/settings.ini'); print(cfg.accounts.ids, cfg.accounts.confirm_mode)"
 ```
 **What success looks like:**
 - Pre-commit and pytest finish with no errors.
@@ -37,7 +33,7 @@ conda activate ibkr-rebal
 cd path\to\IB_Simple
 pre-commit run --all-files
 pytest -q
-python -m src.rebalance --dry-run --config config\settings.ini --csv data\portfolios.csv
+python -m src.rebalance --dry-run --config config/settings.ini --csv data/portfolios.csv
 ```
 **What success looks like:**
 - Pre-commit and pytest pass.
@@ -56,7 +52,7 @@ conda activate ibkr-rebal
 cd path\to\IB_Simple
 pre-commit run --all-files
 pytest -q
-python -m src.rebalance --config config\settings.ini --csv data\portfolios.csv
+python -m src.rebalance --config config/settings.ini --csv data/portfolios.csv
 ```
 When prompted for each account, type `y` and press Enter.
 After it finishes:
@@ -81,7 +77,7 @@ conda activate ibkr-rebal
 cd path\to\IB_Simple
 pre-commit run --all-files
 pytest -q
-python -m src.rebalance --dry-run --config config\settings.ini --csv data\portfolios.csv
+python -m src.rebalance --dry-run --config config/settings.ini --csv data/portfolios.csv
 ```
 Try again with one fake account ID to see friendly errors.
 
