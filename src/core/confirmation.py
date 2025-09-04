@@ -10,7 +10,6 @@ from src.broker.errors import IBKRError
 from src.broker.ibkr_client import IBKRClient
 from src.core.errors import PlanningError
 from src.core.planner import Plan
-from src.core.sizing import SizedTrade
 from src.io import AppConfig, ConfigError
 
 
@@ -39,7 +38,6 @@ async def confirm_per_account(
     net_liq = plan["net_liq"]
     pre_gross_exposure = plan["pre_gross_exposure"]
     pre_leverage = plan["pre_leverage"]
-    post_gross_exposure = plan["post_gross_exposure"]
     post_leverage = plan["post_leverage"]
     table = plan["table"]
     planned_orders = plan["planned_orders"]
@@ -580,8 +578,6 @@ async def confirm_global(
         drifts = plan["drifts"]
         pre_gross_exposure = plan["pre_gross_exposure"]
         pre_leverage = plan["pre_leverage"]
-        post_gross_exposure = plan["post_gross_exposure"]
-        post_leverage = plan["post_leverage"]
         sell_results = cast(list[dict[str, Any]], plan.get("sell_results", []))
         buy_results = cast(list[dict[str, Any]], plan.get("buy_results", []))
         results = sell_results + buy_results

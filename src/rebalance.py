@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Rebalance CLI entry point."""
+
+from __future__ import annotations
 
 import argparse
 import asyncio
@@ -8,17 +8,16 @@ import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 from rich import print
 
 from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRClient
-from src.core.drift import Drift, compute_drift, prioritize_by_drift
+from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.errors import PlanningError
 from src.core.preview import render as render_preview
-from src.core.sizing import SizedTrade, size_orders
+from src.core.sizing import size_orders
 from src.io import AppConfig, ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 from src.io.reporting import (
