@@ -20,7 +20,7 @@ from src.core.errors import PlanningError
 from src.core.planner import Plan, _fetch_price, plan_account
 from src.core.preview import render as render_preview
 from src.core.sizing import size_orders
-from src.io import AppConfig, ConfigError, load_config
+from src.io import AppConfig, ConfigError, ConfirmMode, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 from src.io.reporting import (
     append_run_summary,
@@ -37,7 +37,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cfg: AppConfig = load_config(cfg_path)
     cli_confirm_mode = getattr(args, "confirm_mode", None)
     if cli_confirm_mode:
-        cfg.accounts.confirm_mode = cli_confirm_mode
+        cfg.accounts.confirm_mode = ConfirmMode(cli_confirm_mode)
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
@@ -54,7 +54,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     failures: list[tuple[str, str]] = []
 
     accounts = cfg.accounts
-    confirm_mode = getattr(accounts, "confirm_mode", "per_account")
+    confirm_mode = getattr(accounts, "confirm_mode", ConfirmMode.PER_ACCOUNT)
     plans: list[Plan] = []
     for account_id in accounts.ids:
         plan: Plan | None = None
@@ -72,7 +72,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 render_preview=render_preview,
                 write_pre_trade_report=write_pre_trade_report,
             )
-            if confirm_mode == "per_account":
+            if confirm_mode is ConfirmMode.PER_ACCOUNT:
                 await confirm_per_account(
                     plan,
                     args,
@@ -117,7 +117,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         finally:
             await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
-    if confirm_mode == "global":
+    if confirm_mode is ConfirmMode.GLOBAL:
         failures.extend(
             await confirm_global(
                 plans,
@@ -173,7 +173,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--confirm-mode",
-        choices=["per_account", "global"],
+        choices=[mode.value for mode in ConfirmMode],
         help="Confirmation mode: per-account or global",
     )
     args = parser.parse_args(argv if argv is not None else [])

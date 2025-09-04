@@ -7,12 +7,20 @@ from __future__ import annotations
 
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import Dict
 
 
 class ConfigError(Exception):
     """Raised when configuration loading or validation fails."""
+
+
+class ConfirmMode(Enum):
+    """Confirmation prompt behavior."""
+
+    PER_ACCOUNT = "per_account"
+    GLOBAL = "global"
 
 
 @dataclass
@@ -85,7 +93,7 @@ class Accounts:
     """Configuration for multiple trading accounts."""
 
     ids: list[str]
-    confirm_mode: str
+    confirm_mode: ConfirmMode
     pacing_sec: float = 0.0
 
 
@@ -153,7 +161,7 @@ def load_config(path: Path) -> AppConfig:
             seen.add(s)
     if not ids:
         raise ConfigError("[accounts] ids must be non-empty")
-    confirm_mode = (
+    confirm_mode_str = (
         cp.get(
             "accounts",
             "confirm_mode",
@@ -162,13 +170,12 @@ def load_config(path: Path) -> AppConfig:
         .strip()
         .lower()
     )
-    if confirm_mode not in {"per_account", "global"}:
-        # fmt: off
+    try:
+        confirm_mode = ConfirmMode(confirm_mode_str)
+    except ValueError as exc:
         raise ConfigError(
-            "[accounts] confirm_mode must be "
-            "'per_account' or 'global'"
-        )
-        # fmt: on
+            "[accounts] confirm_mode must be 'per_account' or 'global'"
+        ) from exc
     try:
         pacing_sec = cp.getfloat("accounts", "pacing_sec", fallback=0.0)
     except ValueError as exc:
