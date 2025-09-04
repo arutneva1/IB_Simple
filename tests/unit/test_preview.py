@@ -36,8 +36,8 @@ def test_render_sorted_and_filtered() -> None:
     ]
     cfg = _cfg(100)
 
-    prioritized = prioritize_by_drift(drifts, cfg)
-    table = render(prioritized, [], 0.0, 0.0, 0.0, 0.0)
+    prioritized = prioritize_by_drift("ACCT", drifts, cfg)
+    table = render("ACCT", prioritized, [], 0.0, 0.0, 0.0, 0.0)
 
     assert "Drift %" in table
     assert "BBB" not in table
@@ -49,11 +49,11 @@ def test_render_shows_quantities_and_notional() -> None:
     prices = {"AAA": 25.0}
     cfg = _cfg(1)
 
-    prioritized = prioritize_by_drift(drifts, cfg)
+    prioritized = prioritize_by_drift("ACCT", drifts, cfg)
     trades, post_exp, post_lev = size_orders(
-        prioritized, prices, cash=100.0, net_liq=100.0, cfg=cfg
+        "ACCT", prioritized, prices, cash=100.0, net_liq=100.0, cfg=cfg
     )
-    table = render(prioritized, trades, 100.0, 1.0, post_exp, post_lev)
+    table = render("ACCT", prioritized, trades, 100.0, 1.0, post_exp, post_lev)
 
     assert "Qty" in table
     assert "Notional" in table
@@ -78,6 +78,7 @@ def test_render_batch_summary() -> None:
     post_exp = pre_exp + gross_buy - gross_sell
     post_lev = post_exp / (pre_exp / pre_lev)
     table = render(
+        "ACCT",
         drifts,
         trades,
         pre_gross_exposure=pre_exp,

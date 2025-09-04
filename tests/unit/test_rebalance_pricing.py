@@ -63,7 +63,7 @@ def _setup_common(
     captured_fetch: list[str] = []
     captured_sizing: dict[str, float] = {}
 
-    def fake_compute_drift(current, targets, prices, net_liq, cfg):
+    def fake_compute_drift(account_id, current, targets, prices, net_liq, cfg):
         captured_pre.update(prices)
         return [
             Drift("AAA", 0, 0, -10.0, -10.0, "BUY"),
@@ -74,10 +74,10 @@ def _setup_common(
     monkeypatch.setattr(
         rebalance,
         "prioritize_by_drift",
-        lambda drifts, cfg: [d for d in drifts if d.action != "HOLD"],
+        lambda account_id, drifts, cfg: [d for d in drifts if d.action != "HOLD"],
     )
 
-    def fake_size_orders(prioritized, prices, cash, net_liq, cfg):
+    def fake_size_orders(account_id, prioritized, prices, cash, net_liq, cfg):
         captured_sizing.update(prices)
         return [], [], []
 

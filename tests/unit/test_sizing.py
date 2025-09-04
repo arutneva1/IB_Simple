@@ -72,7 +72,7 @@ def test_greedy_fill_under_limited_cash(
     )
 
     trades, gross, lev = size_orders(
-        drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACCT", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
     )
 
     qty = 100.0 / prices["AAA"]  # all available cash goes to highest priority
@@ -92,7 +92,9 @@ def test_residual_cash_distributed_proportionally() -> None:
     prices = {"AAA": 10.0, "BBB": 20.0, "CCC": 5.0}
     cfg = _cfg()
 
-    trades, gross, lev = size_orders(drifts, prices, cash=0.0, net_liq=net_liq, cfg=cfg)
+    trades, gross, lev = size_orders(
+        "ACCT", drifts, prices, cash=0.0, net_liq=net_liq, cfg=cfg
+    )
 
     assert sorted(trades, key=lambda t: t.symbol) == [
         SizedTrade("AAA", "BUY", 10.0, 100.0),
@@ -110,7 +112,7 @@ def test_leverage_scaled_when_exceeding_max() -> None:
     cfg = _cfg(max_leverage=0.85)
 
     trades, gross, lev = size_orders(
-        drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACCT", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
     )
 
     assert trades == [SizedTrade("AAA", "BUY", 5.0, 50.0)]
@@ -125,7 +127,7 @@ def test_rounds_and_drops_orders_below_min() -> None:
     cfg = _cfg(min_order_usd=50, allow_fractional=False)
 
     trades, gross, lev = size_orders(
-        drifts, prices, cash=600.0, net_liq=net_liq, cfg=cfg
+        "ACCT", drifts, prices, cash=600.0, net_liq=net_liq, cfg=cfg
     )
 
     assert trades == []
@@ -141,13 +143,13 @@ def test_rejects_non_finite_price_or_quantity() -> None:
     drifts = [_drift("AAA", -100.0, net_liq)]
     prices = {"AAA": math.nan}
     with pytest.raises(ValueError):
-        size_orders(drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg)
+        size_orders("ACCT", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg)
 
     # Non-finite quantity
     bad_drift = Drift("BBB", 0.0, 0.0, 0.0, math.nan, "BUY")
     prices = {"BBB": 10.0}
     with pytest.raises(ValueError):
-        size_orders([bad_drift], prices, cash=200.0, net_liq=net_liq, cfg=cfg)
+        size_orders("ACCT", [bad_drift], prices, cash=200.0, net_liq=net_liq, cfg=cfg)
 
 
 def test_duplicate_symbols_are_merged() -> None:
@@ -158,7 +160,7 @@ def test_duplicate_symbols_are_merged() -> None:
     cfg = _cfg(allow_fractional=True)
 
     trades, _gross, _lev = size_orders(
-        drifts, prices, cash=500.0, net_liq=net_liq, cfg=cfg
+        "ACCT", drifts, prices, cash=500.0, net_liq=net_liq, cfg=cfg
     )
 
     assert trades == [SizedTrade("AAA", "BUY", 20.0, 200.0)]

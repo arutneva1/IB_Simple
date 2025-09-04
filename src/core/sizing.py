@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from typing import Any, Mapping
+import logging
 
 from .drift import Drift
 
@@ -50,6 +51,7 @@ def _extract_cfg(cfg: Any) -> tuple[int, bool, str, float | None, float | None, 
 
 
 def size_orders(
+    account_id: str,
     drifts: list[Drift],
     prices: Mapping[str, float],
     cash: float,
@@ -60,6 +62,8 @@ def size_orders(
 
     Parameters
     ----------
+    account_id:
+        Account identifier used for logging context.
     drifts:
         Prioritised drift records.
     prices:
@@ -77,6 +81,8 @@ def size_orders(
         A list of :class:`SizedTrade` objects along with the projected gross
         exposure and leverage after applying the trades.
     """
+
+    logging.debug("Sizing orders for account %s", account_id)
 
     (
         min_order_usd,

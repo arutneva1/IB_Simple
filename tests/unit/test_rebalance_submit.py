@@ -60,11 +60,13 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
 
     monkeypatch.setattr(rebalance, "compute_drift", lambda *a, **k: [])
-    monkeypatch.setattr(rebalance, "prioritize_by_drift", lambda drifts, cfg: [])
+    monkeypatch.setattr(
+        rebalance, "prioritize_by_drift", lambda account_id, drifts, cfg: []
+    )
     monkeypatch.setattr(
         rebalance,
         "size_orders",
-        lambda prioritized, prices, cash, net_liq, cfg: (
+        lambda account_id, prioritized, prices, cash, net_liq, cfg: (
             [SizedTrade("AAA", "BUY", 5.0, 50.0)],
             0.0,
             0.0,

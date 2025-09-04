@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Mapping
+import logging
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class Drift:
 
 
 def compute_drift(
+    account_id: str,
     current: Mapping[str, float],
     targets: Mapping[str, float],
     prices: Mapping[str, float],
@@ -53,6 +55,8 @@ def compute_drift(
 
     Parameters
     ----------
+    account_id:
+        Account identifier used for logging context.
     current:
         Mapping of symbols to share quantities.  ``"CASH"`` represents the
         dollar value of cash holdings.
@@ -73,6 +77,8 @@ def compute_drift(
         ``targets``.  The list is sorted alphabetically by symbol to ensure
         deterministic output.
     """
+
+    logging.debug("Computing drift for account %s", account_id)
 
     # Determine current weights for all held symbols.
     values: dict[str, float] = {}
@@ -163,11 +169,13 @@ def compute_drift(
     return drifts
 
 
-def prioritize_by_drift(drifts: list[Drift], cfg: Any) -> list[Drift]:
+def prioritize_by_drift(account_id: str, drifts: list[Drift], cfg: Any) -> list[Drift]:
     """Filter and sort drifts by dollar magnitude.
 
     Parameters
     ----------
+    account_id:
+        Account identifier used for logging context.
     drifts:
         Drift records to evaluate.
     cfg:
@@ -179,6 +187,8 @@ def prioritize_by_drift(drifts: list[Drift], cfg: Any) -> list[Drift]:
         Drifts whose absolute dollar value exceeds ``min_order_usd``,
         sorted from largest to smallest by absolute drift.
     """
+
+    logging.debug("Prioritizing drifts for account %s", account_id)
 
     try:
         min_order = cfg.rebalance.min_order_usd  # type: ignore[attr-defined]

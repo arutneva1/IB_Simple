@@ -19,7 +19,7 @@ def test_prioritize_filters_and_sorts_by_abs_drift_usd() -> None:
     ]
     cfg = _cfg(100)
 
-    prioritized = prioritize_by_drift(drifts, cfg)
+    prioritized = prioritize_by_drift("ACCT", drifts, cfg)
 
     assert [d.symbol for d in prioritized] == ["CCC", "AAA"]
 
@@ -31,6 +31,6 @@ def test_prioritize_retains_all_when_threshold_zero() -> None:
     ]
     cfg = _cfg(0)
 
-    prioritized = prioritize_by_drift(drifts, cfg)
+    prioritized = prioritize_by_drift("ACCT", drifts, cfg)
 
     assert [d.symbol for d in prioritized] == ["AAA", "BBB"]
