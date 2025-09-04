@@ -76,7 +76,9 @@ async def _run(args: argparse.Namespace) -> None:
                 logging.info("Retrieving account snapshot")
                 snapshot = await client.snapshot(account_id)
 
-                current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
+                current = {
+                    p["symbol"]: float(p["position"]) for p in snapshot["positions"]
+                }
                 current["CASH"] = float(snapshot["cash"])
 
                 prices: dict[str, float] = {}
@@ -108,7 +110,9 @@ async def _run(args: argparse.Namespace) -> None:
                     if d.symbol != "CASH" and d.action in ("BUY", "SELL")
                 }
 
-                print(f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]")
+                print(
+                    f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
+                )
                 logging.info("Fetching prices for %d symbols", len(trade_symbols))
                 tasks = [
                     asyncio.create_task(_fetch_price(client._ib, sym, cfg))
@@ -129,7 +133,9 @@ async def _run(args: argparse.Namespace) -> None:
 
                 prices = {sym: prices[sym] for sym in trade_symbols}
             finally:
-                await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.disconnect(
+                    cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                )
 
             print("[blue]Sizing orders[/blue]")
             logging.info("Sizing orders")
@@ -191,7 +197,9 @@ async def _run(args: argparse.Namespace) -> None:
             try:
                 results = await submit_batch(client, trades, cfg)
             finally:
-                await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.disconnect(
+                    cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                )
 
             for res in results:
                 qty = res.get("fill_qty", res.get("filled", 0))
@@ -223,9 +231,7 @@ async def _run(args: argparse.Namespace) -> None:
                 filled = float(filled_any)
                 price_any = res.get("fill_price")
                 if price_any is None:
-                    price_any = res.get(
-                        "avg_fill_price", prices.get(trade.symbol, 0.0)
-                    )
+                    price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
                 price = float(price_any)
                 if trade.action == "BUY":
                     positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
