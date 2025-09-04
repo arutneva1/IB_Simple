@@ -18,7 +18,6 @@ from src.io.config_loader import (  # noqa: E402
     load_config,
 )
 
-
 VALID_CONFIG = """\
 [ibkr]
 host = 127.0.0.1
