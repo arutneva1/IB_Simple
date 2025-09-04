@@ -1,7 +1,7 @@
 # Math and Logic of the Rebalancer
 
 ## Introduction
-This project is like a helpful robot that keeps an investment portfolio tidy. It automatically checks what you own and makes small trades so the mix stays on target. Think of it as a digital gardener trimming and watering your money plants so they grow the way you planned.
+See trade-decision-flow.pdf for an overview. This project is like a helpful robot that keeps an investment portfolio tidy. It automatically checks what you own and makes small trades so the mix stays on target. Think of it as a digital gardener trimming and watering your money plants so they grow the way you planned.
 
 ## How the main calculations work
 
