@@ -15,6 +15,7 @@ from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRClient
 from src.core.drift import compute_drift, prioritize_by_drift
+from src.core.errors import PlanningError
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
 from src.core.sizing import size_orders
@@ -39,7 +40,7 @@ async def _fetch_price(ib, symbol: str, cfg) -> tuple[str, float]:
     return symbol, price
 
 
-async def _run(args: argparse.Namespace) -> None:
+async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cfg_path = Path(args.config)
     csv_path = Path(args.csv)
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
@@ -57,8 +58,11 @@ async def _run(args: argparse.Namespace) -> None:
         port=cfg.ibkr.port,
         client_id=cfg.ibkr.client_id,
     )
+    failures: list[tuple[str, str]] = []
 
-    for account_id in cfg.accounts.ids:
+    accounts = cfg.accounts
+    assert accounts is not None
+    for account_id in accounts.ids:
         try:
             client = IBKRClient()
             print(
@@ -98,93 +102,99 @@ async def _run(args: argparse.Namespace) -> None:
                         + weights["gltr"] * cfg.models.gltr
                     )
 
-                print("[blue]Computing drift[/blue]")
-                logging.info("Computing drift for %s", account_id)
-                drifts = compute_drift(
-                    account_id, current, targets, prices, net_liq, cfg
-                )
-                print("[blue]Prioritizing trades[/blue]")
-                logging.info("Prioritizing trades for %s", account_id)
-                prioritized = prioritize_by_drift(account_id, drifts, cfg)
+                try:
+                    print("[blue]Computing drift[/blue]")
+                    logging.info("Computing drift for %s", account_id)
+                    drifts = compute_drift(
+                        account_id, current, targets, prices, net_liq, cfg
+                    )
+                    print("[blue]Prioritizing trades[/blue]")
+                    logging.info("Prioritizing trades for %s", account_id)
+                    prioritized = prioritize_by_drift(account_id, drifts, cfg)
 
-                trade_symbols = {
-                    d.symbol
-                    for d in prioritized
-                    if d.symbol != "CASH" and d.action in ("BUY", "SELL")
-                }
+                    trade_symbols = {
+                        d.symbol
+                        for d in prioritized
+                        if d.symbol != "CASH" and d.action in ("BUY", "SELL")
+                    }
 
-                print(
-                    f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
-                )
-                logging.info(
-                    "Fetching prices for %s: %d symbols",
-                    account_id,
-                    len(trade_symbols),
-                )
-                tasks = [
-                    asyncio.create_task(_fetch_price(client._ib, sym, cfg))
-                    for sym in trade_symbols
-                ]
-                for idx, task in enumerate(asyncio.as_completed(tasks), 1):
-                    try:
-                        symbol, price = await task
-                    except PricingError as exc:
-                        print(f"[red]{exc}[/red]")
-                        logging.error(str(exc))
-                        for t in tasks:
-                            t.cancel()
-                        await asyncio.gather(*tasks, return_exceptions=True)
-                        raise
-                    prices[symbol] = price
-                    print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
+                    print(
+                        f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
+                    )
+                    logging.info(
+                        "Fetching prices for %s: %d symbols",
+                        account_id,
+                        len(trade_symbols),
+                    )
+                    tasks = [
+                        asyncio.create_task(_fetch_price(client._ib, sym, cfg))
+                        for sym in trade_symbols
+                    ]
+                    for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+                        try:
+                            symbol, price = await task
+                        except PricingError as exc:
+                            print(f"[red]{exc}[/red]")
+                            logging.error(str(exc))
+                            for t in tasks:
+                                t.cancel()
+                            await asyncio.gather(*tasks, return_exceptions=True)
+                            raise
+                        prices[symbol] = price
+                        print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
 
-                prices = {sym: prices[sym] for sym in trade_symbols}
+                    prices = {sym: prices[sym] for sym in trade_symbols}
+                except Exception as exc:
+                    raise PlanningError(str(exc)) from exc
             finally:
                 await client.disconnect(
                     cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                 )
 
-            print("[blue]Sizing orders[/blue]")
-            logging.info("Sizing orders for %s", account_id)
-            trades, post_gross_exposure, post_leverage = size_orders(
-                account_id,
-                prioritized,
-                prices,
-                current["CASH"],
-                net_liq,
-                cfg,
-            )
-            pre_gross_exposure = net_liq - current["CASH"]
-            pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
-            pre_path = write_pre_trade_report(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                account_id,
-                drifts,
-                trades,
-                prices,
-                net_liq,
-                pre_gross_exposure,
-                pre_leverage,
-                post_gross_exposure,
-                post_leverage,
-                cfg,
-            )
-            logging.info(
-                "Pre-trade report for %s written to %s", account_id, pre_path
-            )
-            print("[blue]Rendering preview[/blue]")
-            logging.info("Rendering preview for %s", account_id)
-            table = render_preview(
-                account_id,
-                prioritized,
-                trades,
-                pre_gross_exposure,
-                pre_leverage,
-                post_gross_exposure,
-                post_leverage,
-            )
-            print(table)
+            try:
+                print("[blue]Sizing orders[/blue]")
+                logging.info("Sizing orders for %s", account_id)
+                trades, post_gross_exposure, post_leverage = size_orders(
+                    account_id,
+                    prioritized,
+                    prices,
+                    current["CASH"],
+                    net_liq,
+                    cfg,
+                )
+                pre_gross_exposure = net_liq - current["CASH"]
+                pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
+                pre_path = write_pre_trade_report(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    account_id,
+                    drifts,
+                    trades,
+                    prices,
+                    net_liq,
+                    pre_gross_exposure,
+                    pre_leverage,
+                    post_gross_exposure,
+                    post_leverage,
+                    cfg,
+                )
+                logging.info(
+                    "Pre-trade report for %s written to %s", account_id, pre_path
+                )
+                print("[blue]Rendering preview[/blue]")
+                logging.info("Rendering preview for %s", account_id)
+                table = render_preview(
+                    account_id,
+                    prioritized,
+                    trades,
+                    pre_gross_exposure,
+                    pre_leverage,
+                    post_gross_exposure,
+                    post_leverage,
+                )
+                print(table)
+            except Exception as exc:
+                raise PlanningError(str(exc)) from exc
             if args.dry_run:
                 print("[green]Dry run complete (no orders submitted).[/green]")
                 logging.info("Dry run complete (no orders submitted).")
@@ -232,7 +242,7 @@ async def _run(args: argparse.Namespace) -> None:
                 )
             if any(r.get("status") != "Filled" for r in results):
                 logging.error("One or more orders failed to fill")
-                raise RuntimeError("One or more orders failed to fill")
+                raise IBKRError("One or more orders failed to fill")
 
             cash_after = current["CASH"]
             positions = current.copy()
@@ -284,10 +294,17 @@ async def _run(args: argparse.Namespace) -> None:
                 len(trades),
                 post_leverage_actual,
             )
-        except Exception as exc:
+        except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
+            failures.append((account_id, str(exc)))
             continue
+
+    if failures:
+        print("[red]One or more accounts failed:[/red]")
+        for acct, msg in failures:
+            print(f"[red]- {acct}: {msg}[/red]")
+    return failures
 
 
 def main() -> None:
@@ -318,14 +335,16 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        asyncio.run(_run(args))
+        failures = asyncio.run(_run(args))
     except KeyboardInterrupt:
         logging.info("Aborted by user via keyboard interrupt")
         print("[yellow]Aborted by user.[/yellow]")
         raise SystemExit(1)
-    except (ConfigError, PortfolioCSVError, IBKRError) as exc:
+    except (ConfigError, PortfolioCSVError, IBKRError, PlanningError) as exc:
         logging.error(str(exc))
         print(f"[red]{exc}[/red]")
+        raise SystemExit(1)
+    if failures:
         raise SystemExit(1)
 
 
