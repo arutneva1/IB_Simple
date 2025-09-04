@@ -54,7 +54,7 @@ def _base_cfg(trading_hours: str = "rth"):
 
 
 def test_rejected_order_returns_status(monkeypatch):
-    """Rejected order path returns status 'Rejected'."""
+    """Rejected order triggers IBKRError."""
     ib = SimpleNamespace()
 
     def fake_place(*_a, **_k):
@@ -64,23 +64,8 @@ def test_rejected_order_returns_status(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
     cfg = _base_cfg()
-    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
-    assert res == [
-        {
-            "symbol": "AAA",
-            "order_id": 1,
-            "status": "Rejected",
-            "filled": 0.0,
-            "avg_fill_price": 0.0,
-            "fill_qty": 0.0,
-            "fill_price": 0.0,
-            "fill_time": None,
-            "commission": 0.0,
-            "exec_commissions": {},
-            "commission_placeholder": False,
-            "missing_exec_ids": [],
-        }
-    ]
+    with pytest.raises(IBKRError):
+        asyncio.run(submit_batch(client, [trade], cfg, "DU"))
 
 
 def test_submit_batch_sets_order_account(monkeypatch):

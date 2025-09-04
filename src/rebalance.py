@@ -580,46 +580,40 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         },
                     )
                 return failures
+        # Phase 1: submit sells for all accounts
         for plan in plans:
             account_id = plan["account_id"]
+            trades = plan["trades"]
+            sell_trades = [t for t in trades if t.action == "SELL"]
             try:
-                trades = plan["trades"]
-                prices = plan["prices"]
-                current = plan["current"]
-                net_liq = plan["net_liq"]
-                drifts = plan["drifts"]
-                pre_gross_exposure = plan["pre_gross_exposure"]
-                pre_leverage = plan["pre_leverage"]
-                post_gross_exposure = plan["post_gross_exposure"]
-                post_leverage = plan["post_leverage"]
-                planned_orders = len(trades)
-
-                print("[blue]Submitting batch market orders[/blue]")
-                logging.info("Submitting batch market orders for %s", account_id)
+                print("[blue]Submitting sell orders[/blue]")
+                logging.info("Submitting sell orders for %s", account_id)
                 client = IBKRClient()
                 if hasattr(client, "__aenter__"):
                     setattr(client, "_host", cfg.ibkr.host)
                     setattr(client, "_port", cfg.ibkr.port)
                     setattr(client, "_client_id", cfg.ibkr.client_id)
                     async with client:
-                        results = await submit_batch(client, trades, cfg, account_id)
+                        plan["sell_results"] = await submit_batch(
+                            client, sell_trades, cfg, account_id
+                        )
                 else:
                     await client.connect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                     )
                     try:
-                        results = await submit_batch(client, trades, cfg, account_id)
+                        plan["sell_results"] = await submit_batch(
+                            client, sell_trades, cfg, account_id
+                        )
                     finally:
                         await client.disconnect(
                             cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                         )
-
-                for res in results:
+                for res in plan.get("sell_results", []):
                     qty = res.get("fill_qty", res.get("filled", 0))
                     price = res.get("fill_price", res.get("avg_fill_price", 0))
                     print(
-                        f"[green]{res.get('symbol')}: {res.get('status')} "
-                        f"{qty} @ {price}[/green]"
+                        f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
                     )
                     logging.info(
                         "%s: %s %s @ %s",
@@ -628,112 +622,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         qty,
                         price,
                     )
-                if any(r.get("status") != "Filled" for r in results):
-                    logging.error("One or more orders failed to fill")
-                    raise IBKRError("One or more orders failed to fill")
-
-                cash_after = current["CASH"]
-                positions = current.copy()
-                prices_before = prices.copy()
-                results_by_symbol = {r.get("symbol"): r for r in results}
-                for trade in trades:
-                    res = results_by_symbol.get(trade.symbol, {})
-                    filled_any = res.get("fill_qty")
-                    if filled_any is None:
-                        filled_any = res.get("filled", trade.quantity)
-                    filled = float(filled_any)
-                    price_any = res.get("fill_price")
-                    if price_any is None:
-                        price_any = res.get(
-                            "avg_fill_price", prices.get(trade.symbol, 0.0)
-                        )
-                    price = float(price_any)
-                    if trade.action == "BUY":
-                        positions[trade.symbol] = (
-                            positions.get(trade.symbol, 0.0) + filled
-                        )
-                        cash_after -= filled * price
-                    else:
-                        positions[trade.symbol] = (
-                            positions.get(trade.symbol, 0.0) - filled
-                        )
-                        cash_after += filled * price
-                    prices[trade.symbol] = price
-
-                post_gross_exposure_actual = net_liq - cash_after
-                post_leverage_actual = (
-                    post_gross_exposure_actual / net_liq if net_liq else 0.0
-                )
-                trades_by_symbol = {t.symbol: t for t in trades}
-                filled = sum(1 for r in results if r.get("status") == "Filled")
-                rejected = len(results) - filled
-                buy_usd = 0.0
-                sell_usd = 0.0
-                for r in results:
-                    sym_any = r.get("symbol")
-                    if not isinstance(sym_any, str):
-                        continue
-                    matched_trade = trades_by_symbol.get(sym_any)
-                    if matched_trade is None:
-                        continue
-                    qty_any = r.get("fill_qty")
-                    if qty_any is None:
-                        qty_any = r.get("filled", 0.0)
-                    price_any = r.get("fill_price")
-                    if price_any is None:
-                        price_any = r.get("avg_fill_price", 0.0)
-                    value = float(qty_any) * float(price_any)
-                    if matched_trade.action == "BUY":
-                        buy_usd += value
-                    else:
-                        sell_usd += value
-                post_path = write_post_trade_report(
-                    Path(cfg.io.report_dir),
-                    ts_dt,
-                    account_id,
-                    drifts,
-                    trades,
-                    results,
-                    prices_before,
-                    net_liq,
-                    pre_gross_exposure,
-                    pre_leverage,
-                    post_gross_exposure_actual,
-                    post_leverage_actual,
-                    cfg,
-                )
-                logging.info(
-                    "Post-trade report for %s written to %s", account_id, post_path
-                )
-                logging.info(
-                    "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
-                    account_id,
-                    len(trades),
-                    post_leverage_actual,
-                )
-                append_run_summary(
-                    Path(cfg.io.report_dir),
-                    ts_dt,
-                    {
-                        "timestamp_run": ts_dt.isoformat(),
-                        "account_id": account_id,
-                        "planned_orders": planned_orders,
-                        "submitted": len(trades),
-                        "filled": filled,
-                        "rejected": rejected,
-                        "buy_usd": buy_usd,
-                        "sell_usd": sell_usd,
-                        "pre_leverage": pre_leverage,
-                        "post_leverage": post_leverage_actual,
-                        "status": "completed",
-                        "error": "",
-                    },
-                )
             except (ConfigError, IBKRError, PlanningError) as exc:
                 logging.error("Error processing account %s: %s", account_id, exc)
                 print(f"[red]{exc}[/red]")
                 failures.append((account_id, str(exc)))
-                trades = plan["trades"]
+                plan["failed"] = True
                 buy_usd = sum(t.notional for t in trades if t.action == "BUY")
                 sell_usd = sum(t.notional for t in trades if t.action == "SELL")
                 append_run_summary(
@@ -754,9 +647,214 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         "error": str(exc),
                     },
                 )
-                continue
             finally:
                 await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
+
+        # Phase 2: submit buys for all accounts
+        for plan in plans:
+            if plan.get("failed"):
+                continue
+            account_id = plan["account_id"]
+            trades = plan["trades"]
+            buy_trades = [t for t in trades if t.action == "BUY"]
+            try:
+                print("[blue]Submitting buy orders[/blue]")
+                logging.info("Submitting buy orders for %s", account_id)
+                client = IBKRClient()
+                if hasattr(client, "__aenter__"):
+                    setattr(client, "_host", cfg.ibkr.host)
+                    setattr(client, "_port", cfg.ibkr.port)
+                    setattr(client, "_client_id", cfg.ibkr.client_id)
+                    async with client:
+                        plan["buy_results"] = await submit_batch(
+                            client, buy_trades, cfg, account_id
+                        )
+                else:
+                    await client.connect(
+                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                    )
+                    try:
+                        plan["buy_results"] = await submit_batch(
+                            client, buy_trades, cfg, account_id
+                        )
+                    finally:
+                        await client.disconnect(
+                            cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        )
+                for res in plan.get("buy_results", []):
+                    qty = res.get("fill_qty", res.get("filled", 0))
+                    price = res.get("fill_price", res.get("avg_fill_price", 0))
+                    print(
+                        f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
+                    )
+                    logging.info(
+                        "%s: %s %s @ %s",
+                        res.get("symbol"),
+                        res.get("status"),
+                        qty,
+                        price,
+                    )
+            except (ConfigError, IBKRError, PlanningError) as exc:
+                logging.error("Error processing account %s: %s", account_id, exc)
+                print(f"[red]{exc}[/red]")
+                failures.append((account_id, str(exc)))
+                plan["failed"] = True
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": len(trades),
+                        "submitted": len(plan.get("sell_results", [])),
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["pre_leverage"],
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
+            finally:
+                await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
+
+        # Phase 3: finalize results and reports
+        for plan in plans:
+            if plan.get("failed"):
+                continue
+            account_id = plan["account_id"]
+            trades = plan["trades"]
+            prices = plan["prices"]
+            current = plan["current"]
+            net_liq = plan["net_liq"]
+            drifts = plan["drifts"]
+            pre_gross_exposure = plan["pre_gross_exposure"]
+            pre_leverage = plan["pre_leverage"]
+            post_gross_exposure = plan["post_gross_exposure"]
+            post_leverage = plan["post_leverage"]
+            planned_orders = len(trades)
+            results = plan.get("sell_results", []) + plan.get("buy_results", [])
+
+            if any(r.get("status") != "Filled" for r in results):
+                logging.error("One or more orders failed to fill")
+                failures.append((account_id, "unfilled orders"))
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": planned_orders,
+                        "submitted": len(results),
+                        "filled": 0,
+                        "rejected": len(results),
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": pre_leverage,
+                        "post_leverage": pre_leverage,
+                        "status": "failed",
+                        "error": "unfilled orders",
+                    },
+                )
+                continue
+
+            cash_after = current["CASH"]
+            positions = current.copy()
+            prices_before = prices.copy()
+            results_by_symbol = {r.get("symbol"): r for r in results}
+            for trade in trades:
+                res = results_by_symbol.get(trade.symbol, {})
+                filled_any = res.get("fill_qty")
+                if filled_any is None:
+                    filled_any = res.get("filled", trade.quantity)
+                filled = float(filled_any)
+                price_any = res.get("fill_price")
+                if price_any is None:
+                    price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
+                price = float(price_any)
+                if trade.action == "BUY":
+                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
+                    cash_after -= filled * price
+                else:
+                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
+                    cash_after += filled * price
+                prices[trade.symbol] = price
+
+            post_gross_exposure_actual = net_liq - cash_after
+            post_leverage_actual = (
+                post_gross_exposure_actual / net_liq if net_liq else 0.0
+            )
+            trades_by_symbol = {t.symbol: t for t in trades}
+            filled = sum(1 for r in results if r.get("status") == "Filled")
+            rejected = len(results) - filled
+            buy_usd = 0.0
+            sell_usd = 0.0
+            for r in results:
+                sym_any = r.get("symbol")
+                if not isinstance(sym_any, str):
+                    continue
+                matched_trade = trades_by_symbol.get(sym_any)
+                if matched_trade is None:
+                    continue
+                qty_any = r.get("fill_qty")
+                if qty_any is None:
+                    qty_any = r.get("filled", 0.0)
+                price_any = r.get("fill_price")
+                if price_any is None:
+                    price_any = r.get("avg_fill_price", 0.0)
+                value = float(qty_any) * float(price_any)
+                if matched_trade.action == "BUY":
+                    buy_usd += value
+                else:
+                    sell_usd += value
+            post_path = write_post_trade_report(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                account_id,
+                drifts,
+                trades,
+                results,
+                prices_before,
+                net_liq,
+                pre_gross_exposure,
+                pre_leverage,
+                post_gross_exposure_actual,
+                post_leverage_actual,
+                cfg,
+            )
+            logging.info(
+                "Post-trade report for %s written to %s", account_id, post_path
+            )
+            logging.info(
+                "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
+                account_id,
+                len(trades),
+                post_leverage_actual,
+            )
+            append_run_summary(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": planned_orders,
+                    "submitted": len(results),
+                    "filled": filled,
+                    "rejected": rejected,
+                    "buy_usd": buy_usd,
+                    "sell_usd": sell_usd,
+                    "pre_leverage": pre_leverage,
+                    "post_leverage": post_leverage_actual,
+                    "status": "completed",
+                    "error": "",
+                },
+            )
 
     if failures:
         print("[red]One or more accounts failed:[/red]")

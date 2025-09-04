@@ -58,43 +58,65 @@ async def submit_batch(
             await trade.statusEvent
             trade.statusEvent.clear()
 
+    async def _wait_with_timeout(trade: Any, symbol: str, timeout: float) -> str:
+        try:
+            return await asyncio.wait_for(_wait(trade, symbol), timeout)
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError from exc
+
     async def _submit_one(st: Trade) -> dict[str, Any]:
         contract = Stock(st.symbol, "SMART", "USD")
-        order = MarketOrder(st.action, st.quantity)
-        order.account = account_id
-        if cfg.rebalance.trading_hours == "eth":
-            order.outsideRth = True
-        algo_used = False
-        algo_pref = cfg.execution.algo_preference.lower()
-        if algo_pref in {"adaptive", "midprice"}:
-            algo_used = True
-            if algo_pref == "adaptive":
-                order.algoStrategy = "Adaptive"
-                order.algoParams = [TagValue("adaptivePriority", "Normal")]
-            elif algo_pref == "midprice":
-                order.algoStrategy = "ArrivalPx"
-                order.algoParams = [TagValue("strategyType", "Midpoint")]
-        ib_trade: Any = await retry_async(
-            lambda: ib.placeOrder(contract, order),
-            action=f"order submission for {st.symbol}",
-        )
-        log.info(
-            "Submitted order %s for %s",
-            getattr(ib_trade.order, "orderId", None),
-            st.symbol,
+        timeout_fill = getattr(cfg.execution, "wait_before_fallback", 300.0)
+
+        def _build_order(qty: float, use_algo: bool) -> tuple[Any, bool]:
+            order = MarketOrder(st.action, qty)
+            order.account = account_id
+            if cfg.rebalance.trading_hours == "eth":
+                order.outsideRth = True
+            algo_used_local = False
+            algo_pref = cfg.execution.algo_preference.lower()
+            if use_algo and algo_pref in {"adaptive", "midprice"}:
+                algo_used_local = True
+                if algo_pref == "adaptive":
+                    order.algoStrategy = "Adaptive"
+                    order.algoParams = [TagValue("adaptivePriority", "Normal")]
+                else:
+                    order.algoStrategy = "ArrivalPx"
+                    order.algoParams = [TagValue("strategyType", "Midpoint")]
+            return order, algo_used_local
+
+        async def _place(qty: float, use_algo: bool, action: str) -> tuple[Any, bool]:
+            order, algo_used_local = _build_order(qty, use_algo)
+            ib_trade: Any = await retry_async(
+                lambda: ib.placeOrder(contract, order),
+                action=action,
+            )
+            log.info(
+                "Submitted order %s for %s",
+                getattr(ib_trade.order, "orderId", None),
+                st.symbol,
+            )
+            return ib_trade, algo_used_local
+
+        ib_trade, algo_used = await _place(
+            st.quantity, True, f"order submission for {st.symbol}"
         )
         status = ""
+        fallback_trade: Any | None = None
         try:
-            status = await _wait(ib_trade, st.symbol)
-        except Exception as exc:  # pragma: no cover - network errors
-            raise IBKRError(f"order submission for {st.symbol} failed: {exc}") from exc
+            status = await _wait_with_timeout(ib_trade, st.symbol, timeout_fill)
+        except TimeoutError:
+            status = "Timeout"
+
         if (
-            algo_used
-            and status in {"Rejected", "Cancelled", "ApiCancelled", "Inactive", "Error"}
+            status != "Filled"
+            and (algo_used or status == "Timeout")
             and cfg.execution.fallback_plain_market
         ):
+            filled_first = float(getattr(ib_trade.orderStatus, "filled", 0.0))
+            remaining_qty = max(st.quantity - filled_first, 0.0)
             log.info(
-                "Order %s for %s failed with status %s; falling back to plain market",
+                "Order %s for %s failed with status %s; cancelling and falling back",
                 getattr(getattr(ib_trade, "order", None), "orderId", None),
                 st.symbol,
                 status,
@@ -104,27 +126,58 @@ async def submit_batch(
                 await _wait(ib_trade, st.symbol)
             except Exception:  # pragma: no cover - network errors
                 pass
-            plain = MarketOrder(st.action, st.quantity)
-            ib_trade = await retry_async(
-                lambda: ib.placeOrder(contract, plain),
-                action=f"fallback order submission for {st.symbol}",
+            if remaining_qty > 0:
+                fallback_trade, _ = await _place(
+                    remaining_qty,
+                    False,
+                    f"fallback order submission for {st.symbol}",
+                )
+                try:
+                    status = await _wait_with_timeout(
+                        fallback_trade, st.symbol, timeout_fill
+                    )
+                except TimeoutError as exc:
+                    raise IBKRError(
+                        f"order submission for {st.symbol} failed to fill after fallback"
+                    ) from exc
+            else:
+                status = getattr(ib_trade.orderStatus, "status", "")
+
+        if status != "Filled":
+            raise IBKRError(
+                f"order submission for {st.symbol} failed with status {status}"
             )
-            log.info(
-                "Submitted fallback order %s for %s",
-                getattr(ib_trade.order, "orderId", None),
-                st.symbol,
+
+        filled_first = float(getattr(ib_trade.orderStatus, "filled", 0.0))
+        avg_price_first = float(getattr(ib_trade.orderStatus, "avgFillPrice", 0.0))
+        exec_objs = [ib_trade]
+        if fallback_trade is not None:
+            filled_second = float(
+                getattr(fallback_trade.orderStatus, "filled", 0.0)
             )
-            status = await _wait(ib_trade, st.symbol)
+            avg_price_second = float(
+                getattr(fallback_trade.orderStatus, "avgFillPrice", 0.0)
+            )
+            filled = filled_first + filled_second
+            avg_price = (
+                (filled_first * avg_price_first)
+                + (filled_second * avg_price_second)
+            ) / filled
+            exec_objs.append(fallback_trade)
+        else:
+            filled = filled_first
+            avg_price = avg_price_first
+
         commission_placeholder = False
         exec_commissions: dict[str, float] = {}
-        timeout = getattr(cfg.execution, "commission_report_timeout", 5.0)
+        timeout_comm = getattr(cfg.execution, "commission_report_timeout", 5.0)
 
-        def _record_reports() -> None:
+        def _record_reports_from(tr: Any) -> None:
             reports = []
-            report_attr = getattr(ib_trade, "commissionReport", None)
+            report_attr = getattr(tr, "commissionReport", None)
             if report_attr is not None:
                 reports.append(report_attr)
-            reports.extend(getattr(ib_trade, "commissionReports", []) or [])
+            reports.extend(getattr(tr, "commissionReports", []) or [])
             client = getattr(ib, "client", None)
             reports.extend(getattr(client, "commissionReports", []) or [])
             for report in reports:
@@ -132,50 +185,53 @@ async def submit_batch(
                 if exec_id and exec_id not in exec_commissions:
                     exec_commissions[exec_id] = abs(getattr(report, "commission", 0.0))
 
-        try:
-            loop = asyncio.get_running_loop()
-            deadline = loop.time() + timeout
-            poll_interval = min(0.05, timeout)
-            client_obj = getattr(ib, "client", None)
-            trade_event = getattr(ib_trade, "commissionReportEvent", None)
-            client_event = getattr(client_obj, "commissionReportEvent", None)
+        fills_all = []
+        for tr in exec_objs:
+            try:
+                loop = asyncio.get_running_loop()
+                deadline = loop.time() + timeout_comm
+                poll_interval = min(0.05, timeout_comm)
+                client_obj = getattr(ib, "client", None)
+                trade_event = getattr(tr, "commissionReportEvent", None)
+                client_event = getattr(client_obj, "commissionReportEvent", None)
 
-            while True:
-                fills = getattr(ib_trade, "fills", []) or []
-                _record_reports()
-                remaining = deadline - loop.time()
-                if remaining <= 0:
-                    break
+                while True:
+                    fills = getattr(tr, "fills", []) or []
+                    _record_reports_from(tr)
+                    remaining = deadline - loop.time()
+                    if remaining <= 0:
+                        break
 
-                wait_timeout = min(poll_interval, remaining)
-                if trade_event is not None:
-                    trade_event.clear()
-                if client_event is not None:
-                    client_event.clear()
-                events = [
-                    asyncio.create_task(e.wait())
-                    for e in (trade_event, client_event)
-                    if e is not None
-                ]
-                if events:
-                    done, pending = await asyncio.wait(
-                        events,
-                        timeout=wait_timeout,
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    for p in pending:
-                        p.cancel()
-                    if done:
-                        deadline = loop.time() + timeout
-                else:
-                    await asyncio.sleep(wait_timeout)
-        except Exception:  # pragma: no cover - defensive
-            fills = getattr(ib_trade, "fills", []) or []
-        else:
-            fills = getattr(ib_trade, "fills", []) or []
+                    wait_timeout = min(poll_interval, remaining)
+                    if trade_event is not None:
+                        trade_event.clear()
+                    if client_event is not None:
+                        client_event.clear()
+                    events = [
+                        asyncio.create_task(e.wait())
+                        for e in (trade_event, client_event)
+                        if e is not None
+                    ]
+                    if events:
+                        done, pending = await asyncio.wait(
+                            events,
+                            timeout=wait_timeout,
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        for p in pending:
+                            p.cancel()
+                        if done:
+                            deadline = loop.time() + timeout_comm
+                    else:
+                        await asyncio.sleep(wait_timeout)
+            except Exception:  # pragma: no cover - defensive
+                fills = getattr(tr, "fills", []) or []
+            else:
+                fills = getattr(tr, "fills", []) or []
+            fills_all.extend(fills)
 
         exec_ids = {
-            getattr(getattr(f, "execution", None), "execId", "") for f in fills
+            getattr(getattr(f, "execution", None), "execId", "") for f in fills_all
         } - {""}
         if exec_ids and not exec_commissions:
             log.warning(
@@ -184,7 +240,7 @@ async def submit_batch(
             )
 
         missing_execs: list[str] = []
-        for idx, f in enumerate(fills):
+        for idx, f in enumerate(fills_all):
             exec_obj = getattr(f, "execution", None)
             exec_id = getattr(exec_obj, "execId", "")
             if exec_id and exec_id not in exec_commissions:
@@ -196,13 +252,10 @@ async def submit_batch(
                 )
                 commission_placeholder = True
                 missing_execs.append(exec_id)
-        filled = getattr(ib_trade.orderStatus, "filled", 0.0)
-        avg_price = getattr(ib_trade.orderStatus, "avgFillPrice", 0.0)
-        fill_time = None
         commission = sum(exec_commissions.values())
+        fill_time = None
         try:
-            fills = getattr(ib_trade, "fills", []) or []
-            for fill in fills:
+            for fill in fills_all:
                 exec_obj = getattr(fill, "execution", None)
                 if exec_obj is not None:
                     ts = getattr(exec_obj, "time", None)
@@ -237,18 +290,26 @@ async def submit_batch(
             "missing_exec_ids": missing_execs,
         }
 
-    # Final safeguard: collapse trades with identical symbols and actions.
-    combined: dict[tuple[str, str], Trade] = {}
-    for t in trades:
-        key = (t.symbol, t.action)
-        if key in combined:
-            existing = combined[key]
-            existing.quantity += t.quantity
-            existing.notional += t.notional
-        else:
-            combined[key] = Trade(t.symbol, t.action, t.quantity, t.notional)
+    def _combine(tr_list: list[Trade]) -> list[Trade]:
+        combined: dict[tuple[str, str], Trade] = {}
+        for t in tr_list:
+            key = (t.symbol, t.action)
+            if key in combined:
+                existing = combined[key]
+                existing.quantity += t.quantity
+                existing.notional += t.notional
+            else:
+                combined[key] = Trade(t.symbol, t.action, t.quantity, t.notional)
+        return list(combined.values())
 
-    results = list(await asyncio.gather(*[_submit_one(t) for t in combined.values()]))
+    sell_trades = _combine([t for t in trades if t.action == "SELL"])
+    buy_trades = _combine([t for t in trades if t.action == "BUY"])
+
+    results: list[dict[str, Any]] = []
+    if sell_trades:
+        results.extend(await asyncio.gather(*[_submit_one(t) for t in sell_trades]))
+    if buy_trades:
+        results.extend(await asyncio.gather(*[_submit_one(t) for t in buy_trades]))
     status_counts: dict[str, int] = {}
     for res in results:
         status_counts[res["status"]] = status_counts.get(res["status"], 0) + 1
