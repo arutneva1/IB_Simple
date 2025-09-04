@@ -43,7 +43,9 @@ class Rebalance:
     per_holding_band_bps: int
     portfolio_total_band_bps: int
     min_order_usd: int
-    cash_buffer_pct: float  # decimal fraction (e.g., 0.01 = 1%)
+    cash_buffer_type: str
+    cash_buffer_pct: float | None  # decimal fraction (e.g., 0.01 = 1%)
+    cash_buffer_abs: float | None
     allow_fractional: bool
     max_leverage: float
     maintenance_buffer_pct: float  # decimal fraction (e.g., 0.10 = 10%)
@@ -151,7 +153,7 @@ def load_config(path: Path) -> AppConfig:
         per_holding_band_bps = cp.getint("rebalance", "per_holding_band_bps")
         portfolio_total_band_bps = cp.getint("rebalance", "portfolio_total_band_bps")
         min_order_usd = cp.getint("rebalance", "min_order_usd")
-        cash_buffer_pct = cp.getfloat("rebalance", "cash_buffer_pct")
+        cash_buffer_type = cp.get("rebalance", "cash_buffer_type", fallback="abs").lower()
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
@@ -164,8 +166,28 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError("[rebalance] portfolio_total_band_bps must be >= 0")
     if min_order_usd <= 0:
         raise ConfigError("[rebalance] min_order_usd must be positive")
-    if not 0 <= cash_buffer_pct <= 1:
-        raise ConfigError("[rebalance] cash_buffer_pct must be between 0 and 1")
+    cash_buffer_pct = None
+    cash_buffer_abs = None
+    if cash_buffer_type == "pct":
+        try:
+            cash_buffer_pct = cp.getfloat("rebalance", "cash_buffer_pct")
+        except (NoOptionError, ValueError) as exc:
+            raise ConfigError(
+                "[rebalance] cash_buffer_pct is required when cash_buffer_type=pct"
+            ) from exc
+        if not 0 <= cash_buffer_pct <= 1:
+            raise ConfigError("[rebalance] cash_buffer_pct must be between 0 and 1")
+    elif cash_buffer_type == "abs":
+        try:
+            cash_buffer_abs = cp.getfloat("rebalance", "cash_buffer_abs")
+        except (NoOptionError, ValueError) as exc:
+            raise ConfigError(
+                "[rebalance] cash_buffer_abs is required when cash_buffer_type=abs"
+            ) from exc
+        if cash_buffer_abs < 0:
+            raise ConfigError("[rebalance] cash_buffer_abs must be >= 0")
+    else:
+        raise ConfigError("[rebalance] cash_buffer_type must be 'pct' or 'abs'")
     if max_leverage <= 0:
         raise ConfigError("[rebalance] max_leverage must be positive")
     if not 0 <= maintenance_buffer_pct <= 1:
@@ -175,7 +197,9 @@ def load_config(path: Path) -> AppConfig:
         per_holding_band_bps=per_holding_band_bps,
         portfolio_total_band_bps=portfolio_total_band_bps,
         min_order_usd=min_order_usd,
+        cash_buffer_type=cash_buffer_type,
         cash_buffer_pct=cash_buffer_pct,
+        cash_buffer_abs=cash_buffer_abs,
         allow_fractional=allow_fractional,
         max_leverage=max_leverage,
         maintenance_buffer_pct=maintenance_buffer_pct,

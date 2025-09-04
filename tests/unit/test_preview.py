@@ -12,13 +12,17 @@ from src.core.sizing import SizedTrade, size_orders
 def _cfg(
     min_usd: int,
     allow_fractional: bool = True,
+    cash_buffer_type: str = "pct",
     cash_buffer_pct: float = 0.0,
+    cash_buffer_abs: float = 0.0,
     max_leverage: float = 1.0,
 ) -> SimpleNamespace:
     reb = SimpleNamespace(
         min_order_usd=min_usd,
         allow_fractional=allow_fractional,
+        cash_buffer_type=cash_buffer_type,
         cash_buffer_pct=cash_buffer_pct,
+        cash_buffer_abs=cash_buffer_abs,
         max_leverage=max_leverage,
     )
     return SimpleNamespace(rebalance=reb)

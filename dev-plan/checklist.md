@@ -82,7 +82,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 
 ### Phase C3 — Sizing, Leverage Guard, Rounding, Cash Buffer
 - [x] `src/core/sizing.py` implemented
-- [x] Reserves `cash_buffer_pct`
+- [x] Reserves cash buffer per configuration
 - [x] Rounds if `allow_fractional=false`
 - [x] Enforces leverage ≤ `max_leverage`
 - [x] Partial scaling by priority when needed

@@ -90,7 +90,12 @@ def compute_drift(
     investable_net_liq = net_liq
     if cfg is not None:
         try:
-            investable_net_liq *= 1 - cfg.rebalance.cash_buffer_pct  # type: ignore[attr-defined]
+            reb = cfg.rebalance  # type: ignore[attr-defined]
+            buffer_type = getattr(reb, "cash_buffer_type", "pct").lower()
+            if buffer_type == "pct":
+                investable_net_liq -= net_liq * getattr(reb, "cash_buffer_pct", 0.0)
+            elif buffer_type == "abs":
+                investable_net_liq -= getattr(reb, "cash_buffer_abs", 0.0)
         except AttributeError:
             pass
 

@@ -28,13 +28,17 @@ def _cfg(
     *,
     min_order_usd: int = 1,
     allow_fractional: bool = False,
+    cash_buffer_type: str = "pct",
     cash_buffer_pct: float = 0.0,
+    cash_buffer_abs: float = 0.0,
     max_leverage: float = 1.0,
 ):
     reb = SimpleNamespace(
         min_order_usd=min_order_usd,
         allow_fractional=allow_fractional,
+        cash_buffer_type=cash_buffer_type,
         cash_buffer_pct=cash_buffer_pct,
+        cash_buffer_abs=cash_buffer_abs,
         max_leverage=max_leverage,
     )
     return SimpleNamespace(rebalance=reb)
@@ -50,11 +54,22 @@ def _drift(symbol: str, usd: float, net_liq: float) -> Drift:
     return Drift(symbol, target, current, pct, usd, action)
 
 
-def test_greedy_fill_under_limited_cash() -> None:
+@pytest.mark.parametrize(
+    "cash_buffer_type,cash_buffer_pct,cash_buffer_abs",
+    [("pct", 0.1, 0.0), ("abs", 0.0, 100.0)],
+)
+def test_greedy_fill_under_limited_cash(
+    cash_buffer_type: str, cash_buffer_pct: float, cash_buffer_abs: float
+) -> None:
     net_liq = 1000.0
     drifts = [_drift("AAA", -150.0, net_liq), _drift("BBB", -100.0, net_liq)]
     prices = {"AAA": 24.0, "BBB": 10.0}
-    cfg = _cfg(cash_buffer_pct=0.1, allow_fractional=True)
+    cfg = _cfg(
+        cash_buffer_type=cash_buffer_type,
+        cash_buffer_pct=cash_buffer_pct,
+        cash_buffer_abs=cash_buffer_abs,
+        allow_fractional=True,
+    )
 
     trades, gross, lev = size_orders(
         drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg

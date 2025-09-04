@@ -48,19 +48,32 @@ def test_compute_drift_normalizes_and_combines_targets() -> None:
     assert cash.action == "SELL"
 
 
-def test_compute_drift_respects_cash_buffer() -> None:
+@pytest.mark.parametrize(
+    "reb_cfg,investable_net_liq",
+    [
+        (
+            SimpleNamespace(cash_buffer_type="pct", cash_buffer_pct=0.1),
+            6000.0 * (1 - 0.1),
+        ),
+        (
+            SimpleNamespace(cash_buffer_type="abs", cash_buffer_abs=600.0),
+            6000.0 - 600.0,
+        ),
+    ],
+)
+def test_compute_drift_respects_cash_buffer(
+    reb_cfg: SimpleNamespace, investable_net_liq: float
+) -> None:
     """Cash buffer reduces investable NetLiq for drift calculations."""
 
     current = {"AAA": 10, "CASH": 5000}
     targets = {"AAA": 50.0, "BBB": 50.0, "CASH": 0.0}
     prices = {"AAA": 100.0, "BBB": 100.0}
     net_liq = 6000.0
-    cfg = SimpleNamespace(rebalance=SimpleNamespace(cash_buffer_pct=0.1))
+    cfg = SimpleNamespace(rebalance=reb_cfg)
 
     drifts = compute_drift(current, targets, prices, net_liq, cfg)
     by_symbol = {d.symbol: d for d in drifts}
-
-    investable_net_liq = net_liq * (1 - 0.1)
 
     aaa = by_symbol["AAA"]
     assert aaa.current_wt_pct == pytest.approx(

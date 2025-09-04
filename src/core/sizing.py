@@ -32,18 +32,17 @@ class SizedTrade:
     notional: float
 
 
-def _extract_cfg(cfg: Any) -> tuple[int, bool, float, float]:
-    """Return relevant rebalance configuration values.
-
-    ``cash_buffer_pct`` is expected as a decimal fraction (e.g., ``0.01`` for 1%).
-    """
+def _extract_cfg(cfg: Any) -> tuple[int, bool, str, float | None, float | None, float]:
+    """Return relevant rebalance configuration values."""
 
     try:
         reb = cfg.rebalance  # type: ignore[attr-defined]
         return (
             reb.min_order_usd,
             reb.allow_fractional,
-            reb.cash_buffer_pct,
+            reb.cash_buffer_type.lower(),
+            getattr(reb, "cash_buffer_pct", None),
+            getattr(reb, "cash_buffer_abs", None),
             reb.max_leverage,
         )
     except AttributeError as exc:  # pragma: no cover - defensive
@@ -79,9 +78,19 @@ def size_orders(
         exposure and leverage after applying the trades.
     """
 
-    min_order_usd, allow_fractional, cash_buffer_pct, max_leverage = _extract_cfg(cfg)
+    (
+        min_order_usd,
+        allow_fractional,
+        cash_buffer_type,
+        cash_buffer_pct,
+        cash_buffer_abs,
+        max_leverage,
+    ) = _extract_cfg(cfg)
 
-    reserve = net_liq * cash_buffer_pct  # cfg.cash_buffer_pct is already a decimal
+    if cash_buffer_type == "pct":
+        reserve = net_liq * (cash_buffer_pct or 0.0)
+    else:
+        reserve = cash_buffer_abs or 0.0
     available = cash - reserve
 
     trades: list[SizedTrade] = []
