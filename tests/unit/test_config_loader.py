@@ -136,6 +136,16 @@ def test_accounts_pacing_sec_negative(tmp_path: Path) -> None:
         load_config(path)
 
 
+def test_ibkr_account_id_rejected(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "read_only = true", "read_only = true\naccount_id = DU111111"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
 def test_non_numeric_port(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace("port = 4002", "port = not_a_number")
     path = tmp_path / "settings.ini"
