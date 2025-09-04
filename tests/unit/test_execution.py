@@ -92,6 +92,24 @@ def test_rejected_order_returns_status(monkeypatch):
     ]
 
 
+def test_submit_batch_sets_order_account(monkeypatch):
+    """Orders are tagged with the provided account id."""
+    ib = SimpleNamespace()
+
+    account_id = "TEST123"
+
+    def fake_place(contract, order):
+        assert order.account == account_id
+        return DummyTrade(status="Filled", filled=1.0)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg()
+    res = asyncio.run(submit_batch(client, [trade], cfg, account_id))
+    assert res[0]["status"] == "Filled"
+
+
 def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
     """Partial fill updates are reflected in final result and logged."""
     ib = SimpleNamespace()

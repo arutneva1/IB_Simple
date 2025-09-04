@@ -7,7 +7,11 @@ import pytest
 
 from src.core.drift import Drift
 from src.core.sizing import SizedTrade
-from src.io.reporting import write_post_trade_report, write_pre_trade_report
+from src.io.reporting import (
+    append_run_summary,
+    write_post_trade_report,
+    write_pre_trade_report,
+)
 
 
 def _cfg():
@@ -43,6 +47,8 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         1.0,
         cfg,
     )
+
+    assert "ACCT" in pre_path.name
 
     expected_pre_fields = [
         "timestamp_run",
@@ -136,6 +142,8 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
         cfg,
     )
 
+    assert "ACCT" in post_path.name
+
     expected_post_fields = expected_pre_fields + [
         "fill_qty",
         "fill_price",
@@ -163,6 +171,54 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
     messages = [rec.message for rec in caplog.records]
     assert f"Pre-trade report written to {pre_path}" in messages
     assert f"Post-trade report written to {post_path}" in messages
+
+
+def test_append_run_summary(tmp_path):
+    ts = datetime(2023, 1, 1, 12, 0, 0)
+    row1 = {
+        "timestamp_run": ts.isoformat(),
+        "account_id": "ACC1",
+        "planned_orders": 1,
+        "submitted": 0,
+        "filled": 0,
+        "rejected": 0,
+        "buy_usd": 0.0,
+        "sell_usd": 0.0,
+        "pre_leverage": 0.5,
+        "post_leverage": 0.5,
+        "status": "aborted",
+        "error": "",
+    }
+    row2 = {**row1, "account_id": "ACC2", "planned_orders": 2}
+
+    path = append_run_summary(tmp_path, ts, row1)
+    path = append_run_summary(tmp_path, ts, row2)
+
+    expected_header = [
+        "timestamp_run",
+        "account_id",
+        "planned_orders",
+        "submitted",
+        "filled",
+        "rejected",
+        "buy_usd",
+        "sell_usd",
+        "pre_leverage",
+        "post_leverage",
+        "status",
+        "error",
+    ]
+
+    with path.open() as f:
+        reader = csv.DictReader(f)
+        assert reader.fieldnames == expected_header
+        rows = list(reader)
+
+    expected_rows = [
+        {k: str(v) for k, v in row1.items()},
+        {k: str(v) for k, v in row2.items()},
+    ]
+    assert rows == expected_rows
 
 
 def test_post_trade_missing_execid_notes(tmp_path):
