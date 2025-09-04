@@ -47,9 +47,12 @@ This project is like a helpful robot that keeps an investment portfolio tidy. It
 
 **Example JG**
 : Trade priorities come from the drift list fed into `size_orders`.
-: `compute_drift` first creates the drift records in alphabetical order, giving a deterministic base order.
-: `rioritize_by_drift` then sorts those records by absolute dollar drift in descending order while preserving any alphabetical tie. : That means smaller (or tied‑small) drifts end up at the end of the list.
-: When leverage is too high, `size_orders` walks the trade list in reverse to trim buys starting from the tail—i.e., from the lowest‑priority drift.
+
+ 1. `compute_drift` first creates the drift records in alphabetical order, giving a deterministic base order.
+
+ 2. `prioritize_by_drift` then sorts those records by absolute dollar drift in descending order while preserving any alphabetical tie. : That means smaller (or tied‑small) drifts end up at the end of the list.
+
+3. When leverage is too high, `size_orders` walks the trade list in reverse to trim buys starting from the tail—i.e., from the lowest‑priority drift.
 
 ### `core/pricing.get_price` – fetching prices and using fallbacks
 **What it is**
