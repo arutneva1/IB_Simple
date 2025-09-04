@@ -10,9 +10,7 @@ from src.core.sizing import SizedTrade
 
 def _setup_common(monkeypatch: pytest.MonkeyPatch):
     cfg = SimpleNamespace(
-        ibkr=SimpleNamespace(
-            host="h", port=1, client_id=1, read_only=False
-        ),
+        ibkr=SimpleNamespace(host="h", port=1, client_id=1, read_only=False),
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
         rebalance=SimpleNamespace(

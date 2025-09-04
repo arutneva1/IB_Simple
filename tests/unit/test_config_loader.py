@@ -102,7 +102,9 @@ def test_load_valid_config(config_file: Path) -> None:
             wait_before_fallback=300.0,
         ),
         io=IO(report_dir="reports", log_level="INFO"),
-        accounts=Accounts(ids=["ACC1", "ACC2"], confirm_mode="per_account", pacing_sec=0.0),
+        accounts=Accounts(
+            ids=["ACC1", "ACC2"], confirm_mode="per_account", pacing_sec=0.0
+        ),
     )
     assert cfg == expected
 
@@ -149,4 +151,3 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
-
