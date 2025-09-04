@@ -81,8 +81,9 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
     _setup_common(monkeypatch)
     recorded = {}
 
-    async def fake_submit_batch(client, trades, cfg):
+    async def fake_submit_batch(client, trades, cfg, account_id):
         recorded["trades"] = trades
+        recorded["account_id"] = account_id
         return [
             {"symbol": "AAA", "status": "Filled", "filled": 5.0, "avg_fill_price": 10.0}
         ]
@@ -102,7 +103,7 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
 def test_run_logs_error_on_order_failure(monkeypatch, capsys):
     _setup_common(monkeypatch)
 
-    async def fake_submit_batch(client, trades, cfg):
+    async def fake_submit_batch(client, trades, cfg, account_id):
         return [
             {
                 "symbol": "AAA",

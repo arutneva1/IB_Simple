@@ -227,7 +227,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 logging.info("Submitting batch market orders for %s", account_id)
                 await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
                 try:
-                    results = await submit_batch(client, trades, cfg)
+                    results = await submit_batch(client, trades, cfg, account_id)
                 finally:
                     await client.disconnect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
@@ -368,7 +368,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 client = IBKRClient()
                 await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
                 try:
-                    results = await submit_batch(client, trades, cfg)
+                    results = await submit_batch(client, trades, cfg, account_id)
                 finally:
                     await client.disconnect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
