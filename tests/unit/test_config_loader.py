@@ -8,12 +8,14 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from src.io.config_loader import (
     IBKR,
     IO,
+    Accounts,
     AppConfig,
     ConfigError,
     Execution,
     Models,
     Pricing,
     Rebalance,
+    account_overrides,
     load_config,
 )
 
@@ -100,6 +102,7 @@ def test_load_valid_config(config_file: Path) -> None:
             commission_report_timeout=5.0,
         ),
         io=IO(report_dir="reports", log_level="INFO"),
+        accounts=None,
     )
     assert cfg == expected
 
@@ -113,6 +116,44 @@ def test_missing_section(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
+
+
+def test_accounts_section_and_overrides(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = ACC1, ACC2
+confirm_mode = per_order
+
+[account:ACC1]
+foo = bar
+
+[account:ACC2]
+baz = qux
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="per_order")
+    assert account_overrides == {"ACC1": {"foo": "bar"}, "ACC2": {"baz": "qux"}}
+
+
+def test_accounts_default_confirm_mode(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = ONLY
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(ids=["ONLY"], confirm_mode="per_account")
 
 
 def test_missing_key(tmp_path: Path) -> None:

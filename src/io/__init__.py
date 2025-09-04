@@ -8,12 +8,14 @@ types without reaching into the underlying modules.
 from .config_loader import (
     IBKR,
     IO,
+    Accounts,
     AppConfig,
     ConfigError,
     Execution,
     Models,
     Pricing,
     Rebalance,
+    account_overrides,
     load_config,
 )
 from .portfolio_csv import PortfolioCSVError, load_portfolios, validate_symbols
@@ -21,10 +23,12 @@ from .reporting import setup_logging, write_post_trade_report, write_pre_trade_r
 
 __all__ = [
     "AppConfig",
+    "Accounts",
     "ConfigError",
     "Execution",
     "IBKR",
     "IO",
+    "account_overrides",
     "Models",
     "Pricing",
     "Rebalance",

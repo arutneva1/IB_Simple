@@ -80,6 +80,14 @@ class IO:
 
 
 @dataclass
+class Accounts:
+    """Configuration for multiple trading accounts."""
+
+    ids: list[str]
+    confirm_mode: str
+
+
+@dataclass
 class AppConfig:
     """Top level application configuration."""
 
@@ -89,9 +97,12 @@ class AppConfig:
     pricing: Pricing
     execution: Execution
     io: IO
+    accounts: Accounts | None
 
 
 TOLERANCE = 0.001
+
+account_overrides: Dict[str, Dict[str, str]] = {}
 
 
 def _load_section(cp: ConfigParser, section: str) -> Dict[str, str]:
@@ -129,6 +140,22 @@ def load_config(path: Path) -> AppConfig:
         read_only=read_only,
     )
 
+    accounts: Accounts | None = None
+    if cp.has_section("accounts"):
+        try:
+            raw_ids = cp.get("accounts", "ids")
+        except NoOptionError as exc:
+            raise ConfigError("[accounts] missing key: ids") from exc
+        ids = [s.strip() for s in raw_ids.split(",") if s.strip()]
+        confirm_mode = cp.get("accounts", "confirm_mode", fallback="per_account")
+        accounts = Accounts(ids=ids, confirm_mode=confirm_mode)
+
+    account_overrides.clear()
+    for section in cp.sections():
+        if section.startswith("account:"):
+            acc_id = section.split("account:", 1)[1]
+            account_overrides[acc_id] = dict(cp.items(section))
+
     # [models]
     data = _load_section(cp, "models")
     required_models = ["smurf", "badass", "gltr"]
@@ -153,7 +180,9 @@ def load_config(path: Path) -> AppConfig:
         per_holding_band_bps = cp.getint("rebalance", "per_holding_band_bps")
         portfolio_total_band_bps = cp.getint("rebalance", "portfolio_total_band_bps")
         min_order_usd = cp.getint("rebalance", "min_order_usd")
-        cash_buffer_type = cp.get("rebalance", "cash_buffer_type", fallback="abs").lower()
+        cash_buffer_type = cp.get(
+            "rebalance", "cash_buffer_type", fallback="abs"
+        ).lower()
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
@@ -245,6 +274,7 @@ def load_config(path: Path) -> AppConfig:
         pricing=pricing,
         execution=execution,
         io=io_cfg,
+        accounts=accounts,
     )
 
 
