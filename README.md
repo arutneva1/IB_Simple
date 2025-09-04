@@ -45,13 +45,20 @@ confirm_mode = per_account        ; per_account | global
 
 When present, this block takes precedence over the legacy `[ibkr] account_id`.
 The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
-controls how the tool prompts for trade confirmation:
+controls how the tool prompts for trade confirmation and can be overridden at
+runtime via `--confirm-mode`:
 
-* `per_account` (default) confirms each account separately.
-* `global` prompts once for all accounts.
+* `per_account` (default) previews and confirms each account separately.
+* `global` shows all account previews first, then prompts once for the batch.
 
-Even with multiple IDs, execution remains single-account for now; multi-account
-behavior arrives in later phases.
+Example forcing a global prompt:
+
+```bash
+python src/rebalance.py --dry-run --confirm-mode global --config config/settings.ini --csv data/portfolios.csv
+```
+
+Orders sent to Interactive Brokers are tagged with the respective account code
+so each account's trades remain isolated.
 
 ## Usage
 
@@ -124,7 +131,25 @@ Batch Summary
 │ Pre Leverage        │   1.00 │
 │ Post Gross Exposure │ 10500.00 │
 │ Post Leverage       │   1.05 │
+
+┏━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
+┃ Account    ┃ Symbol  ┃ Target % ┃ Current % ┃ Drift % ┃ Drift $ ┃ Action ┃   Qty ┃ Est Value ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
+│ DU222222   │ AGG     │ 40.00    │ 45.00    │  5.00    │  500.00  │ SELL   │ 5.00  │ 1000.00   │
+└────────────┴─────────┴──────────┴──────────┴──────────┴──────────┴────────┴───────┴───────────┘
+
+Batch Summary
+│ Gross Buy           │   0.00 │
+│ Gross Sell          │ 500.00 │
+│ Pre Gross Exposure  │ 10000.00 │
+│ Pre Leverage        │   1.00 │
+│ Post Gross Exposure │  9500.00 │
+│ Post Leverage       │   0.95 │
 ```
+
+A run summary file `reports/run_summary_<timestamp>.csv` records one row per
+account with columns such as `planned_orders`, `submitted`, `filled`, and
+leverage metrics.
 
 Flags such as `--dry-run`, `--yes`, and `--read-only` apply to every account
 processed.
@@ -151,17 +176,25 @@ Forces preview-only mode even if `--yes` is used.
 After a run, timestamped artifacts are written under `reports/`:
 
 ```text
-reports/rebalance_pre_<timestamp>.csv   # state and intended trades
-reports/rebalance_post_<timestamp>.csv  # execution results (omitted on --dry-run)
-reports/rebalance_<timestamp>.log       # INFO/ERROR log output
+reports/rebalance_pre_<account>_<timestamp>.csv   # state and intended trades per account
+reports/rebalance_post_<account>_<timestamp>.csv  # execution results per account (omitted on --dry-run)
+reports/run_summary_<timestamp>.csv               # per-account run summary
+reports/rebalance_<timestamp>.log                 # INFO/ERROR log output
+```
+
+`run_summary_<timestamp>.csv` contains one row per account with the schema:
+
+```text
+timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_usd,pre_leverage,post_leverage,status,error
 ```
 
 ### Order execution module
 `src/broker/execution.py` submits the confirmed trades and supports IBKR's
-Adaptive or Midprice algos via `execution.algo_preference`. If the selected
-algo is rejected and `fallback_plain_market` is true, it retries with a plain
-market order. When `rebalance.prefer_rth` is enabled, the module queries the
-IBKR server clock and only proceeds between 09:30 and 16:00
+Adaptive or Midprice algos via `execution.algo_preference`. Submitted orders
+are tagged with their account code so Interactive Brokers books them correctly.
+If the selected algo is rejected and `fallback_plain_market` is true, it retries
+with a plain market order. When `rebalance.prefer_rth` is enabled, the module
+queries the IBKR server clock and only proceeds between 09:30 and 16:00
 America/New_York. Order submissions log each status transition with the symbol
 and order ID, including retries when falling back to plain market orders. The
 module waits up to `execution.commission_report_timeout` seconds for commission
