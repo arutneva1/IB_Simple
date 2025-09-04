@@ -28,6 +28,7 @@ def _setup_common(
             commission_report_timeout=5.0,
         ),
         io=SimpleNamespace(report_dir="reports", log_level="INFO"),
+        accounts=SimpleNamespace(ids=["a"]),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
@@ -127,8 +128,7 @@ def test_run_aborts_when_trade_price_unavailable(
         yes=False,
         read_only=False,
     )
-    with pytest.raises(SystemExit):
-        asyncio.run(rebalance._run(args))
+    asyncio.run(rebalance._run(args))
 
     out, _ = capsys.readouterr()
     assert "bad price" in out

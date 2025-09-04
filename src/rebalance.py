@@ -44,8 +44,6 @@ async def _run(args: argparse.Namespace) -> None:
     csv_path = Path(args.csv)
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg: AppConfig = load_config(cfg_path)
-    accounts = getattr(cfg, "accounts", None)
-    account_id = cfg.ibkr.account_id if accounts is None else accounts.ids[0]
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
@@ -60,202 +58,212 @@ async def _run(args: argparse.Namespace) -> None:
         client_id=cfg.ibkr.client_id,
     )
 
-    client = IBKRClient()
-    print(
-        f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id})[/blue]"
-    )
-    logging.info(
-        "Connecting to IBKR at %s:%s (client id %s)",
-        cfg.ibkr.host,
-        cfg.ibkr.port,
-        cfg.ibkr.client_id,
-    )
-    await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-    try:
-        print("[blue]Retrieving account snapshot[/blue]")
-        logging.info("Retrieving account snapshot")
-        snapshot = await client.snapshot(account_id)
-
-        current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
-        current["CASH"] = float(snapshot["cash"])
-
-        prices: dict[str, float] = {}
-        for pos in snapshot["positions"]:
-            price = pos.get("market_price") or pos.get("avg_cost")
-            if price is not None:
-                prices[pos["symbol"]] = float(price)
-
-        net_liq = float(snapshot.get("net_liq", 0.0))
-
-        targets: dict[str, float] = {}
-        for symbol, weights in portfolios.items():
-            targets[symbol] = (
-                weights["smurf"] * cfg.models.smurf
-                + weights["badass"] * cfg.models.badass
-                + weights["gltr"] * cfg.models.gltr
+    for account_id in cfg.accounts.ids:
+        try:
+            client = IBKRClient()
+            print(
+                f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id})[/blue]"
             )
-
-        print("[blue]Computing drift[/blue]")
-        logging.info("Computing drift")
-        drifts = compute_drift(current, targets, prices, net_liq, cfg)
-        print("[blue]Prioritizing trades[/blue]")
-        logging.info("Prioritizing trades")
-        prioritized = prioritize_by_drift(drifts, cfg)
-
-        trade_symbols = {
-            d.symbol
-            for d in prioritized
-            if d.symbol != "CASH" and d.action in ("BUY", "SELL")
-        }
-
-        print(f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]")
-        logging.info("Fetching prices for %d symbols", len(trade_symbols))
-        tasks = [
-            asyncio.create_task(_fetch_price(client._ib, sym, cfg))
-            for sym in trade_symbols
-        ]
-        for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+            logging.info(
+                "Connecting to IBKR at %s:%s (client id %s)",
+                cfg.ibkr.host,
+                cfg.ibkr.port,
+                cfg.ibkr.client_id,
+            )
+            await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
             try:
-                symbol, price = await task
-            except PricingError as exc:
-                print(f"[red]{exc}[/red]")
-                logging.error(str(exc))
-                for t in tasks:
-                    t.cancel()
-                await asyncio.gather(*tasks, return_exceptions=True)
-                raise SystemExit(1)
-            prices[symbol] = price
-            print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
+                print("[blue]Retrieving account snapshot[/blue]")
+                logging.info("Retrieving account snapshot")
+                snapshot = await client.snapshot(account_id)
 
-        prices = {sym: prices[sym] for sym in trade_symbols}
-    finally:
-        await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
+                current["CASH"] = float(snapshot["cash"])
 
-    print("[blue]Sizing orders[/blue]")
-    logging.info("Sizing orders")
-    trades, post_gross_exposure, post_leverage = size_orders(
-        prioritized, prices, current["CASH"], net_liq, cfg
-    )
-    pre_gross_exposure = net_liq - current["CASH"]
-    pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
-    pre_path = write_pre_trade_report(
-        Path(cfg.io.report_dir),
-        ts_dt,
-        account_id,
-        drifts,
-        trades,
-        prices,
-        net_liq,
-        pre_gross_exposure,
-        pre_leverage,
-        post_gross_exposure,
-        post_leverage,
-        cfg,
-    )
-    logging.info("Pre-trade report written to %s", pre_path)
-    print("[blue]Rendering preview[/blue]")
-    logging.info("Rendering preview")
-    table = render_preview(
-        prioritized,
-        trades,
-        pre_gross_exposure,
-        pre_leverage,
-        post_gross_exposure,
-        post_leverage,
-    )
-    print(table)
-    if args.dry_run:
-        print("[green]Dry run complete (no orders submitted).[/green]")
-        logging.info("Dry run complete (no orders submitted).")
-        return
+                prices: dict[str, float] = {}
+                for pos in snapshot["positions"]:
+                    price = pos.get("market_price") or pos.get("avg_cost")
+                    if price is not None:
+                        prices[pos["symbol"]] = float(price)
 
-    if cfg.ibkr.read_only or args.read_only:
-        print(
-            "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
-        )
-        logging.info(
-            "Read-only mode: trading is disabled; no orders will be submitted."
-        )
-        return
+                net_liq = float(snapshot.get("net_liq", 0.0))
 
-    if not args.yes:
-        resp = input("Proceed? [y/N]: ").strip().lower()
-        if resp != "y":
-            print("[yellow]Aborted by user.[/yellow]")
-            logging.info("Aborted by user.")
-            return
+                targets: dict[str, float] = {}
+                for symbol, weights in portfolios.items():
+                    targets[symbol] = (
+                        weights["smurf"] * cfg.models.smurf
+                        + weights["badass"] * cfg.models.badass
+                        + weights["gltr"] * cfg.models.gltr
+                    )
 
-    print("[blue]Submitting batch market orders[/blue]")
-    logging.info("Submitting batch market orders")
-    await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-    try:
-        results = await submit_batch(client, trades, cfg)
-    finally:
-        await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                print("[blue]Computing drift[/blue]")
+                logging.info("Computing drift")
+                drifts = compute_drift(current, targets, prices, net_liq, cfg)
+                print("[blue]Prioritizing trades[/blue]")
+                logging.info("Prioritizing trades")
+                prioritized = prioritize_by_drift(drifts, cfg)
 
-    for res in results:
-        qty = res.get("fill_qty", res.get("filled", 0))
-        price = res.get("fill_price", res.get("avg_fill_price", 0))
-        print(
-            f"[green]{res.get('symbol')}: {res.get('status')} "
-            f"{qty} @ {price}[/green]"
-        )
-        logging.info(
-            "%s: %s %s @ %s",
-            res.get("symbol"),
-            res.get("status"),
-            qty,
-            price,
-        )
-    if any(r.get("status") != "Filled" for r in results):
-        logging.error("One or more orders failed to fill")
-        raise SystemExit(1)
+                trade_symbols = {
+                    d.symbol
+                    for d in prioritized
+                    if d.symbol != "CASH" and d.action in ("BUY", "SELL")
+                }
 
-    cash_after = current["CASH"]
-    positions = current.copy()
-    prices_before = prices.copy()
-    results_by_symbol = {r.get("symbol"): r for r in results}
-    for trade in trades:
-        res = results_by_symbol.get(trade.symbol, {})
-        filled_any = res.get("fill_qty")
-        if filled_any is None:
-            filled_any = res.get("filled", trade.quantity)
-        filled = float(filled_any)
-        price_any = res.get("fill_price")
-        if price_any is None:
-            price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
-        price = float(price_any)
-        if trade.action == "BUY":
-            positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
-            cash_after -= filled * price
-        else:
-            positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
-            cash_after += filled * price
-        prices[trade.symbol] = price
+                print(f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]")
+                logging.info("Fetching prices for %d symbols", len(trade_symbols))
+                tasks = [
+                    asyncio.create_task(_fetch_price(client._ib, sym, cfg))
+                    for sym in trade_symbols
+                ]
+                for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+                    try:
+                        symbol, price = await task
+                    except PricingError as exc:
+                        print(f"[red]{exc}[/red]")
+                        logging.error(str(exc))
+                        for t in tasks:
+                            t.cancel()
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                        raise
+                    prices[symbol] = price
+                    print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
 
-    post_gross_exposure_actual = net_liq - cash_after
-    post_leverage_actual = post_gross_exposure_actual / net_liq if net_liq else 0.0
-    post_path = write_post_trade_report(
-        Path(cfg.io.report_dir),
-        ts_dt,
-        account_id,
-        drifts,
-        trades,
-        results,
-        prices_before,
-        net_liq,
-        pre_gross_exposure,
-        pre_leverage,
-        post_gross_exposure_actual,
-        post_leverage_actual,
-        cfg,
-    )
-    logging.info("Post-trade report written to %s", post_path)
-    logging.info(
-        "Rebalance complete: %d trades executed. Post leverage %.4f",
-        len(trades),
-        post_leverage_actual,
-    )
+                prices = {sym: prices[sym] for sym in trade_symbols}
+            finally:
+                await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+
+            print("[blue]Sizing orders[/blue]")
+            logging.info("Sizing orders")
+            trades, post_gross_exposure, post_leverage = size_orders(
+                prioritized, prices, current["CASH"], net_liq, cfg
+            )
+            pre_gross_exposure = net_liq - current["CASH"]
+            pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
+            pre_path = write_pre_trade_report(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                account_id,
+                drifts,
+                trades,
+                prices,
+                net_liq,
+                pre_gross_exposure,
+                pre_leverage,
+                post_gross_exposure,
+                post_leverage,
+                cfg,
+            )
+            logging.info("Pre-trade report written to %s", pre_path)
+            print("[blue]Rendering preview[/blue]")
+            logging.info("Rendering preview")
+            table = render_preview(
+                prioritized,
+                trades,
+                pre_gross_exposure,
+                pre_leverage,
+                post_gross_exposure,
+                post_leverage,
+            )
+            print(table)
+            if args.dry_run:
+                print("[green]Dry run complete (no orders submitted).[/green]")
+                logging.info("Dry run complete (no orders submitted).")
+                continue
+
+            if cfg.ibkr.read_only or args.read_only:
+                print(
+                    "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
+                )
+                logging.info(
+                    "Read-only mode: trading is disabled; no orders will be submitted."
+                )
+                continue
+
+            if not args.yes:
+                resp = input("Proceed? [y/N]: ").strip().lower()
+                if resp != "y":
+                    print("[yellow]Aborted by user.[/yellow]")
+                    logging.info("Aborted by user.")
+                    continue
+
+            print("[blue]Submitting batch market orders[/blue]")
+            logging.info("Submitting batch market orders")
+            await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+            try:
+                results = await submit_batch(client, trades, cfg)
+            finally:
+                await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+
+            for res in results:
+                qty = res.get("fill_qty", res.get("filled", 0))
+                price = res.get("fill_price", res.get("avg_fill_price", 0))
+                print(
+                    f"[green]{res.get('symbol')}: {res.get('status')} "
+                    f"{qty} @ {price}[/green]"
+                )
+                logging.info(
+                    "%s: %s %s @ %s",
+                    res.get("symbol"),
+                    res.get("status"),
+                    qty,
+                    price,
+                )
+            if any(r.get("status") != "Filled" for r in results):
+                logging.error("One or more orders failed to fill")
+                raise RuntimeError("One or more orders failed to fill")
+
+            cash_after = current["CASH"]
+            positions = current.copy()
+            prices_before = prices.copy()
+            results_by_symbol = {r.get("symbol"): r for r in results}
+            for trade in trades:
+                res = results_by_symbol.get(trade.symbol, {})
+                filled_any = res.get("fill_qty")
+                if filled_any is None:
+                    filled_any = res.get("filled", trade.quantity)
+                filled = float(filled_any)
+                price_any = res.get("fill_price")
+                if price_any is None:
+                    price_any = res.get(
+                        "avg_fill_price", prices.get(trade.symbol, 0.0)
+                    )
+                price = float(price_any)
+                if trade.action == "BUY":
+                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
+                    cash_after -= filled * price
+                else:
+                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
+                    cash_after += filled * price
+                prices[trade.symbol] = price
+
+            post_gross_exposure_actual = net_liq - cash_after
+            post_leverage_actual = (
+                post_gross_exposure_actual / net_liq if net_liq else 0.0
+            )
+            post_path = write_post_trade_report(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                account_id,
+                drifts,
+                trades,
+                results,
+                prices_before,
+                net_liq,
+                pre_gross_exposure,
+                pre_leverage,
+                post_gross_exposure_actual,
+                post_leverage_actual,
+                cfg,
+            )
+            logging.info("Post-trade report written to %s", post_path)
+            logging.info(
+                "Rebalance complete: %d trades executed. Post leverage %.4f",
+                len(trades),
+                post_leverage_actual,
+            )
+        except Exception as exc:
+            logging.error("Error processing account %s: %s", account_id, exc)
+            print(f"[red]{exc}[/red]")
+            continue
 
 
 def main() -> None:

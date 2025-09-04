@@ -30,6 +30,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
             commission_report_timeout=5.0,
         ),
         io=SimpleNamespace(report_dir="reports", log_level="INFO"),
+        accounts=SimpleNamespace(ids=["a"]),
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
@@ -96,7 +97,7 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
     assert "AAA" in out and "Filled" in out
 
 
-def test_run_raises_on_order_failure(monkeypatch):
+def test_run_logs_error_on_order_failure(monkeypatch, capsys):
     _setup_common(monkeypatch)
 
     async def fake_submit_batch(client, trades, cfg):
@@ -114,5 +115,6 @@ def test_run_raises_on_order_failure(monkeypatch):
     args = argparse.Namespace(
         config="cfg", csv="csv", dry_run=False, yes=True, read_only=False
     )
-    with pytest.raises(SystemExit):
-        asyncio.run(rebalance._run(args))
+    asyncio.run(rebalance._run(args))
+    out, _ = capsys.readouterr()
+    assert "One or more orders failed to fill" in out

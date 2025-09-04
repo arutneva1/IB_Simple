@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import logging
 from pathlib import Path
 
 from rich import print
@@ -14,15 +15,17 @@ from src.io import AppConfig, ConfigError, load_config
 
 async def _run(cfg_path: Path) -> None:
     cfg: AppConfig = load_config(cfg_path)
-    accounts = getattr(cfg, "accounts", None)
-    account_id = cfg.ibkr.account_id if accounts is None else accounts.ids[0]
-    client = IBKRClient()
-    await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-    try:
-        data = await client.snapshot(account_id)
-    finally:
-        await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-    print(json.dumps(data, indent=2))
+    for account_id in cfg.accounts.ids:
+        client = IBKRClient()
+        await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+        try:
+            data = await client.snapshot(account_id)
+            print(json.dumps(data, indent=2))
+        except Exception as exc:
+            logging.error("Error processing account %s: %s", account_id, exc)
+            print(f"[red]{exc}[/red]")
+        finally:
+            await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
 
 
 def main() -> None:
