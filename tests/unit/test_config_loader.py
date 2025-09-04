@@ -137,7 +137,9 @@ baz = qux
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="global")
+    assert cfg.accounts == Accounts(
+        ids=["ACC1", "ACC2"], confirm_mode="global", pacing_sec=0.0
+    )
     assert account_overrides == {"ACC1": {"foo": "bar"}, "ACC2": {"baz": "qux"}}
 
 
@@ -153,7 +155,9 @@ ids = ONLY
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.accounts == Accounts(ids=["ONLY"], confirm_mode="per_account")
+    assert cfg.accounts == Accounts(
+        ids=["ONLY"], confirm_mode="per_account", pacing_sec=0.0
+    )
 
 
 def test_accounts_invalid_confirm_mode(tmp_path: Path) -> None:
@@ -185,7 +189,7 @@ ids = ACC1, ACC2, ACC1 , ACC3
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts == Accounts(
-        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account"
+        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account", pacing_sec=0.0
     )
     assert cfg.ibkr.account_id == "ACC1"
     # Existing fields remain unchanged
@@ -307,7 +311,7 @@ ids =   ACC1,ACC2  ,  ACC3
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts == Accounts(
-        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account"
+        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account", pacing_sec=0.0
     )
     assert cfg.ibkr.account_id == "ACC1"
     # Existing fields unaffected
@@ -326,7 +330,9 @@ ids = ONLY
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.accounts == Accounts(ids=["ONLY"], confirm_mode="per_account")
+    assert cfg.accounts == Accounts(
+        ids=["ONLY"], confirm_mode="per_account", pacing_sec=0.0
+    )
     assert cfg.ibkr.account_id == "ONLY"
     assert cfg.rebalance.min_order_usd == 500
 
@@ -344,6 +350,42 @@ unknown = something
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="per_account")
+    assert cfg.accounts == Accounts(
+        ids=["ACC1", "ACC2"], confirm_mode="per_account", pacing_sec=0.0
+    )
     assert cfg.ibkr.account_id == "ACC1"
     assert cfg.io.log_level == "INFO"
+
+
+def test_accounts_pacing_sec_valid(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = ACC1, ACC2
+pacing_sec = 2.5
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(
+        ids=["ACC1", "ACC2"], confirm_mode="per_account", pacing_sec=2.5
+    )
+
+
+def test_accounts_pacing_sec_negative(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = ACC1
+pacing_sec = -1
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
