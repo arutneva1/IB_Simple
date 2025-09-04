@@ -124,21 +124,14 @@ def load_config(path: Path) -> AppConfig:
         host = cp.get("ibkr", "host")
         port = cp.getint("ibkr", "port")
         client_id = cp.getint("ibkr", "client_id")
-        account_id = cp.get("ibkr", "account_id")
         read_only = cp.getboolean("ibkr", "read_only")
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[ibkr] {exc}") from exc
+    account_id = cp.get("ibkr", "account_id", fallback="").strip()
     if port <= 0:
         raise ConfigError("[ibkr] port must be positive")
     if client_id < 0:
         raise ConfigError("[ibkr] client_id must be non-negative")
-    ibkr = IBKR(
-        host=host,
-        port=port,
-        client_id=client_id,
-        account_id=account_id,
-        read_only=read_only,
-    )
 
     accounts: Accounts | None = None
     if cp.has_section("accounts"):
@@ -146,9 +139,31 @@ def load_config(path: Path) -> AppConfig:
             raw_ids = cp.get("accounts", "ids")
         except NoOptionError as exc:
             raise ConfigError("[accounts] missing key: ids") from exc
-        ids = [s.strip() for s in raw_ids.split(",") if s.strip()]
-        confirm_mode = cp.get("accounts", "confirm_mode", fallback="per_account")
+        ids: list[str] = []
+        seen: set[str] = set()
+        for s in raw_ids.split(","):
+            s = s.strip()
+            if s and s not in seen:
+                ids.append(s)
+                seen.add(s)
+        if not ids:
+            raise ConfigError("[accounts] ids must be non-empty")
+        confirm_mode = cp.get("accounts", "confirm_mode", fallback="per_account").strip().lower()
+        if confirm_mode not in {"per_account", "global"}:
+            raise ConfigError("[accounts] confirm_mode must be 'per_account' or 'global'")
         accounts = Accounts(ids=ids, confirm_mode=confirm_mode)
+        account_id = ids[0]
+    else:
+        if not account_id:
+            raise ConfigError("[ibkr] missing key: account_id")
+
+    ibkr = IBKR(
+        host=host,
+        port=port,
+        client_id=client_id,
+        account_id=account_id,
+        read_only=read_only,
+    )
 
     account_overrides.clear()
     for section in cp.sections():
