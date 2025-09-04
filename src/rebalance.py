@@ -28,10 +28,10 @@ from src.io.reporting import (
     write_post_trade_report,
     write_pre_trade_report,
 )
-from typing import TypedDict
+from typing import Any, TypedDict, cast
 
 
-class Plan(TypedDict):
+class Plan(TypedDict, total=False):
     account_id: str
     drifts: list[Drift]
     trades: list[SizedTrade]
@@ -43,6 +43,9 @@ class Plan(TypedDict):
     post_gross_exposure: float
     post_leverage: float
     table: str
+    sell_results: list[dict[str, Any]]
+    buy_results: list[dict[str, Any]]
+    failed: bool
 
 
 async def _fetch_price(ib, symbol: str, cfg) -> tuple[str, float]:
@@ -609,7 +612,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         await client.disconnect(
                             cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                         )
-                for res in plan.get("sell_results", []):
+                sell_results = cast(list[dict[str, Any]], plan.get("sell_results", []))
+                for res in sell_results:
                     qty = res.get("fill_qty", res.get("filled", 0))
                     price = res.get("fill_price", res.get("avg_fill_price", 0))
                     print(
@@ -652,7 +656,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
         # Phase 2: submit buys for all accounts
         for plan in plans:
-            if plan.get("failed"):
+            if cast(bool, plan.get("failed")):
                 continue
             account_id = plan["account_id"]
             trades = plan["trades"]
@@ -681,7 +685,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         await client.disconnect(
                             cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                         )
-                for res in plan.get("buy_results", []):
+                buy_results = cast(list[dict[str, Any]], plan.get("buy_results", []))
+                for res in buy_results:
                     qty = res.get("fill_qty", res.get("filled", 0))
                     price = res.get("fill_price", res.get("avg_fill_price", 0))
                     print(
@@ -701,6 +706,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 plan["failed"] = True
                 buy_usd = sum(t.notional for t in trades if t.action == "BUY")
                 sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                sell_results = cast(list[dict[str, Any]], plan.get("sell_results", []))
                 append_run_summary(
                     Path(cfg.io.report_dir),
                     ts_dt,
@@ -708,7 +714,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         "timestamp_run": ts_dt.isoformat(),
                         "account_id": account_id,
                         "planned_orders": len(trades),
-                        "submitted": len(plan.get("sell_results", [])),
+                        "submitted": len(sell_results),
                         "filled": 0,
                         "rejected": 0,
                         "buy_usd": buy_usd,
@@ -724,7 +730,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
         # Phase 3: finalize results and reports
         for plan in plans:
-            if plan.get("failed"):
+            if cast(bool, plan.get("failed")):
                 continue
             account_id = plan["account_id"]
             trades = plan["trades"]
@@ -737,7 +743,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             post_gross_exposure = plan["post_gross_exposure"]
             post_leverage = plan["post_leverage"]
             planned_orders = len(trades)
-            results = plan.get("sell_results", []) + plan.get("buy_results", [])
+            sell_results = cast(list[dict[str, Any]], plan.get("sell_results", []))
+            buy_results = cast(list[dict[str, Any]], plan.get("buy_results", []))
+            results = sell_results + buy_results
 
             if any(r.get("status") != "Filled" for r in results):
                 logging.error("One or more orders failed to fill")
