@@ -45,6 +45,12 @@ This project is like a helpful robot that keeps an investment portfolio tidy. It
 **Example with numbers**
 : If the account has $200 cash, a $10,000 net value, and a 1% cash buffer, only `$200 - 100 = $100` is available to buy. A requested $300 buy is scaled down to $100 unless later sells free up more cash. If buying would push exposure over a 1.5× leverage limit (`$15,000` for `$10,000` net value), the buys are trimmed until the limit is met.
 
+**Example JG**
+Trade priorities come from the drift list fed into `size_orders`.
+`compute_drift` first creates the drift records in alphabetical order, giving a deterministic base order.
+`rioritize_by_drift` then sorts those records by absolute dollar drift in descending order while preserving any alphabetical tie. That means smaller (or tied‑small) drifts end up at the end of the list.
+When leverage is too high, `size_orders` walks the trade list in reverse to trim buys starting from the tail—i.e., from the lowest‑priority drift.
+
 ### `core/pricing.get_price` – fetching prices and using fallbacks
 **What it is**
 : Asks Interactive Brokers for a price. If the main price field is missing, it tries a backup or a delayed snapshot.
