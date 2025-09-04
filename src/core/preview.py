@@ -12,12 +12,14 @@ from io import StringIO
 from rich import box
 from rich.console import Console
 from rich.table import Table
+import logging
 
 from .drift import Drift
 from .sizing import SizedTrade
 
 
 def render(
+    account_id: str,
     plan: list[Drift],
     trades: list[SizedTrade] | None = None,
     pre_gross_exposure: float = 0.0,
@@ -29,6 +31,8 @@ def render(
 
     Parameters
     ----------
+    account_id:
+        Account identifier used for logging context.
     plan:
         Drift records, typically already filtered and prioritised.
     trades:
@@ -48,6 +52,8 @@ def render(
     str
         Table rendering of the drift information followed by a batch summary.
     """
+
+    logging.debug("Rendering preview for account %s", account_id)
 
     # ``Rich``'s default table box style has changed across releases. Some
     # versions render with the heavy box drawing characters we expect in the

@@ -21,7 +21,7 @@ def test_compute_drift_normalizes_and_combines_targets() -> None:
     prices = {"AAA": 100.0, "BBB": 100.0}
     net_liq = 6000.0  # 10*100 + 5000
 
-    drifts = compute_drift(current, targets, prices, net_liq, cfg=None)
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
     by_symbol = {d.symbol: d for d in drifts}
 
     assert len(drifts) == 3
@@ -72,7 +72,7 @@ def test_compute_drift_respects_cash_buffer(
     net_liq = 6000.0
     cfg = SimpleNamespace(rebalance=reb_cfg)
 
-    drifts = compute_drift(current, targets, prices, net_liq, cfg)
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg)
     by_symbol = {d.symbol: d for d in drifts}
 
     aaa = by_symbol["AAA"]
@@ -98,7 +98,7 @@ def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     prices = {"AAA": 100.0, "CCC": 10.0, "BBB": 100.0}
     net_liq = 600.0  # 5*100 + 10*10
 
-    drifts = compute_drift(current, targets, prices, net_liq, cfg=None)
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
     by_symbol = {d.symbol: d for d in drifts}
 
     # Ensure "CCC" (missing from targets) defaults to 0 target weight
@@ -170,7 +170,7 @@ def test_per_holding_mode_triggers_symbols_and_skips_small_drifts(
 ) -> None:
     cfg = cfg_factory("per_holding", per_band=300)
     drifts = compute_drift(
-        per_holding_current, per_holding_targets, sample_prices, 100.0, cfg
+        "ACCT", per_holding_current, per_holding_targets, sample_prices, 100.0, cfg
     )
     symbols = [d.symbol for d in drifts]
     assert symbols == ["AAA", "BBB"]
@@ -187,7 +187,7 @@ def test_total_drift_mode_selects_largest_until_band(
     cfg_factory,
 ) -> None:
     cfg = cfg_factory("total_drift", total_band=500)
-    drifts = compute_drift(total_current, total_targets, sample_prices, 100.0, cfg)
+    drifts = compute_drift("ACCT", total_current, total_targets, sample_prices, 100.0, cfg)
     assert [d.symbol for d in drifts] == ["AAA", "BBB"]
     by_symbol = {d.symbol: d for d in drifts}
     assert by_symbol["AAA"].action == "SELL"
@@ -201,7 +201,7 @@ def test_prioritize_by_drift_filters_and_sorts(cfg_factory) -> None:
         Drift("CCC", 0.0, 0.0, 0.0, 150.0, "BUY"),
     ]
     cfg = cfg_factory(min_order=100)
-    prioritized = prioritize_by_drift(drifts, cfg)
+    prioritized = prioritize_by_drift("ACCT", drifts, cfg)
     assert [d.symbol for d in prioritized] == ["BBB", "CCC"]
     assert prioritized[0].drift_usd == -200.0
     assert prioritized[1].drift_usd == 150.0
@@ -212,7 +212,7 @@ def test_compute_drift_zero_drift_returns_hold() -> None:
     targets = {"AAA": 100.0}
     prices = {"AAA": 1.0}
     net_liq = 5.0
-    drifts = compute_drift(current, targets, prices, net_liq, cfg=None)
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
     assert len(drifts) == 1
     d = drifts[0]
     assert d.drift_pct == pytest.approx(0.0)

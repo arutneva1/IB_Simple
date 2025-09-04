@@ -62,18 +62,19 @@ async def _run(args: argparse.Namespace) -> None:
         try:
             client = IBKRClient()
             print(
-                f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id})[/blue]"
+                f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id}) for account {account_id}[/blue]"
             )
             logging.info(
-                "Connecting to IBKR at %s:%s (client id %s)",
+                "Connecting to IBKR at %s:%s (client id %s) for account %s",
                 cfg.ibkr.host,
                 cfg.ibkr.port,
                 cfg.ibkr.client_id,
+                account_id,
             )
             await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
             try:
                 print("[blue]Retrieving account snapshot[/blue]")
-                logging.info("Retrieving account snapshot")
+                logging.info("Retrieving account snapshot for %s", account_id)
                 snapshot = await client.snapshot(account_id)
 
                 current = {
@@ -98,11 +99,13 @@ async def _run(args: argparse.Namespace) -> None:
                     )
 
                 print("[blue]Computing drift[/blue]")
-                logging.info("Computing drift")
-                drifts = compute_drift(current, targets, prices, net_liq, cfg)
+                logging.info("Computing drift for %s", account_id)
+                drifts = compute_drift(
+                    account_id, current, targets, prices, net_liq, cfg
+                )
                 print("[blue]Prioritizing trades[/blue]")
-                logging.info("Prioritizing trades")
-                prioritized = prioritize_by_drift(drifts, cfg)
+                logging.info("Prioritizing trades for %s", account_id)
+                prioritized = prioritize_by_drift(account_id, drifts, cfg)
 
                 trade_symbols = {
                     d.symbol
@@ -113,7 +116,11 @@ async def _run(args: argparse.Namespace) -> None:
                 print(
                     f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
                 )
-                logging.info("Fetching prices for %d symbols", len(trade_symbols))
+                logging.info(
+                    "Fetching prices for %s: %d symbols",
+                    account_id,
+                    len(trade_symbols),
+                )
                 tasks = [
                     asyncio.create_task(_fetch_price(client._ib, sym, cfg))
                     for sym in trade_symbols
@@ -138,9 +145,14 @@ async def _run(args: argparse.Namespace) -> None:
                 )
 
             print("[blue]Sizing orders[/blue]")
-            logging.info("Sizing orders")
+            logging.info("Sizing orders for %s", account_id)
             trades, post_gross_exposure, post_leverage = size_orders(
-                prioritized, prices, current["CASH"], net_liq, cfg
+                account_id,
+                prioritized,
+                prices,
+                current["CASH"],
+                net_liq,
+                cfg,
             )
             pre_gross_exposure = net_liq - current["CASH"]
             pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
@@ -158,10 +170,13 @@ async def _run(args: argparse.Namespace) -> None:
                 post_leverage,
                 cfg,
             )
-            logging.info("Pre-trade report written to %s", pre_path)
+            logging.info(
+                "Pre-trade report for %s written to %s", account_id, pre_path
+            )
             print("[blue]Rendering preview[/blue]")
-            logging.info("Rendering preview")
+            logging.info("Rendering preview for %s", account_id)
             table = render_preview(
+                account_id,
                 prioritized,
                 trades,
                 pre_gross_exposure,
@@ -192,7 +207,7 @@ async def _run(args: argparse.Namespace) -> None:
                     continue
 
             print("[blue]Submitting batch market orders[/blue]")
-            logging.info("Submitting batch market orders")
+            logging.info("Submitting batch market orders for %s", account_id)
             await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
             try:
                 results = await submit_batch(client, trades, cfg)
@@ -260,9 +275,12 @@ async def _run(args: argparse.Namespace) -> None:
                 post_leverage_actual,
                 cfg,
             )
-            logging.info("Post-trade report written to %s", post_path)
             logging.info(
-                "Rebalance complete: %d trades executed. Post leverage %.4f",
+                "Post-trade report for %s written to %s", account_id, post_path
+            )
+            logging.info(
+                "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
+                account_id,
                 len(trades),
                 post_leverage_actual,
             )
