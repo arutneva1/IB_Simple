@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict, dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from ib_async import IB, Position
 
@@ -117,8 +117,17 @@ class IBKRClient:
                 if p.contract.currency == "USD"
             ]
 
-            # Ensure account summary data is fetched for the target account
-            await self._ib.reqAccountSummaryAsync(account_id)
+            # Ensure account summary data is fetched for the target account.
+            # ``ib_async`` changed the signature of ``reqAccountSummaryAsync`` at
+            # some point, so we try calling it with the account id first and
+            # fall back to calling it without arguments if a ``TypeError`` is
+            # raised.  Using ``cast`` avoids a mypy complaint about the
+            # potentially varying call signature.
+            req_summary = cast(Any, self._ib.reqAccountSummaryAsync)
+            try:
+                await req_summary(account_id)
+            except TypeError:
+                await req_summary()
             summary = await self._ib.accountSummaryAsync(account_id)
             summary = [
                 s for s in summary if getattr(s, "account", account_id) == account_id

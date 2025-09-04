@@ -182,7 +182,7 @@ async def submit_batch(
                 if exec_id and exec_id not in exec_commissions:
                     exec_commissions[exec_id] = abs(getattr(report, "commission", 0.0))
 
-        fills_all = []
+        fills_all: list[Any] = []
         for tr in exec_objs:
             try:
                 loop = asyncio.get_running_loop()
