@@ -9,11 +9,11 @@ from typing import Any, TypedDict
 from src.broker.ibkr_client import IBKRClient
 from src.core.drift import Drift
 from src.core.errors import PlanningError
+from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
 from src.core.sizing import SizedTrade
 from src.io import AppConfig
 from src.io.reporting import write_pre_trade_report
-from src.core.preview import render as render_preview
 
 
 class Plan(TypedDict, total=False):
@@ -115,7 +115,9 @@ async def plan_account(
                 if d.symbol != "CASH" and d.action in ("BUY", "SELL")
             }
 
-            print(f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]")
+            print(
+                f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
+            )
             logging.info(
                 "Fetching prices for %s: %d symbols",
                 account_id,

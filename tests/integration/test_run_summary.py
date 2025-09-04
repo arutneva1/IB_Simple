@@ -20,10 +20,14 @@ class DummyIBKRClient:
     def __init__(self) -> None:
         self._ib = None
 
-    async def connect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def connect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         pass
 
-    async def disconnect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def disconnect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         pass
 
     async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002

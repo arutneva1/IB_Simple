@@ -14,8 +14,10 @@ from rich import print
 from src.broker.errors import IBKRError
 from src.broker.execution import submit_batch
 from src.broker.ibkr_client import IBKRClient
+from src.core.confirmation import confirm_global, confirm_per_account
 from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.errors import PlanningError
+from src.core.planner import Plan, _fetch_price, plan_account
 from src.core.preview import render as render_preview
 from src.core.sizing import size_orders
 from src.io import AppConfig, ConfigError, load_config
@@ -26,8 +28,6 @@ from src.io.reporting import (
     write_post_trade_report,
     write_pre_trade_report,
 )
-from src.core.planner import Plan, plan_account, _fetch_price
-from src.core.confirmation import confirm_per_account, confirm_global
 
 
 async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
@@ -146,10 +146,14 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="IBKR ETF Rebalancer (scaffold)")
     parser.add_argument(
-        "--config", default="config/settings.ini", help="Path to settings file",
+        "--config",
+        default="config/settings.ini",
+        help="Path to settings file",
     )
     parser.add_argument(
-        "--csv", default="data/portfolios.csv", help="Path to portfolio CSV",
+        "--csv",
+        default="data/portfolios.csv",
+        help="Path to portfolio CSV",
     )
     parser.add_argument(
         "--dry-run",
