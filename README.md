@@ -100,6 +100,35 @@ python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfo
 ```
 Displays the batch summary and exits without placing orders.
 
+### Dry run across multiple accounts
+When `[accounts]` lists more than one ID, the rebalancer previews each
+account in sequence. Run the same command to simulate the batch:
+
+```bash
+python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
+```
+
+Each account prints its own table. Example output:
+
+```text
+┏━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
+┃ Account    ┃ Symbol  ┃ Target % ┃ Current % ┃ Drift % ┃ Drift $ ┃ Action ┃   Qty ┃ Est Value ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
+│ DU111111   │ SPY     │ 60.00    │ 55.00    │ -5.00    │ -500.00  │ BUY    │ 5.00  │ 2000.00   │
+└────────────┴─────────┴──────────┴──────────┴──────────┴──────────┴────────┴───────┴───────────┘
+
+Batch Summary
+│ Gross Buy           │ 500.00 │
+│ Gross Sell          │   0.00 │
+│ Pre Gross Exposure  │ 10000.00 │
+│ Pre Leverage        │   1.00 │
+│ Post Gross Exposure │ 10500.00 │
+│ Post Leverage       │   1.05 │
+```
+
+Flags such as `--dry-run`, `--yes`, and `--read-only` apply to every account
+processed.
+
 ### Interactive execution
 ```bash
 python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
