@@ -90,7 +90,6 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         buy_usd = sell_usd = 0.0
         pre_leverage = post_leverage = 0.0
         try:
-            client = IBKRClient()
             print(
                 f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id}) for account {account_id}[/blue]"
             )
@@ -101,8 +100,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 cfg.ibkr.client_id,
                 account_id,
             )
-            await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-            try:
+            client = IBKRClient()
+
+            async def _plan_with_client(client):
                 print("[blue]Retrieving account snapshot[/blue]")
                 logging.info("Retrieving account snapshot for %s", account_id)
                 snapshot = await client.snapshot(account_id)
@@ -172,10 +172,26 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     prices = {sym: prices[sym] for sym in trade_symbols}
                 except Exception as exc:
                     raise PlanningError(str(exc)) from exc
-            finally:
-                await client.disconnect(
-                    cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
-                )
+                return current, prices, net_liq, drifts, prioritized
+
+            if hasattr(client, "__aenter__"):
+                setattr(client, "_host", cfg.ibkr.host)
+                setattr(client, "_port", cfg.ibkr.port)
+                setattr(client, "_client_id", cfg.ibkr.client_id)
+                async with client:
+                    current, prices, net_liq, drifts, prioritized = (
+                        await _plan_with_client(client)
+                    )
+            else:
+                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                try:
+                    current, prices, net_liq, drifts, prioritized = (
+                        await _plan_with_client(client)
+                    )
+                finally:
+                    await client.disconnect(
+                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                    )
 
             try:
                 print("[blue]Sizing orders[/blue]")
@@ -302,13 +318,23 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
                 print("[blue]Submitting batch market orders[/blue]")
                 logging.info("Submitting batch market orders for %s", account_id)
-                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-                try:
-                    results = await submit_batch(client, trades, cfg, account_id)
-                finally:
-                    await client.disconnect(
+                client = IBKRClient()
+                if hasattr(client, "__aenter__"):
+                    setattr(client, "_host", cfg.ibkr.host)
+                    setattr(client, "_port", cfg.ibkr.port)
+                    setattr(client, "_client_id", cfg.ibkr.client_id)
+                    async with client:
+                        results = await submit_batch(client, trades, cfg, account_id)
+                else:
+                    await client.connect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                     )
+                    try:
+                        results = await submit_batch(client, trades, cfg, account_id)
+                    finally:
+                        await client.disconnect(
+                            cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        )
 
                 for res in results:
                     qty = res.get("fill_qty", res.get("filled", 0))
@@ -464,6 +490,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 },
             )
             continue
+        finally:
+            await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
     if confirm_mode == "global" and plans:
         for plan in plans:
@@ -569,13 +597,22 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 print("[blue]Submitting batch market orders[/blue]")
                 logging.info("Submitting batch market orders for %s", account_id)
                 client = IBKRClient()
-                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-                try:
-                    results = await submit_batch(client, trades, cfg, account_id)
-                finally:
-                    await client.disconnect(
+                if hasattr(client, "__aenter__"):
+                    setattr(client, "_host", cfg.ibkr.host)
+                    setattr(client, "_port", cfg.ibkr.port)
+                    setattr(client, "_client_id", cfg.ibkr.client_id)
+                    async with client:
+                        results = await submit_batch(client, trades, cfg, account_id)
+                else:
+                    await client.connect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
                     )
+                    try:
+                        results = await submit_batch(client, trades, cfg, account_id)
+                    finally:
+                        await client.disconnect(
+                            cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        )
 
                 for res in results:
                     qty = res.get("fill_qty", res.get("filled", 0))
@@ -718,6 +755,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     },
                 )
                 continue
+            finally:
+                await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
     if failures:
         print("[red]One or more accounts failed:[/red]")
