@@ -152,16 +152,13 @@ async def submit_batch(
         avg_price_first = float(getattr(ib_trade.orderStatus, "avgFillPrice", 0.0))
         exec_objs = [ib_trade]
         if fallback_trade is not None:
-            filled_second = float(
-                getattr(fallback_trade.orderStatus, "filled", 0.0)
-            )
+            filled_second = float(getattr(fallback_trade.orderStatus, "filled", 0.0))
             avg_price_second = float(
                 getattr(fallback_trade.orderStatus, "avgFillPrice", 0.0)
             )
             filled = filled_first + filled_second
             avg_price = (
-                (filled_first * avg_price_first)
-                + (filled_second * avg_price_second)
+                (filled_first * avg_price_first) + (filled_second * avg_price_second)
             ) / filled
             exec_objs.append(fallback_trade)
         else:
