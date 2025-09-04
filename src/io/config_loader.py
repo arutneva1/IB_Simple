@@ -153,7 +153,9 @@ def load_config(path: Path) -> AppConfig:
         per_holding_band_bps = cp.getint("rebalance", "per_holding_band_bps")
         portfolio_total_band_bps = cp.getint("rebalance", "portfolio_total_band_bps")
         min_order_usd = cp.getint("rebalance", "min_order_usd")
-        cash_buffer_type = cp.get("rebalance", "cash_buffer_type", fallback="abs").lower()
+        cash_buffer_type = cp.get(
+            "rebalance", "cash_buffer_type", fallback="abs"
+        ).lower()
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
