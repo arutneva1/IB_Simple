@@ -148,9 +148,13 @@ def load_config(path: Path) -> AppConfig:
                 seen.add(s)
         if not ids:
             raise ConfigError("[accounts] ids must be non-empty")
-        confirm_mode = cp.get("accounts", "confirm_mode", fallback="per_account").strip().lower()
+        confirm_mode = (
+            cp.get("accounts", "confirm_mode", fallback="per_account").strip().lower()
+        )
         if confirm_mode not in {"per_account", "global"}:
-            raise ConfigError("[accounts] confirm_mode must be 'per_account' or 'global'")
+            raise ConfigError(
+                "[accounts] confirm_mode must be 'per_account' or 'global'"
+            )
         accounts = Accounts(ids=ids, confirm_mode=confirm_mode)
         account_id = ids[0]
     else:
