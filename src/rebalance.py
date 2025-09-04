@@ -132,7 +132,7 @@ async def _run(args: argparse.Namespace) -> None:
     print("[blue]Sizing orders[/blue]")
     logging.info("Sizing orders")
     trades, post_gross_exposure, post_leverage = size_orders(
-        prioritized, prices, current["CASH"], cfg
+        prioritized, prices, current["CASH"], net_liq, cfg
     )
     pre_gross_exposure = net_liq - current["CASH"]
     pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
