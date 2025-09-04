@@ -46,6 +46,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     csv_path = Path(args.csv)
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg: AppConfig = load_config(cfg_path)
+    cli_confirm_mode = getattr(args, "confirm_mode", None)
+    if cli_confirm_mode and cfg.accounts is not None:
+        cfg.accounts.confirm_mode = cli_confirm_mode
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
@@ -63,6 +66,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
     accounts = cfg.accounts
     assert accounts is not None
+    confirm_mode = getattr(accounts, "confirm_mode", "per_account")
+    plans = []
     for account_id in accounts.ids:
         try:
             client = IBKRClient()
@@ -193,113 +198,261 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     post_gross_exposure,
                     post_leverage,
                 )
-                print(table)
             except Exception as exc:
                 raise PlanningError(str(exc)) from exc
-            if args.dry_run:
-                print("[green]Dry run complete (no orders submitted).[/green]")
-                logging.info("Dry run complete (no orders submitted).")
-                continue
-
-            if cfg.ibkr.read_only or args.read_only:
-                print(
-                    "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
-                )
-                logging.info(
-                    "Read-only mode: trading is disabled; no orders will be submitted."
-                )
-                continue
-
-            if not args.yes:
-                resp = input("Proceed? [y/N]: ").strip().lower()
-                if resp != "y":
-                    print("[yellow]Aborted by user.[/yellow]")
-                    logging.info("Aborted by user.")
+            if confirm_mode == "per_account":
+                print(table)
+                if args.dry_run:
+                    print("[green]Dry run complete (no orders submitted).[/green]")
+                    logging.info("Dry run complete (no orders submitted).")
                     continue
 
-            print("[blue]Submitting batch market orders[/blue]")
-            logging.info("Submitting batch market orders for %s", account_id)
-            await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
-            try:
-                results = await submit_batch(client, trades, cfg)
-            finally:
-                await client.disconnect(
-                    cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
-                )
+                if cfg.ibkr.read_only or args.read_only:
+                    print(
+                        "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
+                    )
+                    logging.info(
+                        "Read-only mode: trading is disabled; no orders will be submitted."
+                    )
+                    continue
 
-            for res in results:
-                qty = res.get("fill_qty", res.get("filled", 0))
-                price = res.get("fill_price", res.get("avg_fill_price", 0))
-                print(
-                    f"[green]{res.get('symbol')}: {res.get('status')} "
-                    f"{qty} @ {price}[/green]"
+                if not args.yes:
+                    resp = input("Proceed? [y/N]: ").strip().lower()
+                    if resp != "y":
+                        print("[yellow]Aborted by user.[/yellow]")
+                        logging.info("Aborted by user.")
+                        continue
+
+                print("[blue]Submitting batch market orders[/blue]")
+                logging.info("Submitting batch market orders for %s", account_id)
+                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                try:
+                    results = await submit_batch(client, trades, cfg)
+                finally:
+                    await client.disconnect(
+                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                    )
+
+                for res in results:
+                    qty = res.get("fill_qty", res.get("filled", 0))
+                    price = res.get("fill_price", res.get("avg_fill_price", 0))
+                    print(
+                        f"[green]{res.get('symbol')}: {res.get('status')} "
+                        f"{qty} @ {price}[/green]"
+                    )
+                    logging.info(
+                        "%s: %s %s @ %s",
+                        res.get("symbol"),
+                        res.get("status"),
+                        qty,
+                        price,
+                    )
+                if any(r.get("status") != "Filled" for r in results):
+                    logging.error("One or more orders failed to fill")
+                    raise IBKRError("One or more orders failed to fill")
+
+                cash_after = current["CASH"]
+                positions = current.copy()
+                prices_before = prices.copy()
+                results_by_symbol = {r.get("symbol"): r for r in results}
+                for trade in trades:
+                    res = results_by_symbol.get(trade.symbol, {})
+                    filled_any = res.get("fill_qty")
+                    if filled_any is None:
+                        filled_any = res.get("filled", trade.quantity)
+                    filled = float(filled_any)
+                    price_any = res.get("fill_price")
+                    if price_any is None:
+                        price_any = res.get(
+                            "avg_fill_price", prices.get(trade.symbol, 0.0)
+                        )
+                    price = float(price_any)
+                    if trade.action == "BUY":
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) + filled
+                        )
+                        cash_after -= filled * price
+                    else:
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) - filled
+                        )
+                        cash_after += filled * price
+                    prices[trade.symbol] = price
+
+                post_gross_exposure_actual = net_liq - cash_after
+                post_leverage_actual = (
+                    post_gross_exposure_actual / net_liq if net_liq else 0.0
+                )
+                post_path = write_post_trade_report(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    account_id,
+                    drifts,
+                    trades,
+                    results,
+                    prices_before,
+                    net_liq,
+                    pre_gross_exposure,
+                    pre_leverage,
+                    post_gross_exposure_actual,
+                    post_leverage_actual,
+                    cfg,
                 )
                 logging.info(
-                    "%s: %s %s @ %s",
-                    res.get("symbol"),
-                    res.get("status"),
-                    qty,
-                    price,
+                    "Post-trade report for %s written to %s", account_id, post_path
                 )
-            if any(r.get("status") != "Filled" for r in results):
-                logging.error("One or more orders failed to fill")
-                raise IBKRError("One or more orders failed to fill")
-
-            cash_after = current["CASH"]
-            positions = current.copy()
-            prices_before = prices.copy()
-            results_by_symbol = {r.get("symbol"): r for r in results}
-            for trade in trades:
-                res = results_by_symbol.get(trade.symbol, {})
-                filled_any = res.get("fill_qty")
-                if filled_any is None:
-                    filled_any = res.get("filled", trade.quantity)
-                filled = float(filled_any)
-                price_any = res.get("fill_price")
-                if price_any is None:
-                    price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
-                price = float(price_any)
-                if trade.action == "BUY":
-                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
-                    cash_after -= filled * price
-                else:
-                    positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
-                    cash_after += filled * price
-                prices[trade.symbol] = price
-
-            post_gross_exposure_actual = net_liq - cash_after
-            post_leverage_actual = (
-                post_gross_exposure_actual / net_liq if net_liq else 0.0
-            )
-            post_path = write_post_trade_report(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                account_id,
-                drifts,
-                trades,
-                results,
-                prices_before,
-                net_liq,
-                pre_gross_exposure,
-                pre_leverage,
-                post_gross_exposure_actual,
-                post_leverage_actual,
-                cfg,
-            )
-            logging.info(
-                "Post-trade report for %s written to %s", account_id, post_path
-            )
-            logging.info(
-                "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
-                account_id,
-                len(trades),
-                post_leverage_actual,
-            )
+                logging.info(
+                    "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
+                    account_id,
+                    len(trades),
+                    post_leverage_actual,
+                )
+            else:
+                plans.append(
+                    {
+                        "account_id": account_id,
+                        "drifts": drifts,
+                        "trades": trades,
+                        "prices": prices,
+                        "current": current,
+                        "net_liq": net_liq,
+                        "pre_gross_exposure": pre_gross_exposure,
+                        "pre_leverage": pre_leverage,
+                        "post_gross_exposure": post_gross_exposure,
+                        "post_leverage": post_leverage,
+                        "table": table,
+                    }
+                )
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
             failures.append((account_id, str(exc)))
             continue
+
+    if confirm_mode == "global" and plans:
+        for plan in plans:
+            print(plan["table"])
+        if args.dry_run:
+            print("[green]Dry run complete (no orders submitted).[/green]")
+            logging.info("Dry run complete (no orders submitted).")
+            return failures
+        if cfg.ibkr.read_only or args.read_only:
+            print(
+                "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
+            )
+            logging.info(
+                "Read-only mode: trading is disabled; no orders will be submitted."
+            )
+            return failures
+        if not args.yes:
+            resp = input("Proceed? [y/N]: ").strip().lower()
+            if resp != "y":
+                print("[yellow]Aborted by user.[/yellow]")
+                logging.info("Aborted by user.")
+                return failures
+        for plan in plans:
+            account_id = plan["account_id"]
+            try:
+                trades = plan["trades"]
+                prices = plan["prices"]
+                current = plan["current"]
+                net_liq = plan["net_liq"]
+                drifts = plan["drifts"]
+                pre_gross_exposure = plan["pre_gross_exposure"]
+                pre_leverage = plan["pre_leverage"]
+                post_gross_exposure = plan["post_gross_exposure"]
+                post_leverage = plan["post_leverage"]
+
+                print("[blue]Submitting batch market orders[/blue]")
+                logging.info("Submitting batch market orders for %s", account_id)
+                client = IBKRClient()
+                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                try:
+                    results = await submit_batch(client, trades, cfg)
+                finally:
+                    await client.disconnect(
+                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                    )
+
+                for res in results:
+                    qty = res.get("fill_qty", res.get("filled", 0))
+                    price = res.get("fill_price", res.get("avg_fill_price", 0))
+                    print(
+                        f"[green]{res.get('symbol')}: {res.get('status')} "
+                        f"{qty} @ {price}[/green]"
+                    )
+                    logging.info(
+                        "%s: %s %s @ %s",
+                        res.get("symbol"),
+                        res.get("status"),
+                        qty,
+                        price,
+                    )
+                if any(r.get("status") != "Filled" for r in results):
+                    logging.error("One or more orders failed to fill")
+                    raise IBKRError("One or more orders failed to fill")
+
+                cash_after = current["CASH"]
+                positions = current.copy()
+                prices_before = prices.copy()
+                results_by_symbol = {r.get("symbol"): r for r in results}
+                for trade in trades:
+                    res = results_by_symbol.get(trade.symbol, {})
+                    filled_any = res.get("fill_qty")
+                    if filled_any is None:
+                        filled_any = res.get("filled", trade.quantity)
+                    filled = float(filled_any)
+                    price_any = res.get("fill_price")
+                    if price_any is None:
+                        price_any = res.get(
+                            "avg_fill_price", prices.get(trade.symbol, 0.0)
+                        )
+                    price = float(price_any)
+                    if trade.action == "BUY":
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) + filled
+                        )
+                        cash_after -= filled * price
+                    else:
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) - filled
+                        )
+                        cash_after += filled * price
+                    prices[trade.symbol] = price
+
+                post_gross_exposure_actual = net_liq - cash_after
+                post_leverage_actual = (
+                    post_gross_exposure_actual / net_liq if net_liq else 0.0
+                )
+                post_path = write_post_trade_report(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    account_id,
+                    drifts,
+                    trades,
+                    results,
+                    prices_before,
+                    net_liq,
+                    pre_gross_exposure,
+                    pre_leverage,
+                    post_gross_exposure_actual,
+                    post_leverage_actual,
+                    cfg,
+                )
+                logging.info(
+                    "Post-trade report for %s written to %s", account_id, post_path
+                )
+                logging.info(
+                    "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
+                    account_id,
+                    len(trades),
+                    post_leverage_actual,
+                )
+            except (ConfigError, IBKRError, PlanningError) as exc:
+                logging.error("Error processing account %s: %s", account_id, exc)
+                print(f"[red]{exc}[/red]")
+                failures.append((account_id, str(exc)))
+                continue
 
     if failures:
         print("[red]One or more accounts failed:[/red]")
@@ -332,6 +485,11 @@ def main(argv: list[str] | None = None) -> None:
         "--read-only",
         action="store_true",
         help="Force read-only mode; block order submission",
+    )
+    parser.add_argument(
+        "--confirm-mode",
+        choices=["per_account", "global"],
+        help="Confirmation mode: per-account or global",
     )
     args = parser.parse_args(argv if argv is not None else [])
 
