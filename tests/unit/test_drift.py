@@ -187,7 +187,9 @@ def test_total_drift_mode_selects_largest_until_band(
     cfg_factory,
 ) -> None:
     cfg = cfg_factory("total_drift", total_band=500)
-    drifts = compute_drift("ACCT", total_current, total_targets, sample_prices, 100.0, cfg)
+    drifts = compute_drift(
+        "ACCT", total_current, total_targets, sample_prices, 100.0, cfg
+    )
     assert [d.symbol for d in drifts] == ["AAA", "BBB"]
     by_symbol = {d.symbol: d for d in drifts}
     assert by_symbol["AAA"].action == "SELL"
