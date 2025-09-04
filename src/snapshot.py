@@ -15,7 +15,9 @@ from src.io import AppConfig, ConfigError, load_config
 
 async def _run(cfg_path: Path) -> None:
     cfg: AppConfig = load_config(cfg_path)
-    for account_id in cfg.accounts.ids:
+    accounts = cfg.accounts
+    account_ids = accounts.ids if accounts is not None else [cfg.ibkr.account_id]
+    for account_id in account_ids:
         client = IBKRClient()
         await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
         try:
