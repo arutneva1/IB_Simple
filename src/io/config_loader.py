@@ -129,6 +129,10 @@ def load_config(path: Path) -> AppConfig:
         read_only = cp.getboolean("ibkr", "read_only")
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[ibkr] {exc}") from exc
+    if cp.has_option("ibkr", "account_id"):
+        raise ConfigError(
+            "[ibkr] account_id is no longer supported; use [accounts] ids"
+        )
     if port <= 0:
         raise ConfigError("[ibkr] port must be positive")
     if client_id < 0:

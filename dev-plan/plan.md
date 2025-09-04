@@ -294,12 +294,13 @@ _Status: Completed with batch-summary preview._
 - Activate env; `pip install -r requirements.txt -r requirements-dev.txt`
 
 2) **IBKR TWS/Gateway**
-- Install and run TWS or IB Gateway (paper)  
-- Enable API, set host/port (default 127.0.0.1:4002), and your `account_id`
+- Install and run TWS or IB Gateway (paper)
+- Enable API, set host/port (default 127.0.0.1:4002), and configure your
+  account IDs under `[accounts]`
 - Ensure connectivity: sample snapshot command returns positions
 
 3) **Pre-commit & CI**
-- `pre-commit install`  
+- `pre-commit install`
 - Push to GitHub; confirm Actions CI runs and passes
 
 ---
