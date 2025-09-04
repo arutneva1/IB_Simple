@@ -48,6 +48,11 @@ class IBKRClient:
 
         if None in (self._host, self._port, self._client_id):
             raise IBKRError("host, port and client_id required for context manager")
+        assert (
+            self._host is not None
+            and self._port is not None
+            and self._client_id is not None
+        )
         await self.connect(self._host, self._port, self._client_id)
         return self
 
@@ -56,6 +61,11 @@ class IBKRClient:
 
         if None not in (self._host, self._port, self._client_id):
             try:
+                assert (
+                    self._host is not None
+                    and self._port is not None
+                    and self._client_id is not None
+                )
                 await self.disconnect(self._host, self._port, self._client_id)
             except Exception:  # pragma: no cover - disconnect errors
                 log.exception("Error while disconnecting from IBKR")
