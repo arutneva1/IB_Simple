@@ -22,7 +22,6 @@ class IBKR:
     host: str
     port: int
     client_id: int
-    account_id: str
     read_only: bool
 
 
@@ -100,7 +99,7 @@ class AppConfig:
     pricing: Pricing
     execution: Execution
     io: IO
-    accounts: Accounts | None
+    accounts: Accounts
 
 
 TOLERANCE = 0.001
@@ -130,60 +129,54 @@ def load_config(path: Path) -> AppConfig:
         read_only = cp.getboolean("ibkr", "read_only")
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[ibkr] {exc}") from exc
-    account_id = cp.get("ibkr", "account_id", fallback="").strip()
     if port <= 0:
         raise ConfigError("[ibkr] port must be positive")
     if client_id < 0:
         raise ConfigError("[ibkr] client_id must be non-negative")
 
-    accounts: Accounts | None = None
-    if cp.has_section("accounts"):
-        try:
-            raw_ids = cp.get("accounts", "ids")
-        except NoOptionError as exc:
-            raise ConfigError("[accounts] missing key: ids") from exc
-        ids: list[str] = []
-        seen: set[str] = set()
-        for s in raw_ids.split(","):
-            s = s.strip()
-            if s and s not in seen:
-                ids.append(s)
-                seen.add(s)
-        if not ids:
-            raise ConfigError("[accounts] ids must be non-empty")
-        confirm_mode = (
-            cp.get(
-                "accounts",
-                "confirm_mode",
-                fallback="per_account",
-            )
-            .strip()
-            .lower()
+    if not cp.has_section("accounts"):
+        raise ConfigError("Missing section [accounts]")
+    try:
+        raw_ids = cp.get("accounts", "ids")
+    except NoOptionError as exc:
+        raise ConfigError("[accounts] missing key: ids") from exc
+    ids: list[str] = []
+    seen: set[str] = set()
+    for s in raw_ids.split(","):
+        s = s.strip()
+        if s and s not in seen:
+            ids.append(s)
+            seen.add(s)
+    if not ids:
+        raise ConfigError("[accounts] ids must be non-empty")
+    confirm_mode = (
+        cp.get(
+            "accounts",
+            "confirm_mode",
+            fallback="per_account",
         )
-        if confirm_mode not in {"per_account", "global"}:
-            # fmt: off
-            raise ConfigError(
-                "[accounts] confirm_mode must be "
-                "'per_account' or 'global'"
-            )
-            # fmt: on
-        try:
-            pacing_sec = cp.getfloat("accounts", "pacing_sec", fallback=0.0)
-        except ValueError as exc:
-            raise ConfigError("[accounts] pacing_sec must be a float") from exc
-        if pacing_sec < 0:
-            raise ConfigError("[accounts] pacing_sec must be >= 0")
-        accounts = Accounts(ids=ids, confirm_mode=confirm_mode, pacing_sec=pacing_sec)
-        account_id = ids[0]
-    else:
-        if not account_id:
-            raise ConfigError("[ibkr] missing key: account_id")
+        .strip()
+        .lower()
+    )
+    if confirm_mode not in {"per_account", "global"}:
+        # fmt: off
+        raise ConfigError(
+            "[accounts] confirm_mode must be "
+            "'per_account' or 'global'"
+        )
+        # fmt: on
+    try:
+        pacing_sec = cp.getfloat("accounts", "pacing_sec", fallback=0.0)
+    except ValueError as exc:
+        raise ConfigError("[accounts] pacing_sec must be a float") from exc
+    if pacing_sec < 0:
+        raise ConfigError("[accounts] pacing_sec must be >= 0")
+    accounts = Accounts(ids=ids, confirm_mode=confirm_mode, pacing_sec=pacing_sec)
 
     ibkr = IBKR(
         host=host,
         port=port,
         client_id=client_id,
-        account_id=account_id,
         read_only=read_only,
     )
 

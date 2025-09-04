@@ -61,8 +61,10 @@ You maintain three model ETF portfolios (e.g., SMURF, BADASS, GLTR). The applica
 host = 127.0.0.1
 port = 4002
 client_id = 42
-account_id = UXXXXXX  ; or DUXXXXXX for paper
 read_only = true      ; force read‑only API until explicitly disabled
+
+[accounts]
+ids = UXXXXXX         ; or DUXXXXXX for paper
 
 [models]
 smurf = 0.50

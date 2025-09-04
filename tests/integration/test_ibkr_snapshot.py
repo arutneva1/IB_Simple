@@ -19,7 +19,7 @@ def test_ibkr_snapshot():
     async def run():
         await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
         try:
-            return await client.snapshot(cfg.ibkr.account_id)
+            return await client.snapshot(cfg.accounts.ids[0])
         finally:
             await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
 

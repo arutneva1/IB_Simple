@@ -126,8 +126,10 @@ repos:
 host = 127.0.0.1
 port = 4002
 client_id = 42
-account_id = DUXXXXXX
 read_only = true
+
+[accounts]
+ids = DUXXXXXX
 
 [models]
 smurf = 0.50

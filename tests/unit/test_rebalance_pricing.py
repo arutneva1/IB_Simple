@@ -19,7 +19,7 @@ def _setup_common(
     """Prepare common patches and capture pricing information."""
 
     cfg = SimpleNamespace(
-        ibkr=SimpleNamespace(host="h", port=1, client_id=1, account_id="a"),
+        ibkr=SimpleNamespace(host="h", port=1, client_id=1),
         models=SimpleNamespace(smurf=0.5, badass=0.3, gltr=0.2),
         pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
         execution=SimpleNamespace(
