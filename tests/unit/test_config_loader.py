@@ -9,6 +9,7 @@ from src.io.config_loader import (  # noqa: E402
     IBKR,
     IO,
     Accounts,
+    account_overrides,
     AppConfig,
     ConfigError,
     Execution,
@@ -134,6 +135,35 @@ def test_accounts_pacing_sec_negative(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
+
+
+def test_accounts_ids_trim_and_deduplicate(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "ids = ACC1, ACC2",
+        "ids =  ACC1  ,  ACC2 , ACC1 ,ACC2  ",
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts.ids == ["ACC1", "ACC2"]
+
+
+def test_single_account_id(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace("ids = ACC1, ACC2", "ids =   ACC1   ")
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts.ids == ["ACC1"]
+
+
+def test_account_section_unknown_keys(tmp_path: Path) -> None:
+    content = VALID_CONFIG + "\n[account:ACC1]\nfoo = bar\nunknown = baz\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts.ids == ["ACC1", "ACC2"]
+    assert account_overrides["ACC1"]["foo"] == "bar"
+    assert account_overrides["ACC1"]["unknown"] == "baz"
 
 
 def test_ibkr_account_id_rejected(tmp_path: Path) -> None:
