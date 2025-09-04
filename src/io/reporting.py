@@ -70,7 +70,7 @@ def write_pre_trade_report(
     """Write a pre-trade CSV report and return its path."""
 
     report_dir.mkdir(parents=True, exist_ok=True)
-    path = report_dir / f"rebalance_pre_{_format_ts(ts)}.csv"
+    path = report_dir / f"rebalance_pre_{account_id}_{_format_ts(ts)}.csv"
 
     fieldnames = [
         "timestamp_run",
@@ -162,7 +162,7 @@ def write_post_trade_report(
     """
 
     report_dir.mkdir(parents=True, exist_ok=True)
-    path = report_dir / f"rebalance_post_{_format_ts(ts)}.csv"
+    path = report_dir / f"rebalance_post_{account_id}_{_format_ts(ts)}.csv"
 
     fieldnames = [
         "timestamp_run",
@@ -280,8 +280,45 @@ def write_post_trade_report(
     return path
 
 
+def append_run_summary(report_dir: Path, ts: datetime, row: Mapping[str, Any]) -> Path:
+    """Append a single row to the run summary CSV file.
+
+    The file is named ``run_summary_<timestamp>.csv`` where ``timestamp`` is
+    derived from ``ts`` using :func:`_format_ts`.  A header row is written if the
+    file does not yet exist.
+    """
+
+    report_dir.mkdir(parents=True, exist_ok=True)
+    path = report_dir / f"run_summary_{_format_ts(ts)}.csv"
+
+    fieldnames = [
+        "timestamp_run",
+        "account_id",
+        "planned_orders",
+        "submitted",
+        "filled",
+        "rejected",
+        "buy_usd",
+        "sell_usd",
+        "pre_leverage",
+        "post_leverage",
+        "status",
+        "error",
+    ]
+
+    write_header = not path.exists() or path.stat().st_size == 0
+    with path.open("a", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+    log.info("Run summary appended to %s", path)
+    return path
+
+
 __all__ = [
     "setup_logging",
     "write_pre_trade_report",
     "write_post_trade_report",
+    "append_run_summary",
 ]

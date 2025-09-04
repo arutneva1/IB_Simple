@@ -19,10 +19,11 @@ from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.errors import PlanningError
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
-from src.core.sizing import size_orders
+from src.core.sizing import SizedTrade, size_orders
 from src.io import AppConfig, ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 from src.io.reporting import (
+    append_run_summary,
     setup_logging,
     write_post_trade_report,
     write_pre_trade_report,
@@ -69,6 +70,10 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     confirm_mode = getattr(accounts, "confirm_mode", "per_account")
     plans = []
     for account_id in accounts.ids:
+        trades: list[SizedTrade] = []
+        planned_orders = 0
+        buy_usd = sell_usd = 0.0
+        pre_leverage = post_leverage = 0.0
         try:
             client = IBKRClient()
             print(
@@ -170,6 +175,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 )
                 pre_gross_exposure = net_liq - current["CASH"]
                 pre_leverage = pre_gross_exposure / net_liq if net_liq else 0.0
+                planned_orders = len(trades)
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
                 pre_path = write_pre_trade_report(
                     Path(cfg.io.report_dir),
                     ts_dt,
@@ -205,6 +213,24 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 if args.dry_run:
                     print("[green]Dry run complete (no orders submitted).[/green]")
                     logging.info("Dry run complete (no orders submitted).")
+                    append_run_summary(
+                        Path(cfg.io.report_dir),
+                        ts_dt,
+                        {
+                            "timestamp_run": ts_dt.isoformat(),
+                            "account_id": account_id,
+                            "planned_orders": planned_orders,
+                            "submitted": 0,
+                            "filled": 0,
+                            "rejected": 0,
+                            "buy_usd": buy_usd,
+                            "sell_usd": sell_usd,
+                            "pre_leverage": pre_leverage,
+                            "post_leverage": post_leverage,
+                            "status": "dry_run",
+                            "error": "",
+                        },
+                    )
                     continue
 
                 if cfg.ibkr.read_only or args.read_only:
@@ -214,6 +240,24 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     logging.info(
                         "Read-only mode: trading is disabled; no orders will be submitted."
                     )
+                    append_run_summary(
+                        Path(cfg.io.report_dir),
+                        ts_dt,
+                        {
+                            "timestamp_run": ts_dt.isoformat(),
+                            "account_id": account_id,
+                            "planned_orders": planned_orders,
+                            "submitted": 0,
+                            "filled": 0,
+                            "rejected": 0,
+                            "buy_usd": buy_usd,
+                            "sell_usd": sell_usd,
+                            "pre_leverage": pre_leverage,
+                            "post_leverage": pre_leverage,
+                            "status": "read_only",
+                            "error": "",
+                        },
+                    )
                     continue
 
                 if not args.yes:
@@ -221,6 +265,24 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     if resp != "y":
                         print("[yellow]Aborted by user.[/yellow]")
                         logging.info("Aborted by user.")
+                        append_run_summary(
+                            Path(cfg.io.report_dir),
+                            ts_dt,
+                            {
+                                "timestamp_run": ts_dt.isoformat(),
+                                "account_id": account_id,
+                                "planned_orders": planned_orders,
+                                "submitted": 0,
+                                "filled": 0,
+                                "rejected": 0,
+                                "buy_usd": buy_usd,
+                                "sell_usd": sell_usd,
+                                "pre_leverage": pre_leverage,
+                                "post_leverage": pre_leverage,
+                                "status": "aborted",
+                                "error": "",
+                            },
+                        )
                         continue
 
                 print("[blue]Submitting batch market orders[/blue]")
@@ -283,6 +345,27 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 post_leverage_actual = (
                     post_gross_exposure_actual / net_liq if net_liq else 0.0
                 )
+                trades_by_symbol = {t.symbol: t for t in trades}
+                filled = sum(1 for r in results if r.get("status") == "Filled")
+                rejected = len(results) - filled
+                buy_usd = 0.0
+                sell_usd = 0.0
+                for r in results:
+                    sym = r.get("symbol")
+                    trade = trades_by_symbol.get(sym)
+                    if not trade:
+                        continue
+                    qty_any = r.get("fill_qty")
+                    if qty_any is None:
+                        qty_any = r.get("filled", 0.0)
+                    price_any = r.get("fill_price")
+                    if price_any is None:
+                        price_any = r.get("avg_fill_price", 0.0)
+                    value = float(qty_any) * float(price_any)
+                    if trade.action == "BUY":
+                        buy_usd += value
+                    else:
+                        sell_usd += value
                 post_path = write_post_trade_report(
                     Path(cfg.io.report_dir),
                     ts_dt,
@@ -307,6 +390,24 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     len(trades),
                     post_leverage_actual,
                 )
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": planned_orders,
+                        "submitted": len(trades),
+                        "filled": filled,
+                        "rejected": rejected,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": pre_leverage,
+                        "post_leverage": post_leverage_actual,
+                        "status": "completed",
+                        "error": "",
+                    },
+                )
             else:
                 plans.append(
                     {
@@ -327,6 +428,24 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
             failures.append((account_id, str(exc)))
+            append_run_summary(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": planned_orders,
+                    "submitted": 0,
+                    "filled": 0,
+                    "rejected": 0,
+                    "buy_usd": buy_usd,
+                    "sell_usd": sell_usd,
+                    "pre_leverage": pre_leverage,
+                    "post_leverage": pre_leverage,
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            )
             continue
 
     if confirm_mode == "global" and plans:
@@ -335,6 +454,28 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         if args.dry_run:
             print("[green]Dry run complete (no orders submitted).[/green]")
             logging.info("Dry run complete (no orders submitted).")
+            for plan in plans:
+                trades = plan["trades"]
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": plan["account_id"],
+                        "planned_orders": len(trades),
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["post_leverage"],
+                        "status": "dry_run",
+                        "error": "",
+                    },
+                )
             return failures
         if cfg.ibkr.read_only or args.read_only:
             print(
@@ -343,12 +484,56 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             logging.info(
                 "Read-only mode: trading is disabled; no orders will be submitted."
             )
+            for plan in plans:
+                trades = plan["trades"]
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": plan["account_id"],
+                        "planned_orders": len(trades),
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["pre_leverage"],
+                        "status": "read_only",
+                        "error": "",
+                    },
+                )
             return failures
         if not args.yes:
             resp = input("Proceed? [y/N]: ").strip().lower()
             if resp != "y":
                 print("[yellow]Aborted by user.[/yellow]")
                 logging.info("Aborted by user.")
+                for plan in plans:
+                    trades = plan["trades"]
+                    buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                    sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                    append_run_summary(
+                        Path(cfg.io.report_dir),
+                        ts_dt,
+                        {
+                            "timestamp_run": ts_dt.isoformat(),
+                            "account_id": plan["account_id"],
+                            "planned_orders": len(trades),
+                            "submitted": 0,
+                            "filled": 0,
+                            "rejected": 0,
+                            "buy_usd": buy_usd,
+                            "sell_usd": sell_usd,
+                            "pre_leverage": plan["pre_leverage"],
+                            "post_leverage": plan["pre_leverage"],
+                            "status": "aborted",
+                            "error": "",
+                        },
+                    )
                 return failures
         for plan in plans:
             account_id = plan["account_id"]
@@ -362,6 +547,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 pre_leverage = plan["pre_leverage"]
                 post_gross_exposure = plan["post_gross_exposure"]
                 post_leverage = plan["post_leverage"]
+                planned_orders = len(trades)
 
                 print("[blue]Submitting batch market orders[/blue]")
                 logging.info("Submitting batch market orders for %s", account_id)
@@ -424,6 +610,27 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 post_leverage_actual = (
                     post_gross_exposure_actual / net_liq if net_liq else 0.0
                 )
+                trades_by_symbol = {t.symbol: t for t in trades}
+                filled = sum(1 for r in results if r.get("status") == "Filled")
+                rejected = len(results) - filled
+                buy_usd = 0.0
+                sell_usd = 0.0
+                for r in results:
+                    sym = r.get("symbol")
+                    trade = trades_by_symbol.get(sym)
+                    if not trade:
+                        continue
+                    qty_any = r.get("fill_qty")
+                    if qty_any is None:
+                        qty_any = r.get("filled", 0.0)
+                    price_any = r.get("fill_price")
+                    if price_any is None:
+                        price_any = r.get("avg_fill_price", 0.0)
+                    value = float(qty_any) * float(price_any)
+                    if trade.action == "BUY":
+                        buy_usd += value
+                    else:
+                        sell_usd += value
                 post_path = write_post_trade_report(
                     Path(cfg.io.report_dir),
                     ts_dt,
@@ -448,10 +655,49 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     len(trades),
                     post_leverage_actual,
                 )
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": planned_orders,
+                        "submitted": len(trades),
+                        "filled": filled,
+                        "rejected": rejected,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": pre_leverage,
+                        "post_leverage": post_leverage_actual,
+                        "status": "completed",
+                        "error": "",
+                    },
+                )
             except (ConfigError, IBKRError, PlanningError) as exc:
                 logging.error("Error processing account %s: %s", account_id, exc)
                 print(f"[red]{exc}[/red]")
                 failures.append((account_id, str(exc)))
+                trades = plan["trades"]
+                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+                append_run_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": len(trades),
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["pre_leverage"],
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
                 continue
 
     if failures:
