@@ -32,6 +32,27 @@ cp data/portfolios.csv my_portfolios.csv
 Blank cells in the CSV represent 0% allocations. Use the copied files via
 `--config my_settings.ini --csv my_portfolios.csv` when running the tools.
 
+### Accounts block and confirmation modes
+
+Add multiple account IDs by extending `settings.ini` with an `[accounts]`
+section:
+
+```ini
+[accounts]
+ids = DU111111, DU222222
+confirm_mode = per_account        ; per_account | global
+```
+
+When present, this block takes precedence over the legacy `[ibkr] account_id`.
+The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
+controls how the tool prompts for trade confirmation:
+
+* `per_account` (default) confirms each account separately.
+* `global` prompts once for all accounts.
+
+Even with multiple IDs, execution remains single-account for now; multi-account
+behavior arrives in later phases.
+
 ## Usage
 
 ### Validate configuration
