@@ -55,6 +55,7 @@ algo_preference = adaptive
 fallback_plain_market = true
 batch_orders = true
 commission_report_timeout = 5.0
+wait_before_fallback = 300
 
 [io]
 report_dir = reports
@@ -100,6 +101,7 @@ def test_load_valid_config(config_file: Path) -> None:
             fallback_plain_market=True,
             batch_orders=True,
             commission_report_timeout=5.0,
+            wait_before_fallback=300.0,
         ),
         io=IO(report_dir="reports", log_level="INFO"),
         accounts=None,

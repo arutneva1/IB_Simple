@@ -69,6 +69,7 @@ class Execution:
     fallback_plain_market: bool
     batch_orders: bool
     commission_report_timeout: float
+    wait_before_fallback: float
 
 
 @dataclass
@@ -290,6 +291,9 @@ def load_config(path: Path) -> AppConfig:
             batch_orders=cp.getboolean("execution", "batch_orders"),
             commission_report_timeout=cp.getfloat(
                 "execution", "commission_report_timeout", fallback=5.0
+            ),
+            wait_before_fallback=cp.getfloat(
+                "execution", "wait_before_fallback", fallback=300.0
             ),
         )
     except (NoSectionError, NoOptionError, ValueError) as exc:
