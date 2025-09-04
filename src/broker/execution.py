@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import time
 from typing import Any, cast
-from zoneinfo import ZoneInfo
 
 from ib_async.contract import Stock
 from ib_async.order import MarketOrder, TagValue
@@ -46,20 +44,6 @@ async def submit_batch(
     log.info("Starting batch execution of %d trades", len(trades))
     ib = cast(Any, client._ib)
 
-    if cfg.rebalance.prefer_rth:
-        try:
-            server_now = await ib.reqCurrentTimeAsync()
-        except Exception as exc:  # pragma: no cover - network errors
-            raise IBKRError("Failed to query current time") from exc
-        if server_now.tzinfo is None:
-            server_now = server_now.replace(tzinfo=ZoneInfo("UTC"))
-        ny_time = server_now.astimezone(ZoneInfo("America/New_York")).time()
-        if not (time(9, 30) <= ny_time <= time(16, 0)):
-            raise IBKRError(
-                "Current time outside 09:30-16:00 America/New_York; "
-                "set rebalance.prefer_rth=False to override"
-            )
-
     async def _wait(trade: Any, symbol: str) -> str:
         terminal = {"Filled", "Cancelled", "ApiCancelled", "Rejected", "Inactive"}
         last_status = ""
@@ -78,6 +62,8 @@ async def submit_batch(
         contract = Stock(st.symbol, "SMART", "USD")
         order = MarketOrder(st.action, st.quantity)
         order.account = account_id
+        if cfg.rebalance.trading_hours == "eth":
+            order.outsideRth = True
         algo_used = False
         algo_pref = cfg.execution.algo_preference.lower()
         if algo_pref in {"adaptive", "midprice"}:

@@ -105,7 +105,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] `src/broker/execution.py` implemented
 - [x] Market orders with preferred algo; fallback plain market
 - [x] Batch submission; track order IDs
-- [x] Respect `prefer_rth` (block outside RTH)
+- [x] Respect `trading_hours` (set outsideRth for extended hours)
 - [x] Integration test with tiny paper trade
 - [x] Unit tests for rejection/partial fill paths
 

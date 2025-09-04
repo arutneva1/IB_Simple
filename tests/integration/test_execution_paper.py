@@ -32,7 +32,7 @@ def test_execution_paper():
     async def run():
         await client.connect(host, port_i, client_id_i)
         try:
-            if cfg.rebalance.prefer_rth:
+            if cfg.rebalance.trading_hours == "rth":
                 server_now = await client._ib.reqCurrentTimeAsync()
                 if server_now.tzinfo is None:
                     server_now = server_now.replace(tzinfo=ZoneInfo("UTC"))

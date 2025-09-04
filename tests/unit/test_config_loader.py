@@ -43,7 +43,7 @@ cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 0.10
-prefer_rth = true
+trading_hours = rth
 
 [pricing]
 price_source = last
@@ -91,7 +91,7 @@ def test_load_valid_config(config_file: Path) -> None:
             allow_fractional=False,
             max_leverage=1.50,
             maintenance_buffer_pct=0.10,
-            prefer_rth=True,
+            trading_hours="rth",
         ),
         pricing=Pricing(price_source="last", fallback_to_snapshot=True),
         execution=Execution(
@@ -111,6 +111,16 @@ def test_missing_section(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace(
         "\n[pricing]\nprice_source = last\nfallback_to_snapshot = true\n\n",
         "\n",
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_invalid_trading_hours(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "trading_hours = rth", "trading_hours = lunar"
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)

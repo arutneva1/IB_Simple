@@ -49,7 +49,7 @@ class Rebalance:
     allow_fractional: bool
     max_leverage: float
     maintenance_buffer_pct: float  # decimal fraction (e.g., 0.10 = 10%)
-    prefer_rth: bool
+    trading_hours: str
 
 
 @dataclass
@@ -223,7 +223,7 @@ def load_config(path: Path) -> AppConfig:
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
-        prefer_rth = cp.getboolean("rebalance", "prefer_rth")
+        trading_hours = cp.get("rebalance", "trading_hours").strip().lower()
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[rebalance] {exc}") from exc
     if per_holding_band_bps < 0:
@@ -258,6 +258,8 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError("[rebalance] max_leverage must be positive")
     if not 0 <= maintenance_buffer_pct <= 1:
         raise ConfigError("[rebalance] maintenance_buffer_pct must be between 0 and 1")
+    if trading_hours not in {"rth", "eth"}:
+        raise ConfigError("[rebalance] trading_hours must be 'rth' or 'eth'")
     rebalance = Rebalance(
         trigger_mode=trigger_mode,
         per_holding_band_bps=per_holding_band_bps,
@@ -269,7 +271,7 @@ def load_config(path: Path) -> AppConfig:
         allow_fractional=allow_fractional,
         max_leverage=max_leverage,
         maintenance_buffer_pct=maintenance_buffer_pct,
-        prefer_rth=prefer_rth,
+        trading_hours=trading_hours,
     )
 
     # [pricing]
