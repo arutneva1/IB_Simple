@@ -18,7 +18,7 @@ from src.core.drift import compute_drift, prioritize_by_drift
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
 from src.core.sizing import size_orders
-from src.io.config_loader import ConfigError, load_config
+from src.io import AppConfig, ConfigError, load_config
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 from src.io.reporting import (
     setup_logging,
@@ -43,7 +43,9 @@ async def _run(args: argparse.Namespace) -> None:
     cfg_path = Path(args.config)
     csv_path = Path(args.csv)
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
-    cfg = load_config(cfg_path)
+    cfg: AppConfig = load_config(cfg_path)
+    accounts = getattr(cfg, "accounts", None)
+    account_id = cfg.ibkr.account_id if accounts is None else accounts.ids[0]
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
@@ -72,7 +74,7 @@ async def _run(args: argparse.Namespace) -> None:
     try:
         print("[blue]Retrieving account snapshot[/blue]")
         logging.info("Retrieving account snapshot")
-        snapshot = await client.snapshot(cfg.ibkr.account_id)
+        snapshot = await client.snapshot(account_id)
 
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
         current["CASH"] = float(snapshot["cash"])
@@ -139,7 +141,7 @@ async def _run(args: argparse.Namespace) -> None:
     pre_path = write_pre_trade_report(
         Path(cfg.io.report_dir),
         ts_dt,
-        cfg.ibkr.account_id,
+        account_id,
         drifts,
         trades,
         prices,
@@ -236,7 +238,7 @@ async def _run(args: argparse.Namespace) -> None:
     post_path = write_post_trade_report(
         Path(cfg.io.report_dir),
         ts_dt,
-        cfg.ibkr.account_id,
+        account_id,
         drifts,
         trades,
         results,

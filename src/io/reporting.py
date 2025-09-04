@@ -11,7 +11,7 @@ from typing import Any, Mapping
 from src.core.drift import Drift
 from src.core.sizing import SizedTrade
 
-from .config_loader import AppConfig
+from . import AppConfig
 
 log = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from ib_async.contract import Stock
 from ib_async.order import MarketOrder, TagValue
 
 from src.core.sizing import SizedTrade as Trade
-from src.io.config_loader import AppConfig as Config
+from src.io import AppConfig as Config
 
 from .errors import IBKRError
 from .ibkr_client import IBKRClient
