@@ -119,9 +119,7 @@ def test_missing_section(tmp_path: Path) -> None:
 
 
 def test_invalid_trading_hours(tmp_path: Path) -> None:
-    content = VALID_CONFIG.replace(
-        "trading_hours = rth", "trading_hours = lunar"
-    )
+    content = VALID_CONFIG.replace("trading_hours = rth", "trading_hours = lunar")
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError):
