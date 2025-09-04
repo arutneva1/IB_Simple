@@ -139,7 +139,9 @@ trigger_mode = per_holding
 per_holding_band_bps = 50
 portfolio_total_band_bps = 100
 min_order_usd = 500
+cash_buffer_type = pct
 cash_buffer_pct = 0.01
+cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 0.10
@@ -336,7 +338,7 @@ def load_config(path: str):
 ### C3. Sizing, leverage guard, rounding, cash buffer
 
 **Implement** `src/core/sizing.py`
-- Reserve `cash_buffer_pct` of NetLiq.
+- Reserve cash per `cash_buffer_type`.
 - Round to whole shares when `allow_fractional=false`.
 - Enforce **post-trade leverage ≤ max_leverage**; if exceeded, scale down lower-priority trades.
 - Drop trades below `min_order_usd` once quantities are rounded.

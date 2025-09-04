@@ -35,7 +35,9 @@ trigger_mode = per_holding
 per_holding_band_bps = 50
 portfolio_total_band_bps = 100
 min_order_usd = 500
+cash_buffer_type = pct
 cash_buffer_pct = 0.01
+cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 0.10
@@ -81,7 +83,9 @@ def test_load_valid_config(config_file: Path) -> None:
             per_holding_band_bps=50,
             portfolio_total_band_bps=100,
             min_order_usd=500,
+            cash_buffer_type="pct",
             cash_buffer_pct=0.01,
+            cash_buffer_abs=None,
             allow_fractional=False,
             max_leverage=1.50,
             maintenance_buffer_pct=0.10,
@@ -147,6 +151,41 @@ def test_cash_buffer_pct_out_of_range(tmp_path: Path) -> None:
 
 def test_cash_buffer_pct_negative(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace("cash_buffer_pct = 0.01", "cash_buffer_pct = -0.2")
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_cash_buffer_abs_valid(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "cash_buffer_type = pct\ncash_buffer_pct = 0.01\ncash_buffer_abs = 0",
+        "cash_buffer_type = abs\ncash_buffer_abs = 100",
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.rebalance.cash_buffer_type == "abs"
+    assert cfg.rebalance.cash_buffer_abs == 100
+    assert cfg.rebalance.cash_buffer_pct is None
+
+
+def test_cash_buffer_abs_missing(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "cash_buffer_type = pct\ncash_buffer_pct = 0.01\ncash_buffer_abs = 0",
+        "cash_buffer_type = abs",
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_cash_buffer_abs_negative(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "cash_buffer_type = pct\ncash_buffer_pct = 0.01\ncash_buffer_abs = 0",
+        "cash_buffer_type = abs\ncash_buffer_abs = -5",
+    )
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError):

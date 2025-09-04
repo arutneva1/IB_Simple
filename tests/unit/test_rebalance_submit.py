@@ -18,7 +18,9 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
         rebalance=SimpleNamespace(
             min_order_usd=1,
             allow_fractional=True,
+            cash_buffer_type="pct",
             cash_buffer_pct=0,
+            cash_buffer_abs=0,
             max_leverage=2,
         ),
         execution=SimpleNamespace(

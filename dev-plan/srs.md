@@ -74,7 +74,9 @@ trigger_mode = per_holding        ; per_holding | total_drift
 per_holding_band_bps = 50         ; trade if |drift| > 0.50%
 portfolio_total_band_bps = 100    ; used when trigger_mode=total_drift
 min_order_usd = 500               ; ignore smaller trades
-cash_buffer_pct = 0.01            ; reserve 1% of NetLiq as cash (0.01 = 1%)
+cash_buffer_type = pct            ; pct | abs
+cash_buffer_pct = 0.01            ; when pct: reserve 1% of NetLiq as cash
+cash_buffer_abs = 0               ; when abs: reserve this USD amount
 allow_fractional = false          ; set true only if account supports it
 max_leverage = 1.50               ; hard cap on gross (e.g., 150%)
 maintenance_buffer_pct = 0.10     ; not used (rely on max_leverage)
@@ -115,7 +117,7 @@ log_level = INFO
    - **Soft guideline**: If a triggering trade rounds to 0 shares or falls below `min_order_usd`, skip it.
 7. **Prioritization**: when cash is insufficient, **largest absolute drift first**.
 8. **Sizing**: size orders to move each position **toward** target, subject to:
-   - `cash_buffer_pct` reserve from NetLiq.  
+   - reserving cash per `cash_buffer_type` (`pct` of NetLiq or `abs` amount).
    - `allow_fractional` (generally false) → round to whole shares.  
    - **Leverage guard**: size partially so post-trade **gross exposure / NetLiq ≤ max_leverage**. If cannot meet, reduce orders proportionally by drift priority list.
 9. **Preview** (no orders yet):
@@ -208,8 +210,8 @@ Proceed? [y/N]:
 - If rounding to whole shares causes the trade value to dip below `min_order_usd`, **skip**.
 
 ### 8.4 Sizing & leverage guard
-- Size each trade to move toward target within available cash after reserving `cash_buffer_pct` of NetLiq.  
-- When cash is insufficient, sort by **abs(drift)** descending and fill greedily until out of cash.  
+- Size each trade to move toward target within available cash after reserving cash per `cash_buffer_type`.
+- When cash is insufficient, sort by **abs(drift)** descending and fill greedily until out of cash.
 - Compute projected **gross exposure** and **leverage**; if projected leverage > `max_leverage`, scale back lower-priority trades until compliant.
 
 ### 8.5 Execution

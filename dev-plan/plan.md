@@ -171,7 +171,7 @@ _Status: Implemented in [`src/core/pricing.py`](../src/core/pricing.py)._
 
 #### Phase C3: Sizing, leverage guard, rounding, cash buffer
 **Deliverables**
-- `src/core/sizing.py` sizes orders to move toward target, reserves `cash_buffer_pct`, rounds to whole shares if `allow_fractional=false`, and enforces **post-trade leverage ≤ max_leverage** with partial scaling by priority
+- `src/core/sizing.py` sizes orders to move toward target, reserves cash per `cash_buffer_type`, rounds to whole shares if `allow_fractional=false`, and enforces **post-trade leverage ≤ max_leverage** with partial scaling by priority
 - Trades falling below `min_order_usd` after rounding are skipped
 
 **Tests (unit)**
