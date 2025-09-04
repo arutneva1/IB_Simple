@@ -87,8 +87,18 @@ def compute_drift(
             value = qty * price
         values[symbol] = value
 
+    investable_net_liq = net_liq
+    if cfg is not None:
+        try:
+            investable_net_liq *= 1 - cfg.rebalance.cash_buffer_pct  # type: ignore[attr-defined]
+        except AttributeError:
+            pass
+
     current_wts = {
-        sym: (val / net_liq * 100.0 if net_liq else 0.0) for sym, val in values.items()
+        sym: (
+            val / investable_net_liq * 100.0 if investable_net_liq else 0.0
+        )
+        for sym, val in values.items()
     }
 
     # Union of all symbols from current holdings and targets.
@@ -99,7 +109,7 @@ def compute_drift(
         target = targets.get(symbol, 0.0)
         current_wt = current_wts.get(symbol, 0.0)
         drift_pct = current_wt - target
-        drift_usd = net_liq * drift_pct / 100.0
+        drift_usd = investable_net_liq * drift_pct / 100.0
 
         if drift_pct > 0:
             action = "SELL"

@@ -48,6 +48,33 @@ def test_compute_drift_normalizes_and_combines_targets() -> None:
     assert cash.action == "SELL"
 
 
+def test_compute_drift_respects_cash_buffer() -> None:
+    """Cash buffer reduces investable NetLiq for drift calculations."""
+
+    current = {"AAA": 10, "CASH": 5000}
+    targets = {"AAA": 50.0, "BBB": 50.0, "CASH": 0.0}
+    prices = {"AAA": 100.0, "BBB": 100.0}
+    net_liq = 6000.0
+    cfg = SimpleNamespace(rebalance=SimpleNamespace(cash_buffer_pct=0.1))
+
+    drifts = compute_drift(current, targets, prices, net_liq, cfg)
+    by_symbol = {d.symbol: d for d in drifts}
+
+    investable_net_liq = net_liq * (1 - 0.1)
+
+    aaa = by_symbol["AAA"]
+    assert aaa.current_wt_pct == pytest.approx(1000 / investable_net_liq * 100, rel=1e-4)
+    assert aaa.drift_pct == pytest.approx(-31.4815, rel=1e-4)
+    assert aaa.drift_usd == pytest.approx(-1700.0, rel=1e-4)
+    assert aaa.action == "BUY"
+
+    bbb = by_symbol["BBB"]
+    assert bbb.drift_usd == pytest.approx(-2700.0, rel=1e-4)
+
+    cash = by_symbol["CASH"]
+    assert cash.drift_usd == pytest.approx(5000.0)
+
+
 def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     """Symbols absent from targets are treated as having 0% target weight."""
 
