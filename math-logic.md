@@ -226,15 +226,16 @@ This project is like a helpful robot that keeps an investment portfolio tidy. It
 **Example with numbers**
 : A `0.10` buffer hints at keeping `10%` of net value free for margin calls.
 
-### `rebalance.prefer_rth`
+### `rebalance.trading_hours`
 **What it is**
-: Trades only during Regular Trading Hours when true.
+: Trading session preference: `rth` for regular hours or `eth` for extended hours.
 
 **Why it matters**
-: Avoids thin after-hours markets.
+: Controls whether orders are eligible for after-hours sessions.
 
 **Example with numbers**
-: With `prefer_rth = true`, a 6 p.m. trade waits until the market opens at 9:30 a.m.
+: With `trading_hours = eth`, a 6 p.m. trade executes during extended hours; with
+`rth`, IBKR holds it for the 9:30 a.m. open.
 
 ### `pricing.price_source`
 **What it is**

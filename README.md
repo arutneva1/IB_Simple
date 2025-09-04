@@ -193,12 +193,13 @@ timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_u
 Adaptive or Midprice algos via `execution.algo_preference`. Submitted orders
 are tagged with their account code so Interactive Brokers books them correctly.
 If the selected algo is rejected and `fallback_plain_market` is true, it retries
-with a plain market order. When `rebalance.prefer_rth` is enabled, the module
-queries the IBKR server clock and only proceeds between 09:30 and 16:00
-America/New_York. Order submissions log each status transition with the symbol
-and order ID, including retries when falling back to plain market orders. The
-module waits up to `execution.commission_report_timeout` seconds for commission
-reports before defaulting to zero commission.
+with a plain market order. Trading hours are controlled by
+`rebalance.trading_hours`: use `eth` to allow extended-hours trading (setting
+`outsideRth=True` on market orders) or the default `rth` to rely on IBKR's
+regular-hours enforcement. Order submissions log each status transition with
+the symbol and order ID, including retries when falling back to plain market
+orders. The module waits up to `execution.commission_report_timeout` seconds for
+commission reports before defaulting to zero commission.
 
 ### Execution integration test
 Verify end-to-end submission against a paper account:
@@ -211,4 +212,4 @@ pytest -q tests/integration/test_execution_paper.py
 ```
 
 The test skips if the connection variables are missing or, with
-`rebalance.prefer_rth=true`, when run outside regular trading hours.
+`rebalance.trading_hours=rth`, when run outside regular trading hours.

@@ -145,7 +145,7 @@ cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
 maintenance_buffer_pct = 0.10
-prefer_rth = true
+trading_hours = rth
 
 [pricing]
 price_source = last
@@ -376,7 +376,7 @@ Proceed? [y/N]:
 **Implement** `src/broker/execution.py`
 - Build **market orders**; set algo preference (`adaptive`/`midprice`) where supported; else **fallback to plain market**.
 - Batch submit; track order IDs; poll until Filled/Rejected/Cancelled.
-- Query server clock and block outside 09:30–16:00 America/New_York when `prefer_rth` is true.
+- Set `outsideRth=True` when `trading_hours` is `eth`; rely on IBKR for `rth`.
 
 **Tests**
 - Integration (paper): run `pytest tests/integration/test_execution_paper.py` with `IBKR_HOST/PORT/CLIENT_ID` set.

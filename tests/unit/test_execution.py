@@ -42,17 +42,9 @@ class FakeClient:
         self._ib = ib
 
 
-async def _time_within_rth():
-    return datetime(2023, 1, 2, 15, 0, tzinfo=ZoneInfo("UTC"))  # 10:00 NY
-
-
-async def _time_outside_rth():
-    return datetime(2023, 1, 2, 13, 0, tzinfo=ZoneInfo("UTC"))  # 08:00 NY
-
-
-def _base_cfg(prefer_rth=False):
+def _base_cfg(trading_hours: str = "rth"):
     return SimpleNamespace(
-        rebalance=SimpleNamespace(prefer_rth=prefer_rth),
+        rebalance=SimpleNamespace(trading_hours=trading_hours),
         execution=SimpleNamespace(
             algo_preference="none",
             fallback_plain_market=False,
@@ -64,7 +56,6 @@ def _base_cfg(prefer_rth=False):
 def test_rejected_order_returns_status(monkeypatch):
     """Rejected order path returns status 'Rejected'."""
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         return DummyTrade(status="Rejected")
@@ -113,7 +104,6 @@ def test_submit_batch_sets_order_account(monkeypatch):
 def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
     """Partial fill updates are reflected in final result and logged."""
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTrade(status="Submitted")
@@ -147,7 +137,6 @@ def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
 def test_algo_order_falls_back_to_plain_market(monkeypatch):
     """Algorithmic orders retry as plain market orders on failure."""
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     events: list[str] = []
 
@@ -177,7 +166,6 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
 def test_submit_batch_merges_duplicate_trades(monkeypatch):
     """Duplicate trades for the same symbol/action collapse into one order."""
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     calls = []
 
@@ -199,19 +187,39 @@ def test_submit_batch_merges_duplicate_trades(monkeypatch):
     assert calls == [3.0]
 
 
-def test_rth_guard_raises_outside_hours(monkeypatch):
+def test_trading_hours_eth_sets_outside_rth(monkeypatch):
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_outside_rth, raising=False)
+
+    def fake_place(_contract, order):
+        assert getattr(order, "outsideRth", False) is True
+        return DummyTrade(status="Filled", filled=order.totalQuantity)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
     client = FakeClient(ib)
-    cfg = _base_cfg(prefer_rth=True)
-    with pytest.raises(IBKRError):
-        asyncio.run(submit_batch(client, [], cfg, "DU"))
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg(trading_hours="eth")
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
+    assert res[0]["status"] == "Filled"
+
+
+def test_trading_hours_rth_default(monkeypatch):
+    ib = SimpleNamespace()
+
+    def fake_place(_contract, order):
+        assert not getattr(order, "outsideRth", False)
+        return DummyTrade(status="Filled", filled=order.totalQuantity)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg(trading_hours="rth")
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
+    assert res[0]["status"] == "Filled"
 
 
 def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
     """Multiple fills with delayed commission reports are summed correctly."""
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission()
@@ -251,7 +259,7 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
     client = FakeClient(ib)
     sized_trade = SizedTrade("AAA", "BUY", 10.0, 1000.0)
     cfg = SimpleNamespace(
-        rebalance=SimpleNamespace(prefer_rth=False),
+        rebalance=SimpleNamespace(trading_hours="rth"),
         execution=SimpleNamespace(
             algo_preference="none",
             fallback_plain_market=False,
@@ -289,7 +297,6 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
     """Commission reports arriving after the first wait are included."""
 
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission()
@@ -337,7 +344,6 @@ def test_commission_report_before_wait(monkeypatch, caplog):
     """Reports arriving before the wait loop are captured without warning."""
 
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission()
@@ -376,7 +382,6 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
     """Placeholder commission reports trigger warning and zero commission."""
 
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission(status="Filled", filled=5.0)
@@ -405,7 +410,6 @@ def test_trade_level_commission_report(monkeypatch):
     """Trade-level commission reports are applied even if fills are placeholders."""
 
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission(status="Filled", filled=5.0)
@@ -441,7 +445,6 @@ def test_client_level_commission_report(monkeypatch):
     ib.client = SimpleNamespace(
         commissionReports=[], commissionReportEvent=AwaitableEvent()
     )
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     def fake_place(*_a, **_k):
         trade = DummyTradeWithCommission()
@@ -478,7 +481,6 @@ def test_submit_order_retries_exhausted(monkeypatch):
     """Failures after all retries raise IBKRError with concise message."""
 
     ib = SimpleNamespace()
-    monkeypatch.setattr(ib, "reqCurrentTimeAsync", _time_within_rth, raising=False)
 
     calls = {"n": 0}
 

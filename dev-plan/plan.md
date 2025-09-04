@@ -206,7 +206,7 @@ _Status: Completed with batch-summary preview._
 **Deliverables**
 - `src/broker/execution.py` builds market orders, applies preferred algo (`adaptive`/`midprice`) if supported; else **fallback to plain market**
 - Batch submission; track order IDs; poll states
-- Respect `prefer_rth` (initially block outside RTH with clear message)
+- Respect `trading_hours` (outsideRth for extended hours, else rely on IBKR)
 
 **Tests**
 - (integration) Paper account: submit small trades on a safe ETF, verify terminal states

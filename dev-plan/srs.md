@@ -80,7 +80,7 @@ cash_buffer_abs = 0               ; when abs: reserve this USD amount
 allow_fractional = false          ; set true only if account supports it
 max_leverage = 1.50               ; hard cap on gross (e.g., 150%)
 maintenance_buffer_pct = 0.10     ; not used (rely on max_leverage)
-prefer_rth = true                 ; place orders only during RTH by default
+trading_hours = rth               ; rth or eth (extended trading hours)
 
 [pricing]
 price_source = last               ; used for sizing/preview valuations
@@ -126,7 +126,7 @@ log_level = INFO
    - Prompt **Y/N** at CLI.
 10. **Execute** (on `Y`):
     - Submit **batch market orders** with preferred **algo** (adaptive or midprice) when supported by IBKR; otherwise **fallback to plain market**.
-    - Honor `prefer_rth` (queue or no-op if outside RTH, depending on future enhancement).  
+    - Honor `trading_hours` (`eth` sets outsideRth for extended sessions).
     - Monitor orders until Filled/Cancelled.
 11. **Report & Log**: write **timestamped CSV** for the run; include per-order fills; append human-readable log lines.  
 12. **Exit**.
@@ -157,7 +157,7 @@ Proceed? [y/N]:
 - **Order type:** **Market** only.  
 - **Algo preference:** `adaptive` (or `midprice`), if available for the symbol/venue.  
 - **Fallback:** If “market-with-algo” is rejected or unsupported, **fallback to plain market**.  
-- **RTH preference:** When `prefer_rth=true`, submit only during regular trading hours (implementation detail: either delay/queue or block with message; initial version may block).
+- **Trading hours:** `trading_hours=rth` submits only during regular trading hours. `eth` enables extended-hours execution.
 
 ---
 
