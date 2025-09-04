@@ -105,6 +105,7 @@ class IBKRClient:
         try:
             log.info("Starting account snapshot for %s", account_id)
             positions: List[Position] = await self._ib.reqPositionsAsync()
+            positions = [p for p in positions if p.account == account_id]
             usd_positions = [
                 {
                     "account": p.account,
@@ -116,9 +117,12 @@ class IBKRClient:
                 if p.contract.currency == "USD"
             ]
 
-            # Ensure account summary data is fetched
-            await self._ib.reqAccountSummaryAsync()
+            # Ensure account summary data is fetched for the target account
+            await self._ib.reqAccountSummaryAsync(account_id)
             summary = await self._ib.accountSummaryAsync(account_id)
+            summary = [
+                s for s in summary if getattr(s, "account", account_id) == account_id
+            ]
 
             cash_usd = 0.0
             net_liq_usd = 0.0

@@ -34,9 +34,15 @@ class FakeIBSnapshot:
                 position=5,
                 avgCost=150.0,
             ),
+            SimpleNamespace(
+                account="OTHER",
+                contract=SimpleNamespace(symbol="MSFT", currency="USD"),
+                position=20,
+                avgCost=200.0,
+            ),
         ]
 
-    async def reqAccountSummaryAsync(self):
+    async def reqAccountSummaryAsync(self, account_id):
         return None
 
     async def accountSummaryAsync(self, account_id):
@@ -64,6 +70,8 @@ def test_snapshot_filters_cad_cash(monkeypatch):
         "cash": 1000.0,
         "net_liq": 1500.0,
     }
+    symbols = {p["symbol"] for p in result["positions"]}
+    assert "MSFT" not in symbols
 
 
 class FailingIB:
