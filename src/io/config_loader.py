@@ -50,6 +50,7 @@ class Rebalance:
     max_leverage: float
     maintenance_buffer_pct: float  # decimal fraction (e.g., 0.10 = 10%)
     trading_hours: str
+    max_passes: int
 
 
 @dataclass
@@ -223,6 +224,7 @@ def load_config(path: Path) -> AppConfig:
         max_leverage = cp.getfloat("rebalance", "max_leverage")
         maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
         trading_hours = cp.get("rebalance", "trading_hours").strip().lower()
+        max_passes = cp.getint("rebalance", "max_passes", fallback=1)
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[rebalance] {exc}") from exc
     if per_holding_band_bps < 0:
@@ -259,6 +261,8 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError("[rebalance] maintenance_buffer_pct must be between 0 and 1")
     if trading_hours not in {"rth", "eth"}:
         raise ConfigError("[rebalance] trading_hours must be 'rth' or 'eth'")
+    if max_passes <= 0:
+        raise ConfigError("[rebalance] max_passes must be >= 1")
     rebalance = Rebalance(
         trigger_mode=trigger_mode,
         per_holding_band_bps=per_holding_band_bps,
@@ -271,6 +275,7 @@ def load_config(path: Path) -> AppConfig:
         max_leverage=max_leverage,
         maintenance_buffer_pct=maintenance_buffer_pct,
         trading_hours=trading_hours,
+        max_passes=max_passes,
     )
 
     # [pricing]

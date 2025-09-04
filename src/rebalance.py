@@ -37,6 +37,7 @@ class Plan(TypedDict, total=False):
     trades: list[SizedTrade]
     prices: dict[str, float]
     current: dict[str, float]
+    targets: dict[str, float]
     net_liq: float
     pre_gross_exposure: float
     pre_leverage: float
@@ -175,22 +176,32 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     prices = {sym: prices[sym] for sym in trade_symbols}
                 except Exception as exc:
                     raise PlanningError(str(exc)) from exc
-                return current, prices, net_liq, drifts, prioritized
+                return current, prices, net_liq, drifts, prioritized, targets
 
             if hasattr(client, "__aenter__"):
                 setattr(client, "_host", cfg.ibkr.host)
                 setattr(client, "_port", cfg.ibkr.port)
                 setattr(client, "_client_id", cfg.ibkr.client_id)
                 async with client:
-                    current, prices, net_liq, drifts, prioritized = (
-                        await _plan_with_client(client)
-                    )
+                    (
+                        current,
+                        prices,
+                        net_liq,
+                        drifts,
+                        prioritized,
+                        targets,
+                    ) = await _plan_with_client(client)
             else:
                 await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
                 try:
-                    current, prices, net_liq, drifts, prioritized = (
-                        await _plan_with_client(client)
-                    )
+                    (
+                        current,
+                        prices,
+                        net_liq,
+                        drifts,
+                        prioritized,
+                        targets,
+                    ) = await _plan_with_client(client)
                 finally:
                     await client.disconnect(
                         cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
@@ -384,17 +395,121 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         )
                         cash_after += filled * price
                     prices[trade.symbol] = price
+                positions["CASH"] = cash_after
+
+                all_trades = list(trades)
+                all_results = list(results)
+                max_passes = getattr(cfg.rebalance, "max_passes", 1)
+                passes = 1
+                while passes < max_passes:
+                    buffer_type = getattr(cfg.rebalance, "cash_buffer_type", "pct")
+                    if buffer_type == "pct":
+                        reserve = net_liq * getattr(
+                            cfg.rebalance, "cash_buffer_pct", 0.0
+                        )
+                    else:
+                        reserve = getattr(cfg.rebalance, "cash_buffer_abs", 0.0)
+                    available_cash = cash_after - reserve
+                    if available_cash < cfg.rebalance.min_order_usd:
+                        break
+                    iter_drifts = compute_drift(
+                        account_id, positions, targets, prices, net_liq, cfg
+                    )
+                    iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
+                    extra_trades, _, _ = size_orders(
+                        account_id,
+                        iter_prioritized,
+                        prices,
+                        cash_after,
+                        net_liq,
+                        cfg,
+                    )
+                    if not extra_trades:
+                        break
+                    print(
+                        f"[blue]Submitting additional batch market orders (pass {passes + 1})[/blue]"
+                    )
+                    logging.info(
+                        "Submitting batch market orders for %s (pass %d)",
+                        account_id,
+                        passes + 1,
+                    )
+                    client = IBKRClient()
+                    if hasattr(client, "__aenter__"):
+                        setattr(client, "_host", cfg.ibkr.host)
+                        setattr(client, "_port", cfg.ibkr.port)
+                        setattr(client, "_client_id", cfg.ibkr.client_id)
+                        async with client:
+                            extra_results = await submit_batch(
+                                client, extra_trades, cfg, account_id
+                            )
+                    else:
+                        await client.connect(
+                            cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        )
+                        try:
+                            extra_results = await submit_batch(
+                                client, extra_trades, cfg, account_id
+                            )
+                        finally:
+                            await client.disconnect(
+                                cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                            )
+                    for res in extra_results:
+                        qty = res.get("fill_qty", res.get("filled", 0))
+                        price = res.get("fill_price", res.get("avg_fill_price", 0))
+                        print(
+                            f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
+                        )
+                        logging.info(
+                            "%s: %s %s @ %s",
+                            res.get("symbol"),
+                            res.get("status"),
+                            qty,
+                            price,
+                        )
+                    if any(r.get("status") != "Filled" for r in extra_results):
+                        logging.error("One or more orders failed to fill")
+                        raise IBKRError("One or more orders failed to fill")
+                    results_by_symbol = {r.get("symbol"): r for r in extra_results}
+                    for trade in extra_trades:
+                        res = results_by_symbol.get(trade.symbol, {})
+                        filled_any = res.get("fill_qty")
+                        if filled_any is None:
+                            filled_any = res.get("filled", trade.quantity)
+                        filled = float(filled_any)
+                        price_any = res.get("fill_price")
+                        if price_any is None:
+                            price_any = res.get(
+                                "avg_fill_price", prices.get(trade.symbol, 0.0)
+                            )
+                        price = float(price_any)
+                        if trade.action == "BUY":
+                            positions[trade.symbol] = (
+                                positions.get(trade.symbol, 0.0) + filled
+                            )
+                            cash_after -= filled * price
+                        else:
+                            positions[trade.symbol] = (
+                                positions.get(trade.symbol, 0.0) - filled
+                            )
+                            cash_after += filled * price
+                        prices[trade.symbol] = price
+                    positions["CASH"] = cash_after
+                    all_trades.extend(extra_trades)
+                    all_results.extend(extra_results)
+                    passes += 1
 
                 post_gross_exposure_actual = net_liq - cash_after
                 post_leverage_actual = (
                     post_gross_exposure_actual / net_liq if net_liq else 0.0
                 )
-                trades_by_symbol = {t.symbol: t for t in trades}
-                filled = sum(1 for r in results if r.get("status") == "Filled")
-                rejected = len(results) - filled
+                trades_by_symbol = {t.symbol: t for t in all_trades}
+                filled = sum(1 for r in all_results if r.get("status") == "Filled")
+                rejected = len(all_results) - filled
                 buy_usd = 0.0
                 sell_usd = 0.0
-                for r in results:
+                for r in all_results:
                     sym_any = r.get("symbol")
                     if not isinstance(sym_any, str):
                         continue
@@ -412,6 +527,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         buy_usd += value
                     else:
                         sell_usd += value
+                trades = all_trades
+                results = all_results
+                planned_orders = len(trades)
                 post_path = write_post_trade_report(
                     Path(cfg.io.report_dir),
                     ts_dt,
@@ -462,6 +580,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         "trades": trades,
                         "prices": prices,
                         "current": current,
+                        "targets": targets,
                         "net_liq": net_liq,
                         "pre_gross_exposure": pre_gross_exposure,
                         "pre_leverage": pre_leverage,
@@ -793,17 +912,120 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
                     cash_after += filled * price
                 prices[trade.symbol] = price
+            positions["CASH"] = cash_after
+
+            all_trades = list(trades)
+            all_results = list(results)
+            max_passes = getattr(cfg.rebalance, "max_passes", 1)
+            passes = 1
+            targets = plan["targets"]
+            while passes < max_passes:
+                buffer_type = getattr(cfg.rebalance, "cash_buffer_type", "pct")
+                if buffer_type == "pct":
+                    reserve = net_liq * getattr(cfg.rebalance, "cash_buffer_pct", 0.0)
+                else:
+                    reserve = getattr(cfg.rebalance, "cash_buffer_abs", 0.0)
+                available_cash = cash_after - reserve
+                if available_cash < cfg.rebalance.min_order_usd:
+                    break
+                iter_drifts = compute_drift(
+                    account_id, positions, targets, prices, net_liq, cfg
+                )
+                iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
+                extra_trades, _, _ = size_orders(
+                    account_id,
+                    iter_prioritized,
+                    prices,
+                    cash_after,
+                    net_liq,
+                    cfg,
+                )
+                if not extra_trades:
+                    break
+                print(
+                    f"[blue]Submitting additional batch market orders (pass {passes + 1})[/blue]"
+                )
+                logging.info(
+                    "Submitting batch market orders for %s (pass %d)",
+                    account_id,
+                    passes + 1,
+                )
+                client = IBKRClient()
+                if hasattr(client, "__aenter__"):
+                    setattr(client, "_host", cfg.ibkr.host)
+                    setattr(client, "_port", cfg.ibkr.port)
+                    setattr(client, "_client_id", cfg.ibkr.client_id)
+                    async with client:
+                        extra_results = await submit_batch(
+                            client, extra_trades, cfg, account_id
+                        )
+                else:
+                    await client.connect(
+                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                    )
+                    try:
+                        extra_results = await submit_batch(
+                            client, extra_trades, cfg, account_id
+                        )
+                    finally:
+                        await client.disconnect(
+                            cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        )
+                for res in extra_results:
+                    qty = res.get("fill_qty", res.get("filled", 0))
+                    price = res.get("fill_price", res.get("avg_fill_price", 0))
+                    print(
+                        f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
+                    )
+                    logging.info(
+                        "%s: %s %s @ %s",
+                        res.get("symbol"),
+                        res.get("status"),
+                        qty,
+                        price,
+                    )
+                if any(r.get("status") != "Filled" for r in extra_results):
+                    logging.error("One or more orders failed to fill")
+                    raise IBKRError("One or more orders failed to fill")
+                results_by_symbol = {r.get("symbol"): r for r in extra_results}
+                for trade in extra_trades:
+                    res = results_by_symbol.get(trade.symbol, {})
+                    filled_any = res.get("fill_qty")
+                    if filled_any is None:
+                        filled_any = res.get("filled", trade.quantity)
+                    filled = float(filled_any)
+                    price_any = res.get("fill_price")
+                    if price_any is None:
+                        price_any = res.get(
+                            "avg_fill_price", prices.get(trade.symbol, 0.0)
+                        )
+                    price = float(price_any)
+                    if trade.action == "BUY":
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) + filled
+                        )
+                        cash_after -= filled * price
+                    else:
+                        positions[trade.symbol] = (
+                            positions.get(trade.symbol, 0.0) - filled
+                        )
+                        cash_after += filled * price
+                    prices[trade.symbol] = price
+                positions["CASH"] = cash_after
+                all_trades.extend(extra_trades)
+                all_results.extend(extra_results)
+                passes += 1
 
             post_gross_exposure_actual = net_liq - cash_after
             post_leverage_actual = (
                 post_gross_exposure_actual / net_liq if net_liq else 0.0
             )
-            trades_by_symbol = {t.symbol: t for t in trades}
-            filled = sum(1 for r in results if r.get("status") == "Filled")
-            rejected = len(results) - filled
+            trades_by_symbol = {t.symbol: t for t in all_trades}
+            filled = sum(1 for r in all_results if r.get("status") == "Filled")
+            rejected = len(all_results) - filled
             buy_usd = 0.0
             sell_usd = 0.0
-            for r in results:
+            for r in all_results:
                 sym_any = r.get("symbol")
                 if not isinstance(sym_any, str):
                     continue
@@ -821,6 +1043,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     buy_usd += value
                 else:
                     sell_usd += value
+            trades = all_trades
+            results = all_results
+            planned_orders = len(trades)
             post_path = write_post_trade_report(
                 Path(cfg.io.report_dir),
                 ts_dt,
@@ -852,7 +1077,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     "timestamp_run": ts_dt.isoformat(),
                     "account_id": account_id,
                     "planned_orders": planned_orders,
-                    "submitted": len(results),
+                    "submitted": len(trades),
                     "filled": filled,
                     "rejected": rejected,
                     "buy_usd": buy_usd,

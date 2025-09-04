@@ -121,3 +121,30 @@ def test_run_logs_error_on_order_failure(monkeypatch, capsys):
     asyncio.run(rebalance._run(args))
     out, _ = capsys.readouterr()
     assert "One or more orders failed to fill" in out
+
+
+def test_run_performs_additional_pass(monkeypatch):
+    cfg = _setup_common(monkeypatch)
+    cfg.rebalance.max_passes = 2
+    calls: list[list[SizedTrade]] = []
+
+    async def fake_submit_batch(client, trades, cfg, account_id):
+        calls.append(list(trades))
+        return [
+            {
+                "symbol": t.symbol,
+                "status": "Filled",
+                "filled": t.quantity,
+                "avg_fill_price": 10.0,
+            }
+            for t in trades
+        ]
+
+    monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
+
+    args = argparse.Namespace(
+        config="cfg", csv="csv", dry_run=False, yes=True, read_only=False
+    )
+    asyncio.run(rebalance._run(args))
+
+    assert len(calls) == 2
