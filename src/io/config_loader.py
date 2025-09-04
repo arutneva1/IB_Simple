@@ -85,6 +85,7 @@ class Accounts:
 
     ids: list[str]
     confirm_mode: str
+    pacing_sec: float = 0.0
 
 
 @dataclass
@@ -164,7 +165,15 @@ def load_config(path: Path) -> AppConfig:
                 "'per_account' or 'global'"
             )
             # fmt: on
-        accounts = Accounts(ids=ids, confirm_mode=confirm_mode)
+        try:
+            pacing_sec = cp.getfloat("accounts", "pacing_sec", fallback=0.0)
+        except ValueError as exc:
+            raise ConfigError("[accounts] pacing_sec must be a float") from exc
+        if pacing_sec < 0:
+            raise ConfigError("[accounts] pacing_sec must be >= 0")
+        accounts = Accounts(
+            ids=ids, confirm_mode=confirm_mode, pacing_sec=pacing_sec
+        )
         account_id = ids[0]
     else:
         if not account_id:
