@@ -7,12 +7,12 @@ side effects beyond returning the rendered string.
 
 from __future__ import annotations
 
+import logging
 from io import StringIO
 
 from rich import box
 from rich.console import Console
 from rich.table import Table
-import logging
 
 from .drift import Drift
 from .sizing import SizedTrade
@@ -37,7 +37,7 @@ def render(
         Drift records, typically already filtered and prioritised.
     trades:
         Optional sized trade information used to display quantities and
-        notionals.
+        estimated dollar values.
     pre_gross_exposure:
         Portfolio gross exposure before applying the trades.
     pre_leverage:
@@ -65,6 +65,7 @@ def render(
         header_style="bold",
         box=box.HEAVY_HEAD,  # ensure heavy vertical separators
     )
+    table.add_column("Account")
     table.add_column("Symbol")
     table.add_column("Target %", justify="right")
     table.add_column("Current %", justify="right")
@@ -72,15 +73,16 @@ def render(
     table.add_column("Drift $", justify="right")
     table.add_column("Action")
     table.add_column("Qty", justify="right")
-    table.add_column("Notional", justify="right")
+    table.add_column("Est Value", justify="right")
 
     qty_lookup = {t.symbol: t.quantity for t in (trades or [])}
-    notional_lookup = {t.symbol: t.notional for t in (trades or [])}
+    est_value_lookup = {t.symbol: t.notional for t in (trades or [])}
 
     for d in plan:
         qty = qty_lookup.get(d.symbol, 0.0)
-        notional = notional_lookup.get(d.symbol, 0.0)
+        notional = est_value_lookup.get(d.symbol, 0.0)
         table.add_row(
+            account_id,
             d.symbol,
             f"{d.target_wt_pct:.2f}",
             f"{d.current_wt_pct:.2f}",
@@ -145,4 +147,14 @@ if __name__ == "__main__":  # pragma: no cover - convenience demo
     pre_lev = 1.0
     post_exp = pre_exp - 640.0 + 640.0  # no change in this demo
     post_lev = post_exp / (pre_exp / pre_lev)
-    print(render(sample_plan, sample_trades, pre_exp, pre_lev, post_exp, post_lev))
+    print(
+        render(
+            "DEMO",
+            sample_plan,
+            sample_trades,
+            pre_exp,
+            pre_lev,
+            post_exp,
+            post_lev,
+        )
+    )

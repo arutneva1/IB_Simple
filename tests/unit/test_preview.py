@@ -42,9 +42,11 @@ def test_render_sorted_and_filtered() -> None:
     assert "Drift %" in table
     assert "BBB" not in table
     assert table.index("CCC") < table.index("AAA")
+    assert "Account" in table
+    assert "ACCT" in table
 
 
-def test_render_shows_quantities_and_notional() -> None:
+def test_render_shows_quantities_and_est_value() -> None:
     drifts = [Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY")]
     prices = {"AAA": 25.0}
     cfg = _cfg(1)
@@ -56,7 +58,7 @@ def test_render_shows_quantities_and_notional() -> None:
     table = render("ACCT", prioritized, trades, 100.0, 1.0, post_exp, post_lev)
 
     assert "Qty" in table
-    assert "Notional" in table
+    assert "Est Value" in table
     assert "4.00" in table
     assert "100.00" in table
 
@@ -90,7 +92,7 @@ def test_render_batch_summary() -> None:
     header = table.splitlines()[1]
     assert (
         header
-        == "┃ Symbol ┃ Target % ┃ Current % ┃ Drift % ┃ Drift $ ┃ Action ┃   Qty ┃ Notional ┃"
+        == "┃ Account ┃ Symbol ┃ Target % ┃ Current % ┃ Drift % ┃ Drift $ ┃ Action ┃   Qty ┃ Est Value ┃"
     )
 
     assert "Batch Summary" in table
