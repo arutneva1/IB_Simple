@@ -40,7 +40,7 @@ def test_execution_paper():
                 if not (time(9, 30) <= ny_time <= time(16, 0)):
                     pytest.skip("Outside regular trading hours")
             trade = SizedTrade("SPY", "BUY", 1.0, 0.0)
-            return await submit_batch(client, [trade], cfg)
+            return await submit_batch(client, [trade], cfg, cfg.ibkr.account_id)
         finally:
             await client.disconnect(host, port_i, client_id_i)
 

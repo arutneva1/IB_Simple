@@ -96,7 +96,7 @@ def test_yes_skips_prompt(
 
     monkeypatch.setattr("builtins.input", fail_input)
 
-    async def fake_submit_batch(client, trades, cfg):  # noqa: ARG001
+    async def fake_submit_batch(client, trades, cfg, account_id):  # noqa: ARG001
         return [
             {
                 "symbol": t.symbol,
@@ -172,7 +172,7 @@ def test_yes_skips_prompt_global(
 
     monkeypatch.setattr("builtins.input", fail_input)
 
-    async def fake_submit_batch(client, trades, cfg):  # noqa: ARG001
+    async def fake_submit_batch(client, trades, cfg, account_id):  # noqa: ARG001
         return [
             {
                 "symbol": t.symbol,

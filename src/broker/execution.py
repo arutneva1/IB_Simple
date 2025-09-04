@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 
 
 async def submit_batch(
-    client: IBKRClient, trades: list[Trade], cfg: Config
+    client: IBKRClient, trades: list[Trade], cfg: Config, account_id: str
 ) -> list[dict[str, Any]]:
     """Submit a batch of market orders and wait for completion.
 
@@ -34,6 +34,8 @@ async def submit_batch(
         Sized trades to execute.
     cfg:
         Application configuration providing execution and rebalance settings.
+    account_id:
+        Account to assign to each order.
 
     Returns
     -------
@@ -75,6 +77,7 @@ async def submit_batch(
     async def _submit_one(st: Trade) -> dict[str, Any]:
         contract = Stock(st.symbol, "SMART", "USD")
         order = MarketOrder(st.action, st.quantity)
+        order.account = account_id
         algo_used = False
         algo_pref = cfg.execution.algo_preference.lower()
         if algo_pref in {"adaptive", "midprice"}:

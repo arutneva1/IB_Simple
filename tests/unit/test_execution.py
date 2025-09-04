@@ -73,7 +73,7 @@ def test_rejected_order_returns_status(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
     cfg = _base_cfg()
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res == [
         {
             "symbol": "AAA",
@@ -118,7 +118,7 @@ def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
     trade = SizedTrade("AAA", "BUY", 10.0, 100.0)
     cfg = _base_cfg()
     caplog.set_level(logging.INFO)
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(10.0)
     messages = "\n".join(r.message for r in caplog.records)
@@ -150,7 +150,7 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     cfg = _base_cfg()
     cfg.execution.algo_preference = "midprice"
     cfg.execution.fallback_plain_market = True
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(1.0)
     assert events == ["algo", "cancel", "plain"]
@@ -175,7 +175,7 @@ def test_submit_batch_merges_duplicate_trades(monkeypatch):
     ]
     cfg = _base_cfg()
 
-    res = asyncio.run(submit_batch(client, trades, cfg))
+    res = asyncio.run(submit_batch(client, trades, cfg, "DU"))
 
     assert len(res) == 1
     assert calls == [3.0]
@@ -187,7 +187,7 @@ def test_rth_guard_raises_outside_hours(monkeypatch):
     client = FakeClient(ib)
     cfg = _base_cfg(prefer_rth=True)
     with pytest.raises(IBKRError):
-        asyncio.run(submit_batch(client, [], cfg))
+        asyncio.run(submit_batch(client, [], cfg, "DU"))
 
 
 def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
@@ -242,7 +242,7 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
         ),
     )
 
-    res = asyncio.run(submit_batch(client, [sized_trade], cfg))
+    res = asyncio.run(submit_batch(client, [sized_trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(1.2)
 
     drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
@@ -311,7 +311,7 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
     cfg = _base_cfg()
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(1.2)
 
 
@@ -348,7 +348,7 @@ def test_commission_report_before_wait(monkeypatch, caplog):
     trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
     cfg = _base_cfg()
     caplog.set_level(logging.WARNING)
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.5)
     warnings = [rec.message for rec in caplog.records if rec.levelno >= logging.WARNING]
     assert not any("No commission report" in msg for msg in warnings)
@@ -376,7 +376,7 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
     trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
     cfg = _base_cfg()
     caplog.set_level(logging.WARNING)
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.0)
     assert res[0]["commission_placeholder"] is True
     messages = [rec.message for rec in caplog.records]
@@ -411,7 +411,7 @@ def test_trade_level_commission_report(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
     cfg = _base_cfg()
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.5)
     assert res[0]["commission_placeholder"] is False
 
@@ -451,7 +451,7 @@ def test_client_level_commission_report(monkeypatch):
     client = FakeClient(ib)
     trade = SizedTrade("AAA", "BUY", 5.0, 500.0)
     cfg = _base_cfg()
-    res = asyncio.run(submit_batch(client, [trade], cfg))
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.5)
     assert res[0]["commission_placeholder"] is False
 
@@ -481,7 +481,7 @@ def test_submit_order_retries_exhausted(monkeypatch):
     monkeypatch.setattr(broker_utils.asyncio, "sleep", fake_sleep)
 
     with pytest.raises(IBKRError) as exc:
-        asyncio.run(submit_batch(client, [trade], cfg))
+        asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert "order submission for AAA failed" in str(exc.value)
     assert calls["n"] == 3
     assert sleeps == [0.5, 1.0]
