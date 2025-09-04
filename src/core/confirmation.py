@@ -10,7 +10,6 @@ from src.broker.errors import IBKRError
 from src.broker.ibkr_client import IBKRClient
 from src.core.errors import PlanningError
 from src.core.planner import Plan
-from src.core.sizing import SizedTrade
 from src.io import AppConfig, ConfigError
 
 
@@ -144,9 +143,7 @@ async def confirm_per_account(
         print(
             f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
         )
-        logging.info(
-            "%s: %s %s @ %s", res.get("symbol"), res.get("status"), qty, price
-        )
+        logging.info("%s: %s %s @ %s", res.get("symbol"), res.get("status"), qty, price)
     if any(r.get("status") != "Filled" for r in results):
         logging.error("One or more orders failed to fill")
         raise IBKRError("One or more orders failed to fill")
@@ -189,7 +186,9 @@ async def confirm_per_account(
         available_cash = cash_after - reserve
         if available_cash < cfg.rebalance.min_order_usd:
             break
-        iter_drifts = compute_drift(account_id, positions, targets, prices, net_liq, cfg)
+        iter_drifts = compute_drift(
+            account_id, positions, targets, prices, net_liq, cfg
+        )
         iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
         extra_trades, _, _ = size_orders(
             account_id, iter_prioritized, prices, cash_after, net_liq, cfg
@@ -208,17 +207,25 @@ async def confirm_per_account(
             setattr(client, "_port", cfg.ibkr.port)
             setattr(client, "_client_id", cfg.ibkr.client_id)
             async with client:
-                extra_results = await submit_batch(client, extra_trades, cfg, account_id)
+                extra_results = await submit_batch(
+                    client, extra_trades, cfg, account_id
+                )
         else:
             await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
             try:
-                extra_results = await submit_batch(client, extra_trades, cfg, account_id)
+                extra_results = await submit_batch(
+                    client, extra_trades, cfg, account_id
+                )
             finally:
-                await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.disconnect(
+                    cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                )
         for res in extra_results:
             qty = res.get("fill_qty", res.get("filled", 0))
             price = res.get("fill_price", res.get("avg_fill_price", 0))
-            print(f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]")
+            print(
+                f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
+            )
             logging.info(
                 "%s: %s %s @ %s", res.get("symbol"), res.get("status"), qty, price
             )
@@ -651,7 +658,9 @@ async def confirm_global(
             available_cash = cash_after - reserve
             if available_cash < cfg.rebalance.min_order_usd:
                 break
-            iter_drifts = compute_drift(account_id, positions, targets, prices, net_liq, cfg)
+            iter_drifts = compute_drift(
+                account_id, positions, targets, prices, net_liq, cfg
+            )
             iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
             extra_trades, _, _ = size_orders(
                 account_id, iter_prioritized, prices, cash_after, net_liq, cfg
@@ -769,9 +778,7 @@ async def confirm_global(
             post_leverage_actual,
             cfg,
         )
-        logging.info(
-            "Post-trade report for %s written to %s", account_id, post_path
-        )
+        logging.info("Post-trade report for %s written to %s", account_id, post_path)
         logging.info(
             "Rebalance complete for %s: %d trades executed. Post leverage %.4f",
             account_id,
