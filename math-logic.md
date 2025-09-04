@@ -96,15 +96,15 @@ See trade-decision-flow.pdf for an overview. This project is like a helpful robo
 **Example with numbers**
 : Setting `client_id = 1` works unless another session already uses 1.
 
-### `ibkr.account_id`
+### `[accounts].ids`
 **What it is**
-: Your account number at IBKR.
+: Comma-separated list of IBKR account numbers.
 
 **Why it matters**
-: Trades are sent to this account.
+: Trades are sent to each listed account in turn.
 
 **Example with numbers**
-: Using `DU123456` points to a paper account; the real one might look like `U654321`.
+: `ids = DU111111, DU222222` targets two paper accounts; real accounts may look like `U654321`.
 
 ### `ibkr.read_only`
 **What it is**

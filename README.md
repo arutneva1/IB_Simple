@@ -22,7 +22,8 @@ pytest -q -m "not integration"
 
 The repository includes example `config/settings.ini` and `data/portfolios.csv`.
 Make copies of these files outside version control and edit them with your own
-IBKR host, account ID, and target weights:
+IBKR host and target weights. Account IDs are listed under the `[accounts]`
+section:
 
 ```bash
 cp config/settings.ini my_settings.ini
@@ -44,7 +45,6 @@ confirm_mode = per_account        ; per_account | global
 pacing_sec = 1                    ; seconds to pause between accounts
 ```
 
-When present, this block takes precedence over the legacy `[ibkr] account_id`.
 The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
 controls how the tool prompts for trade confirmation and can be overridden at
 runtime via `--confirm-mode`:

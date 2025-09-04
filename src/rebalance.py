@@ -36,7 +36,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg: AppConfig = load_config(cfg_path)
     cli_confirm_mode = getattr(args, "confirm_mode", None)
-    if cli_confirm_mode and cfg.accounts is not None:
+    if cli_confirm_mode:
         cfg.accounts.confirm_mode = cli_confirm_mode
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
@@ -54,7 +54,6 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     failures: list[tuple[str, str]] = []
 
     accounts = cfg.accounts
-    assert accounts is not None
     confirm_mode = getattr(accounts, "confirm_mode", "per_account")
     plans: list[Plan] = []
     for account_id in accounts.ids:

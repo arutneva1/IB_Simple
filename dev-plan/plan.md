@@ -295,7 +295,7 @@ _Status: Completed with batch-summary preview._
 
 2) **IBKR TWS/Gateway**
 - Install and run TWS or IB Gateway (paper)  
-- Enable API, set host/port (default 127.0.0.1:4002), and your `account_id`  
+- Enable API, set host/port (default 127.0.0.1:4002), and your `account_id`
 - Ensure connectivity: sample snapshot command returns positions
 
 3) **Pre-commit & CI**
