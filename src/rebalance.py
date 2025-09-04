@@ -799,6 +799,8 @@ def main(argv: list[str] | None = None) -> None:
 
     try:
         failures = asyncio.run(_run(args))
+        if failures:
+            raise SystemExit(1)
     except KeyboardInterrupt:
         logging.info("Aborted by user via keyboard interrupt")
         print("[yellow]Aborted by user.[/yellow]")
@@ -806,8 +808,6 @@ def main(argv: list[str] | None = None) -> None:
     except (ConfigError, PortfolioCSVError, IBKRError, PlanningError) as exc:
         logging.error(str(exc))
         print(f"[red]{exc}[/red]")
-        raise SystemExit(1)
-    if failures:
         raise SystemExit(1)
 
 
