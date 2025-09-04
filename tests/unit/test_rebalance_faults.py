@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from argparse import Namespace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -102,8 +103,12 @@ def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
 
     async def fake_plan_account(account_id, portfolios, cfg, ts_dt, **kwargs):
-        trade_sell = SimpleNamespace(action="SELL", symbol="AAA", quantity=1, notional=1.0)
-        trade_buy = SimpleNamespace(action="BUY", symbol="BBB", quantity=1, notional=1.0)
+        trade_sell = SimpleNamespace(
+            action="SELL", symbol="AAA", quantity=1, notional=1.0
+        )
+        trade_buy = SimpleNamespace(
+            action="BUY", symbol="BBB", quantity=1, notional=1.0
+        )
         return {
             "account_id": account_id,
             "drifts": [],
@@ -152,9 +157,13 @@ def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
     monkeypatch.setattr(rebalance, "setup_logging", lambda *a, **k: None)
     monkeypatch.setattr(rebalance, "render_preview", lambda *a, **k: "TABLE")
-    monkeypatch.setattr(rebalance, "write_pre_trade_report", lambda *a, **k: Path("pre"))
+    monkeypatch.setattr(
+        rebalance, "write_pre_trade_report", lambda *a, **k: Path("pre")
+    )
     monkeypatch.setattr(rebalance, "append_run_summary", lambda *a, **k: None)
-    monkeypatch.setattr(rebalance, "write_post_trade_report", lambda *a, **k: Path("post"))
+    monkeypatch.setattr(
+        rebalance, "write_post_trade_report", lambda *a, **k: Path("post")
+    )
 
     sleep_calls: list[float] = []
 
@@ -166,7 +175,7 @@ def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(confirmation.asyncio, "sleep", fake_sleep)
 
-    args = SimpleNamespace(
+    args = Namespace(
         config="cfg",
         csv="csv",
         dry_run=False,
