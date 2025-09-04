@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.io.portfolio_csv as portfolio_csv
 import src.rebalance as rebalance
+from src.broker.errors import IBKRError
 
 pytestmark = pytest.mark.integration
 
@@ -30,6 +31,8 @@ class DummyIBKRClient:
         pass
 
     async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
+        if account_id == "DUFAIL":
+            raise IBKRError("snapshot failed")
         return {
             "positions": [
                 {"symbol": "SPY", "position": 10, "avg_cost": 100.0},
@@ -68,3 +71,33 @@ def test_rebalance_dry_run(monkeypatch, capsys):
     assert "Batch Summary" in captured
     assert "Dry run complete (no orders submitted)." in captured
     assert "Proceed?" not in captured
+
+
+def test_rebalance_multiple_accounts_failure(monkeypatch, capsys):
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
+    monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
+    monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
+
+    original_load_config = rebalance.load_config
+
+    def fake_load_config(path):
+        cfg = original_load_config(path)
+        cfg.accounts.ids = ["DU111111", "DUFAIL", "DU222222"]
+        return cfg
+
+    monkeypatch.setattr(rebalance, "load_config", fake_load_config)
+
+    args = Namespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=True,
+        yes=False,
+        read_only=False,
+    )
+
+    failures = asyncio.run(rebalance._run(args))
+
+    captured = capsys.readouterr().out
+    assert "DU111111" in captured
+    assert "DU222222" in captured
+    assert failures and failures[0][0] == "DUFAIL"
