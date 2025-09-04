@@ -13,11 +13,7 @@ conda activate ibkr-rebal
 cd path\to\IB_Simple
 pre-commit run --all-files
 pytest -q
-python - <<"PY"
-from src.io import config_loader
-cfg = config_loader.load("config\\settings.ini")
-print(cfg.accounts.ids, cfg.accounts.confirm_mode)
-PY
+python -c "from src.io import load_config; cfg = load_config('config/settings.ini'); print(cfg.accounts.ids, cfg.accounts.confirm_mode)"
 ```
 **What success looks like:**
 - Pre-commit and pytest finish with no errors.
