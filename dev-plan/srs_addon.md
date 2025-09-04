@@ -47,7 +47,7 @@ If no per‑account override is given, use global values.
 
 - Default behavior: iterate through all included accounts and **prompt confirmation per account**.
 - flag: `--dry-run`, `--yes`, and `--read-only`  shall apply to every account processed.
-- New flag: `--confirm-mode global` to present a **single global preview** (aggregate of all planned orders per account) followed by **one Y/N** that applies to all. (default remains `per_account`.)
+- New flag: `--confirm-mode global` to print each account's preview sequentially before a **single Y/N** that applies to all. (default remains `per_account`.)
 - Preview clearly labels **Account**, **symbol**, **drift %/$**, **qty**, **est value**, **pre/post leverage**.
 
 ---
@@ -58,7 +58,7 @@ For each account in the effective list (filtered, ordered as given):
 1. **Snapshot** positions/cash/NetLiq for that account (USD only; ignore CAD cash).
 2. **Compute drift** vs **shared final targets** built from `portfolios.csv` + model mix.
 3. **Trigger selection & sizing** using the same global rules (or per‑account overrides if provided).
-4. **Preview** (per‑account or aggregated depending on confirm mode).
+4. **Preview** the orders for each account individually. In `global` confirm mode, previews for all accounts are shown first and a single confirmation is collected afterward.
 5. On **confirmation**, submit **batch market orders** (algo preferred, fallback to plain market) tagged with the **account code**.
 6. **Reporting**: write `reports/rebalance_<ACCOUNT>_<timestamp>.csv` and append to `reports/run_summary_<timestamp>.csv`.
 7. **Error isolation**: if one account fails (validation or broker error/rejection), record it and continue to the next; exit with non‑zero code if any account failed.
