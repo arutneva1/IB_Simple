@@ -63,7 +63,9 @@ def test_compute_drift_respects_cash_buffer() -> None:
     investable_net_liq = net_liq * (1 - 0.1)
 
     aaa = by_symbol["AAA"]
-    assert aaa.current_wt_pct == pytest.approx(1000 / investable_net_liq * 100, rel=1e-4)
+    assert aaa.current_wt_pct == pytest.approx(
+        1000 / investable_net_liq * 100, rel=1e-4
+    )
     assert aaa.drift_pct == pytest.approx(-31.4815, rel=1e-4)
     assert aaa.drift_usd == pytest.approx(-1700.0, rel=1e-4)
     assert aaa.action == "BUY"
