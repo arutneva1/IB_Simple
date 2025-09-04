@@ -61,7 +61,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         rebalance,
         "size_orders",
-        lambda prioritized, prices, cash, cfg: (
+        lambda prioritized, prices, cash, net_liq, cfg: (
             [SizedTrade("AAA", "BUY", 5.0, 50.0)],
             0.0,
             0.0,

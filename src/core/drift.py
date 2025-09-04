@@ -95,9 +95,7 @@ def compute_drift(
             pass
 
     current_wts = {
-        sym: (
-            val / investable_net_liq * 100.0 if investable_net_liq else 0.0
-        )
+        sym: (val / investable_net_liq * 100.0 if investable_net_liq else 0.0)
         for sym, val in values.items()
     }
 

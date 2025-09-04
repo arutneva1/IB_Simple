@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 from .drift import Drift
 
@@ -50,26 +50,11 @@ def _extract_cfg(cfg: Any) -> tuple[int, bool, float, float]:
         raise AttributeError("cfg.rebalance is missing required fields") from exc
 
 
-def _infer_net_liq(drifts: Iterable[Drift], cash: float) -> float:
-    """Infer ``net_liq`` from the provided drifts.
-
-    ``compute_drift`` derives all ``drift_usd`` values from a common net
-    liquidation figure.  We reverse that relationship here by taking the first
-    non-zero drift percentage.  When no such drift is available we fall back to
-    the cash balance which is a reasonable approximation for an empty
-    portfolio.
-    """
-
-    for d in drifts:
-        if d.drift_pct != 0:
-            return d.drift_usd * 100.0 / d.drift_pct
-    return cash
-
-
 def size_orders(
     drifts: list[Drift],
     prices: Mapping[str, float],
     cash: float,
+    net_liq: float,
     cfg: Any,
 ) -> tuple[list[SizedTrade], float, float]:
     """Size trades based on drift information.
@@ -82,6 +67,8 @@ def size_orders(
         Mapping of symbols to current prices.
     cash:
         Current cash balance in USD.
+    net_liq:
+        Net liquidation value used for leverage calculations.
     cfg:
         Configuration object containing ``rebalance`` settings.
 
@@ -93,8 +80,6 @@ def size_orders(
     """
 
     min_order_usd, allow_fractional, cash_buffer_pct, max_leverage = _extract_cfg(cfg)
-
-    net_liq = _infer_net_liq(drifts, cash)
 
     reserve = net_liq * cash_buffer_pct  # cfg.cash_buffer_pct is already a decimal
     available = cash - reserve

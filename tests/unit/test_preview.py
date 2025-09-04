@@ -46,7 +46,9 @@ def test_render_shows_quantities_and_notional() -> None:
     cfg = _cfg(1)
 
     prioritized = prioritize_by_drift(drifts, cfg)
-    trades, post_exp, post_lev = size_orders(prioritized, prices, cash=100.0, cfg=cfg)
+    trades, post_exp, post_lev = size_orders(
+        prioritized, prices, cash=100.0, net_liq=100.0, cfg=cfg
+    )
     table = render(prioritized, trades, 100.0, 1.0, post_exp, post_lev)
 
     assert "Qty" in table
