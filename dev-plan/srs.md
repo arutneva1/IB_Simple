@@ -88,7 +88,7 @@ fallback_to_snapshot = true
 
 [execution]
 order_type = market               ; market only
-algo_preference = adaptive        ; adaptive | midprice
+algo_preference = none            ; none | adaptive | midprice
 fallback_plain_market = true      ; fallback if algo unsupported
 batch_orders = true               ; send in batches
 
@@ -125,7 +125,7 @@ log_level = INFO
    - Show a **batch summary** (gross to buy/sell, est. exposure, leverage) before prompting.
    - Prompt **Y/N** at CLI.
 10. **Execute** (on `Y`):
-    - Submit **batch market orders** with preferred **algo** (adaptive or midprice) when supported by IBKR; otherwise **fallback to plain market**.
+    - Submit **batch market orders** with preferred **algo** (`none`, `adaptive`, or `midprice`) when supported by IBKR; `none` or unsupported algos **fallback to plain market**.
     - Honor `trading_hours` (`eth` sets outsideRth for extended sessions).
     - Monitor orders until Filled/Cancelled.
 11. **Report & Log**: write **timestamped CSV** for the run; include per-order fills; append human-readable log lines.  
@@ -155,8 +155,8 @@ Proceed? [y/N]:
 
 - **Sizing/preview valuation** uses `price_source` (last by default) with optional snapshot fallback.  
 - **Order type:** **Market** only.  
-- **Algo preference:** `adaptive` (or `midprice`), if available for the symbol/venue.  
-- **Fallback:** If “market-with-algo” is rejected or unsupported, **fallback to plain market**.  
+- **Algo preference:** `none`, `adaptive`, or `midprice` if available for the symbol/venue.
+- **Fallback:** If `algo_preference` is `none` or the selected algo is rejected/unsupported, **fallback to plain market**.
 - **Trading hours:** `trading_hours=rth` submits only during regular trading hours. `eth` enables extended-hours execution.
 
 ---
@@ -215,7 +215,7 @@ Proceed? [y/N]:
 - Compute projected **gross exposure** and **leverage**; if projected leverage > `max_leverage`, scale back lower-priority trades until compliant.
 
 ### 8.5 Execution
-- Build orders as **market** with **algo_preference** where supported; otherwise plain market.  
+- Build orders as **market** with `algo_preference` (`none`, `adaptive`, or `midprice`) where supported; `none` or unsupported algos submit plain market orders.
 - Submit in a **batch**; track order IDs; poll for status until terminal.
 
 ---
