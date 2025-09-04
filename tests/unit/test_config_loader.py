@@ -125,7 +125,7 @@ def test_accounts_section_and_overrides(tmp_path: Path) -> None:
 
 [accounts]
 ids = ACC1, ACC2
-confirm_mode = per_order
+confirm_mode = global
 
 [account:ACC1]
 foo = bar
@@ -137,7 +137,7 @@ baz = qux
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="per_order")
+    assert cfg.accounts == Accounts(ids=["ACC1", "ACC2"], confirm_mode="global")
     assert account_overrides == {"ACC1": {"foo": "bar"}, "ACC2": {"baz": "qux"}}
 
 
@@ -154,6 +154,55 @@ ids = ONLY
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts == Accounts(ids=["ONLY"], confirm_mode="per_account")
+
+
+def test_accounts_invalid_confirm_mode(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + """\
+
+[accounts]
+ids = A1
+confirm_mode = per_order
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
+def test_accounts_ids_dedup_and_precedence(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG.replace("account_id = DUA071544", "account_id = SHOULD_IGNORE")
+        + """\
+
+[accounts]
+ids = ACC1, ACC2, ACC1 , ACC3
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts == Accounts(
+        ids=["ACC1", "ACC2", "ACC3"], confirm_mode="per_account"
+    )
+    assert cfg.ibkr.account_id == "ACC1"
+
+
+def test_accounts_without_ibkr_account_id(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG.replace("account_id = DUA071544\n", "")
+        + """\
+
+[accounts]
+ids = ACC1, ACC2
+"""
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.ibkr.account_id == "ACC1"
 
 
 def test_missing_key(tmp_path: Path) -> None:
