@@ -190,9 +190,10 @@ timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_u
 
 ### Operational notes & safeguards
 
-* **Client isolation** – Each account operates under its own IBKR client ID and
-  orders are tagged with the relevant account code so activity for one account
-  cannot leak into another.
+* **Client isolation** – Orders are tagged with each account code so activity
+  remains separated. All accounts share the `[ibkr]` `client_id` in
+  `config/settings.ini`; per-account client IDs are not currently supported, so
+  use separate runs with different configs if distinct IDs are required.
 * **Pacing and backoff** – Requests are throttled to respect IBKR pacing limits.
   The rebalancer backs off and retries when the API signals rate‑limit
   violations.
