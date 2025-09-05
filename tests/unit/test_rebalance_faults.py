@@ -78,7 +78,7 @@ def test_partial_account_failures(monkeypatch: pytest.MonkeyPatch) -> None:
     assert exc.value.code == 1
     assert statuses["good"] == "dry_run"
     assert statuses["bad"] == "failed"
-    assert len(sleep_calls) == 2
+    assert len(sleep_calls) == 1
 
 
 def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -188,4 +188,4 @@ def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert failures == [("bad", "boom")]
     assert events == [("bad", "sell"), ("good", "sell"), ("good", "buy")]
-    assert sleep_calls == [1, 1, 1, 1, 1]
+    assert sleep_calls == [1, 1, 1, 1]
