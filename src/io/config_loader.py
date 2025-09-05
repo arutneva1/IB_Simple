@@ -181,7 +181,8 @@ def _parse_account_override(items: Mapping[str, str]) -> AccountOverride:
 def merge_account_overrides(cfg: Any, account_id: str) -> Any:
     """Return a copy of ``cfg`` with overrides for ``account_id`` applied."""
 
-    overrides = getattr(cfg, "account_overrides", {}).get(account_id)
+    norm_id = account_id.strip().upper()
+    overrides = getattr(cfg, "account_overrides", {}).get(norm_id)
     if not overrides:
         return cfg
 
@@ -248,7 +249,7 @@ def load_config(path: Path) -> AppConfig:
     ids: list[str] = []
     seen: set[str] = set()
     for s in raw_ids.split(","):
-        s = s.strip()
+        s = s.strip().upper()
         if s and s not in seen:
             ids.append(s)
             seen.add(s)
@@ -296,14 +297,14 @@ def load_config(path: Path) -> AppConfig:
     account_overrides: Dict[str, AccountOverride] = {}
     for section in cp.sections():
         if section.startswith("account:"):
-            acc_id = section.split("account:", 1)[1]
+            acc_id = section.split("account:", 1)[1].strip().upper()
             items = dict(cp.items(section))
             account_overrides[acc_id] = _parse_account_override(items)
 
     portfolio_paths: Dict[str, str] = {}
     for section in cp.sections():
         if section.startswith("portfolio:"):
-            acc_id = section.split("portfolio:", 1)[1]
+            acc_id = section.split("portfolio:", 1)[1].strip().upper()
             try:
                 portfolio_paths[acc_id] = cp.get(section, "path")
             except NoOptionError as exc:

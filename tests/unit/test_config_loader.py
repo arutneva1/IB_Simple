@@ -145,7 +145,7 @@ def test_accounts_pacing_sec_negative(tmp_path: Path) -> None:
 def test_accounts_ids_trim_and_deduplicate(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace(
         "ids = ACC1, ACC2",
-        "ids =  ACC1  ,  ACC2 , ACC1 ,ACC2  ",
+        "ids =  acc1  ,  ACC2 , Acc1 ,acc2  ",
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)
@@ -165,7 +165,7 @@ def test_accounts_parallel_flag(tmp_path: Path) -> None:
 
 
 def test_single_account_id(tmp_path: Path) -> None:
-    content = VALID_CONFIG.replace("ids = ACC1, ACC2", "ids =   ACC1   ")
+    content = VALID_CONFIG.replace("ids = ACC1, ACC2", "ids =   acc1   ")
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
@@ -173,7 +173,7 @@ def test_single_account_id(tmp_path: Path) -> None:
 
 
 def test_account_section_unknown_keys(tmp_path: Path, caplog) -> None:
-    content = VALID_CONFIG + "\n[account:ACC1]\nfoo = bar\nunknown = baz\n"
+    content = VALID_CONFIG + "\n[account: acc1 ]\nfoo = bar\nunknown = baz\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with caplog.at_level(logging.WARNING):
@@ -213,29 +213,29 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
 
 
 def test_account_overrides_allow_fractional(tmp_path: Path) -> None:
-    content = VALID_CONFIG + "\n[account:ACC1]\nallow_fractional = true\n"
+    content = VALID_CONFIG + "\n[account: acc1 ]\nallow_fractional = true\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.rebalance.allow_fractional is False
-    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    cfg_acc = merge_account_overrides(cfg, "acc1")
     assert cfg_acc.rebalance.allow_fractional is True
 
 
 def test_account_overrides_min_order_usd(tmp_path: Path) -> None:
-    content = VALID_CONFIG + "\n[account:ACC1]\nmin_order_usd = 100\n"
+    content = VALID_CONFIG + "\n[account: acc1 ]\nmin_order_usd = 100\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.rebalance.min_order_usd == 500
-    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    cfg_acc = merge_account_overrides(cfg, "acc1")
     assert cfg_acc.rebalance.min_order_usd == 100
 
 
 def test_account_overrides_cash_buffer_abs(tmp_path: Path) -> None:
     content = (
         VALID_CONFIG
-        + "\n[account:ACC1]\n"
+        + "\n[account: acc1 ]\n"
         + "cash_buffer_type = abs\n"
         + "cash_buffer_abs = 2500\n"
     )
@@ -244,6 +244,21 @@ def test_account_overrides_cash_buffer_abs(tmp_path: Path) -> None:
     cfg = load_config(path)
     assert cfg.rebalance.cash_buffer_type == "pct"
     assert cfg.rebalance.cash_buffer_abs is None
-    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    cfg_acc = merge_account_overrides(cfg, "acc1")
     assert cfg_acc.rebalance.cash_buffer_type == "abs"
     assert cfg_acc.rebalance.cash_buffer_abs == 2500
+
+
+def test_account_id_normalization(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "ids = ACC1, ACC2",
+        "ids = acc1 , Acc2 ",
+    )
+    content += "\n[portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts.ids == ["ACC1", "ACC2"]
+    assert cfg.portfolio_paths["ACC1"] == "foo.csv"
+    cfg_acc = merge_account_overrides(cfg, "acc2")
+    assert cfg_acc.rebalance.min_order_usd == 100
