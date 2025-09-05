@@ -37,6 +37,15 @@ from src.io.reporting import (
 )
 
 
+async def _print_err(msg: str, lock: asyncio.Lock | None) -> None:
+    """Print ``msg`` using ``rich.print`` with optional ``asyncio.Lock``."""
+    if lock is not None:
+        async with lock:
+            print(msg)
+    else:
+        print(msg)
+
+
 async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cfg_path = Path(args.config)
     csv_path = Path(args.csv)
@@ -117,11 +126,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             return plan
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
-            if output_lock is not None:
-                async with output_lock:
-                    print(f"[red]{exc}[/red]")
-            else:
-                print(f"[red]{exc}[/red]")
+            await _print_err(f"[red]{exc}[/red]", output_lock)
             failures.append((account_id, str(exc)))
             planned_orders = plan["planned_orders"] if plan else 0
             buy_usd = plan["buy_usd"] if plan else 0.0
@@ -148,11 +153,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             return None
         except Exception as exc:  # noqa: BLE001
             logging.exception("Unhandled error processing account %s", account_id)
-            if output_lock is not None:
-                async with output_lock:
-                    print(f"[red]{exc}[/red]")
-            else:
-                print(f"[red]{exc}[/red]")
+            await _print_err(f"[red]{exc}[/red]", output_lock)
             failures.append((account_id, str(exc)))
             planned_orders = plan["planned_orders"] if plan else 0
             buy_usd = plan["buy_usd"] if plan else 0.0
@@ -202,11 +203,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 logging.exception(
                     "Unhandled error processing account %s", aid, exc_info=res
                 )
-                if output_lock is not None:
-                    async with output_lock:
-                        print(f"[red]{res}[/red]")
-                else:
-                    print(f"[red]{res}[/red]")
+                await _print_err(f"[red]{res}[/red]", output_lock)
                 failures.append((aid, str(res)))
                 capture_summary(
                     Path(cfg.io.report_dir),
@@ -259,7 +256,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 )
             except (ConfigError, IBKRError, PlanningError) as exc:
                 logging.error("Error processing account %s: %s", account_id, exc)
-                print(f"[red]{exc}[/red]")
+                await _print_err(f"[red]{exc}[/red]", output_lock)
                 failures.append((account_id, str(exc)))
                 capture_summary(
                     Path(cfg.io.report_dir),
@@ -283,7 +280,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 logging.exception(
                     "Unexpected error processing account %s: %s", account_id, exc
                 )
-                print(f"[red]{exc}[/red]")
+                await _print_err(f"[red]{exc}[/red]", output_lock)
                 failures.append((account_id, str(exc)))
                 capture_summary(
                     Path(cfg.io.report_dir),
@@ -330,9 +327,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
 
     if failures:
-        print("[red]One or more accounts failed:[/red]")
+        await _print_err("[red]One or more accounts failed:[/red]", output_lock)
         for acct, msg in failures:
-            print(f"[red]- {acct}: {msg}[/red]")
+            await _print_err(f"[red]- {acct}: {msg}[/red]", output_lock)
     return failures
 
 
