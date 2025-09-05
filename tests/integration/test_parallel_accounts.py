@@ -1,8 +1,8 @@
 import asyncio
 import csv
 import time
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,10 +17,14 @@ class DummyClient:
     def __init__(self) -> None:
         DummyClient.instances.append(self)
 
-    async def connect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def connect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         pass
 
-    async def disconnect(self, host: str, port: int, client_id: int) -> None:  # noqa: ARG002
+    async def disconnect(
+        self, host: str, port: int, client_id: int
+    ) -> None:  # noqa: ARG002
         pass
 
 
@@ -28,7 +32,9 @@ async def fake_load_portfolios(csv_path, host, port, client_id):  # noqa: ARG001
     return {}
 
 
-async def stub_plan_account(account_id, portfolios, cfg, ts_dt, **kwargs):  # noqa: ARG001, D401
+async def stub_plan_account(
+    account_id, portfolios, cfg, ts_dt, **kwargs
+):  # noqa: ARG001, D401
     client_factory = kwargs.get("client_factory", rebalance.IBKRClient)
     client_factory()
     await asyncio.sleep(0.1)
