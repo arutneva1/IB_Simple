@@ -261,7 +261,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
-    assert cfg.portfolio_paths["ACC1"] == "foo.csv"
+    assert cfg.portfolio_paths["ACC1"] == Path("foo.csv")
     cfg_acc = merge_account_overrides(cfg, "acc2")
     assert cfg_acc.rebalance.min_order_usd == 100
 

@@ -61,10 +61,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
     logging.info("Loaded configuration from %s", cfg_path)
 
-    portfolio_paths = getattr(cfg, "portfolio_paths", {})
-    path_map = {
-        acct: Path(portfolio_paths.get(acct, csv_path)) for acct in cfg.accounts.ids
-    }
+    portfolio_paths: dict[str, Path] = getattr(cfg, "portfolio_paths", {})
+    path_map = {acct: portfolio_paths.get(acct, csv_path) for acct in cfg.accounts.ids}
     print("[blue]Loading portfolios[/blue]")
     for acct, p in path_map.items():
         logging.info("Portfolio for %s loaded from %s", acct, p)

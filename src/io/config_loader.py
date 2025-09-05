@@ -124,7 +124,7 @@ class AppConfig:
     io: IO
     accounts: Accounts
     account_overrides: Dict[str, AccountOverride] = field(default_factory=dict)
-    portfolio_paths: Dict[str, str] = field(default_factory=dict)
+    portfolio_paths: Dict[str, Path] = field(default_factory=dict)
 
 
 TOLERANCE = 0.001
@@ -301,12 +301,12 @@ def load_config(path: Path) -> AppConfig:
             items = dict(cp.items(section))
             account_overrides[acc_id] = _parse_account_override(items)
 
-    portfolio_paths: Dict[str, str] = {}
+    portfolio_paths: Dict[str, Path] = {}
     for section in cp.sections():
         if section.startswith("portfolio:"):
             acc_id = section.split("portfolio:", 1)[1].strip().upper()
             try:
-                portfolio_paths[acc_id] = cp.get(section, "path")
+                portfolio_paths[acc_id] = Path(cp.get(section, "path"))
             except NoOptionError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
 
