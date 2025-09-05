@@ -7,7 +7,7 @@ import logging
 from typing import Any, cast
 
 from ib_async.contract import Stock
-from ib_async.order import MarketOrder, TagValue
+from ib_async.order import MarketOrder, Order, TagValue
 
 from src.core.sizing import SizedTrade as Trade
 from src.io import AppConfig as Config
@@ -71,20 +71,23 @@ async def submit_batch(
         timeout_fill = getattr(cfg.execution, "wait_before_fallback", 300.0)
 
         def _build_order(qty: float, use_algo: bool) -> tuple[Any, bool]:
-            order = MarketOrder(st.action, qty)
+            algo_pref = cfg.execution.algo_preference.lower()
+            algo_used_local = False
+            if use_algo and algo_pref == "midprice":
+                order: Any = Order(
+                    orderType="MIDPRICE", action=st.action, totalQuantity=qty
+                )
+                algo_used_local = True
+                order.lmtPrice = 0.0
+            else:
+                order = MarketOrder(st.action, qty)
+                if use_algo and algo_pref == "adaptive":
+                    algo_used_local = True
+                    order.algoStrategy = "Adaptive"
+                    order.algoParams = [TagValue("adaptivePriority", "Normal")]
             order.account = account_id
             if cfg.rebalance.trading_hours == "eth":
                 order.outsideRth = True
-            algo_used_local = False
-            algo_pref = cfg.execution.algo_preference.lower()
-            if use_algo and algo_pref in {"adaptive", "midprice"}:
-                algo_used_local = True
-                if algo_pref == "adaptive":
-                    order.algoStrategy = "Adaptive"
-                    order.algoParams = [TagValue("adaptivePriority", "Normal")]
-                else:
-                    order.algoStrategy = "ArrivalPx"
-                    order.algoParams = [TagValue("strategyType", "Midpoint")]
             return order, algo_used_local
 
         async def _place(qty: float, use_algo: bool, action: str) -> tuple[Any, bool]:

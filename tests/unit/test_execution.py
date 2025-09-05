@@ -125,13 +125,14 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     """Algorithmic orders retry as plain market orders on failure."""
     ib = SimpleNamespace()
 
+    order_types: list[str] = []
     events: list[str] = []
 
-    def fake_place(*_a, **_k):
+    def fake_place(_contract, order):
+        order_types.append(order.orderType)
         if not events:
-            events.append("algo")
+            events.append("attempt")
             return DummyTrade(status="Rejected")
-        events.append("plain")
         return DummyTrade(status="Filled", filled=1.0)
 
     def fake_cancel(_order):
@@ -148,7 +149,27 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(1.0)
     assert res[0]["action"] == trade.action
-    assert events == ["algo", "cancel", "plain"]
+    assert order_types == ["MIDPRICE", "MKT"]
+    assert events == ["attempt", "cancel"]
+
+
+def test_midprice_order_type(monkeypatch):
+    """Midprice preference builds a MIDPRICE order."""
+    ib = SimpleNamespace()
+    order_types: list[str] = []
+
+    def fake_place(_contract, order):
+        order_types.append(order.orderType)
+        return DummyTrade(status="Filled", filled=1.0)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trade = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg()
+    cfg.execution.algo_preference = "midprice"
+    res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
+    assert res[0]["status"] == "Filled"
+    assert order_types == ["MIDPRICE"]
 
 
 def test_timeout_without_fallback_cancels_order(monkeypatch):
