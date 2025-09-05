@@ -150,24 +150,25 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             buy_usd = plan["buy_usd"] if plan else 0.0
             sell_usd = plan["sell_usd"] if plan else 0.0
             pre_leverage = plan["pre_leverage"] if plan else 0.0
-            capture_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": planned_orders,
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pre_leverage,
-                    "post_leverage": pre_leverage,
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
+            if not any(r.get("account_id") == account_id for r in summary_rows):
+                capture_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": planned_orders,
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": pre_leverage,
+                        "post_leverage": pre_leverage,
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
             return None
         except Exception as exc:  # noqa: BLE001
             logging.exception("Unhandled error processing account %s", account_id)
@@ -177,24 +178,25 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             buy_usd = plan["buy_usd"] if plan else 0.0
             sell_usd = plan["sell_usd"] if plan else 0.0
             pre_leverage = plan["pre_leverage"] if plan else 0.0
-            capture_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": planned_orders,
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pre_leverage,
-                    "post_leverage": pre_leverage,
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
+            if not any(r.get("account_id") == account_id for r in summary_rows):
+                capture_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": planned_orders,
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": buy_usd,
+                        "sell_usd": sell_usd,
+                        "pre_leverage": pre_leverage,
+                        "post_leverage": pre_leverage,
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
             return None
 
     plans: list[Plan] = []
@@ -279,48 +281,50 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 logging.error("Error processing account %s: %s", account_id, exc)
                 await _print_err(f"[red]{exc}[/red]", output_lock)
                 failures.append((account_id, str(exc)))
-                capture_summary(
-                    Path(cfg.io.report_dir),
-                    ts_dt,
-                    {
-                        "timestamp_run": ts_dt.isoformat(),
-                        "account_id": account_id,
-                        "planned_orders": plan["planned_orders"],
-                        "submitted": 0,
-                        "filled": 0,
-                        "rejected": 0,
-                        "buy_usd": plan["buy_usd"],
-                        "sell_usd": plan["sell_usd"],
-                        "pre_leverage": plan["pre_leverage"],
-                        "post_leverage": plan["pre_leverage"],
-                        "status": "failed",
-                        "error": str(exc),
-                    },
-                )
+                if not any(r.get("account_id") == account_id for r in summary_rows):
+                    capture_summary(
+                        Path(cfg.io.report_dir),
+                        ts_dt,
+                        {
+                            "timestamp_run": ts_dt.isoformat(),
+                            "account_id": account_id,
+                            "planned_orders": plan["planned_orders"],
+                            "submitted": 0,
+                            "filled": 0,
+                            "rejected": 0,
+                            "buy_usd": plan["buy_usd"],
+                            "sell_usd": plan["sell_usd"],
+                            "pre_leverage": plan["pre_leverage"],
+                            "post_leverage": plan["pre_leverage"],
+                            "status": "failed",
+                            "error": str(exc),
+                        },
+                    )
             except Exception as exc:  # noqa: BLE001
                 logging.exception(
                     "Unexpected error processing account %s: %s", account_id, exc
                 )
                 await _print_err(f"[red]{exc}[/red]", output_lock)
                 failures.append((account_id, str(exc)))
-                capture_summary(
-                    Path(cfg.io.report_dir),
-                    ts_dt,
-                    {
-                        "timestamp_run": ts_dt.isoformat(),
-                        "account_id": account_id,
-                        "planned_orders": plan["planned_orders"],
-                        "submitted": 0,
-                        "filled": 0,
-                        "rejected": 0,
-                        "buy_usd": plan["buy_usd"],
-                        "sell_usd": plan["sell_usd"],
-                        "pre_leverage": plan["pre_leverage"],
-                        "post_leverage": plan["pre_leverage"],
-                        "status": "failed",
-                        "error": str(exc),
-                    },
-                )
+                if not any(r.get("account_id") == account_id for r in summary_rows):
+                    capture_summary(
+                        Path(cfg.io.report_dir),
+                        ts_dt,
+                        {
+                            "timestamp_run": ts_dt.isoformat(),
+                            "account_id": account_id,
+                            "planned_orders": plan["planned_orders"],
+                            "submitted": 0,
+                            "filled": 0,
+                            "rejected": 0,
+                            "buy_usd": plan["buy_usd"],
+                            "sell_usd": plan["sell_usd"],
+                            "pre_leverage": plan["pre_leverage"],
+                            "post_leverage": plan["pre_leverage"],
+                            "status": "failed",
+                            "error": str(exc),
+                        },
+                    )
             finally:
                 if idx < len(plans) - 1:
                     await asyncio.sleep(pacing)

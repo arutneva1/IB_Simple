@@ -611,29 +611,8 @@ async def confirm_global(
                 logging.exception(
                     "Unhandled error processing account %s", account_id, exc_info=res
                 )
-                trades = pl["trades"]
-                buy_usd = sum(t.notional for t in trades if t.action == "BUY")
-                sell_usd = sum(t.notional for t in trades if t.action == "SELL")
                 async with output_lock:
                     print(f"[red]{res}[/red]")
-                    append_run_summary(
-                        Path(cfg.io.report_dir),
-                        ts_dt,
-                        {
-                            "timestamp_run": ts_dt.isoformat(),
-                            "account_id": account_id,
-                            "planned_orders": len(trades),
-                            "submitted": 0,
-                            "filled": 0,
-                            "rejected": 0,
-                            "buy_usd": buy_usd,
-                            "sell_usd": sell_usd,
-                            "pre_leverage": pl["pre_leverage"],
-                            "post_leverage": pl["pre_leverage"],
-                            "status": "failed",
-                            "error": str(res),
-                        },
-                    )
                 failures.append((account_id, str(res)))
         return failures
 
@@ -678,27 +657,6 @@ async def confirm_global(
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
-            trades = pl["trades"]
-            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
-            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
-            append_run_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": len(trades),
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pl["pre_leverage"],
-                    "post_leverage": pl["pre_leverage"],
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
             failures.append((account_id, str(exc)))
             failed_accounts.add(account_id)
         except Exception as exc:  # noqa: BLE001
@@ -706,27 +664,6 @@ async def confirm_global(
                 "Unexpected error processing account %s", account_id, exc_info=exc
             )
             print(f"[red]{exc}[/red]")
-            trades = pl["trades"]
-            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
-            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
-            append_run_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": len(trades),
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pl["pre_leverage"],
-                    "post_leverage": pl["pre_leverage"],
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
             failures.append((account_id, str(exc)))
             failed_accounts.add(account_id)
         if idx < len(sell_plans) - 1:
@@ -756,54 +693,12 @@ async def confirm_global(
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
-            trades = pl["trades"]
-            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
-            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
-            append_run_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": len(trades),
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pl["pre_leverage"],
-                    "post_leverage": pl["pre_leverage"],
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
             failures.append((account_id, str(exc)))
         except Exception as exc:  # noqa: BLE001
             logging.exception(
                 "Unexpected error processing account %s", account_id, exc_info=exc
             )
             print(f"[red]{exc}[/red]")
-            trades = pl["trades"]
-            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
-            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
-            append_run_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
-                {
-                    "timestamp_run": ts_dt.isoformat(),
-                    "account_id": account_id,
-                    "planned_orders": len(trades),
-                    "submitted": 0,
-                    "filled": 0,
-                    "rejected": 0,
-                    "buy_usd": buy_usd,
-                    "sell_usd": sell_usd,
-                    "pre_leverage": pl["pre_leverage"],
-                    "post_leverage": pl["pre_leverage"],
-                    "status": "failed",
-                    "error": str(exc),
-                },
-            )
             failures.append((account_id, str(exc)))
         await asyncio.sleep(pacing_sec)
 
