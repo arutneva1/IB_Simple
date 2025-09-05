@@ -118,16 +118,12 @@ async def confirm_per_account(
             q = lookup.get((t.symbol, t.action))
             res = q.popleft() if q else {}
             if not res:
-                raise IBKRError(
-                    f"Missing fill result for {t.symbol} {t.action}"
-                )
+                raise IBKRError(f"Missing fill result for {t.symbol} {t.action}")
             qty_any = res.get("fill_qty")
             if qty_any is None:
                 qty_any = res.get("filled")
             if qty_any is None:
-                raise IBKRError(
-                    f"Missing fill quantity for {t.symbol} {t.action}"
-                )
+                raise IBKRError(f"Missing fill quantity for {t.symbol} {t.action}")
             filled = float(qty_any)
             price_any = res.get("fill_price")
             if price_any is None:
