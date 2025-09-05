@@ -17,6 +17,7 @@ from src.io.config_loader import (  # noqa: E402
     Pricing,
     Rebalance,
     load_config,
+    merge_account_overrides,
 )
 
 VALID_CONFIG = """\
@@ -205,3 +206,13 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
     path.write_text(content)
     with pytest.raises(ConfigError):
         load_config(path)
+
+
+def test_account_overrides_allow_fractional(tmp_path: Path) -> None:
+    content = VALID_CONFIG + "\n[account:ACC1]\nallow_fractional = true\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.rebalance.allow_fractional is False
+    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    assert cfg_acc.rebalance.allow_fractional is True
