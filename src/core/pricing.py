@@ -87,10 +87,10 @@ async def get_price(
             return None
 
         value = getattr(tickers[0], field, None)
-        if value is None or not math.isfinite(value):
+        if value is None or not math.isfinite(value) or value <= 0:
             if field == "last":
                 value = getattr(tickers[0], "close", None)
-                if value is None or not math.isfinite(value):
+                if value is None or not math.isfinite(value) or value <= 0:
                     return None
             else:
                 return None
@@ -107,7 +107,7 @@ async def get_price(
         tickers = await ib.reqTickersAsync(contract, snapshot=True)
         price = _extract_price(tickers, price_source)
 
-    if price is None or not math.isfinite(price):
+    if price is None or not math.isfinite(price) or price <= 0:
         raise PricingError(f"Invalid price for {symbol} using {price_source}")
 
     return price

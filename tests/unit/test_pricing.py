@@ -221,6 +221,38 @@ def test_get_price_raises_on_nan(monkeypatch: pytest.MonkeyPatch) -> None:
     assert getattr(qualify_calls[0], "currency") == "USD"
 
 
+def test_get_price_raises_on_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PricingError is raised when a zero price is returned."""
+
+    ib = SimpleNamespace()
+    qualify_calls: list = []
+    req_calls: list = []
+
+    qualified_contract = SimpleNamespace()
+
+    async def fake_qualify(contract):
+        qualify_calls.append(contract)
+        return [qualified_contract]
+
+    async def fake_req(contract, *, snapshot: bool = False):
+        req_calls.append((contract, snapshot))
+        return [Ticker(last=float("nan"), close=0.0)]
+
+    monkeypatch.setattr(ib, "qualifyContractsAsync", fake_qualify, raising=False)
+    monkeypatch.setattr(ib, "reqTickersAsync", fake_req, raising=False)
+
+    with pytest.raises(PricingError):
+        asyncio.run(
+            get_price(ib, "AAPL", price_source="last", fallback_to_snapshot=False)
+        )
+
+    assert len(qualify_calls) == 1
+    assert req_calls == [(qualified_contract, False)]
+    assert getattr(qualify_calls[0], "symbol") == "AAPL"
+    assert getattr(qualify_calls[0], "exchange") == "SMART"
+    assert getattr(qualify_calls[0], "currency") == "USD"
+
+
 def test_get_price_raises_when_contract_not_qualified(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
