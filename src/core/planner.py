@@ -132,6 +132,38 @@ async def plan_account(
 
         tasks: list[asyncio.Task[Any]] = []
         try:
+            missing_symbols = {
+                sym for sym in targets if sym not in prices and sym != "CASH"
+            }
+            if missing_symbols:
+                await _print(
+                    f"[blue]Fetching prices for {len(missing_symbols)} target symbols[/blue]"
+                )
+                logging.info(
+                    "Fetching prices for %s: %d target symbols",
+                    account_id,
+                    len(missing_symbols),
+                )
+                tasks = [
+                    asyncio.create_task(fetch_price(client._ib, sym, cfg))
+                    for sym in missing_symbols
+                ]
+                for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+                    try:
+                        symbol, price = await task
+                    except PricingError as exc:
+                        await _print(f"[red]{exc}[/red]")
+                        logging.error(str(exc))
+                        for t in tasks:
+                            t.cancel()
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                        raise
+                    prices[symbol] = price
+                    await _print(
+                        f"[blue]  ({idx}/{len(missing_symbols)}) {symbol}[/blue]"
+                    )
+                tasks = []
+
             await _print("[blue]Computing drift[/blue]")
             logging.info("Computing drift for %s", account_id)
             drifts = compute_drift(account_id, current, targets, prices, net_liq, cfg)
