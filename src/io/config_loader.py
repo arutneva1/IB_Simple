@@ -308,38 +308,24 @@ def load_config(path: Path) -> AppConfig:
     )
 
     account_overrides: Dict[str, AccountOverride] = {}
+    portfolio_paths: Dict[str, Path] = {}
     for section in cp.sections():
         if section.lower().startswith("account:"):
             acc_id = section.split(":", 1)[1].strip().upper()
             items = dict(cp.items(section))
+            raw_path = items.pop("path", None)
+            if raw_path is not None:
+                resolved = (base_dir / Path(raw_path)).resolve()
+                if not resolved.is_file():
+                    raise ConfigError(
+                        f"[account:{acc_id}] path is missing or not a regular file: {resolved}"
+                    )
+                portfolio_paths[acc_id] = resolved
             account_overrides[acc_id] = _parse_account_override(items)
-
-    portfolio_paths: Dict[str, Path] = {}
-    for section in cp.sections():
-        if section.lower().startswith("portfolio:"):
-            acc_id = section.split(":", 1)[1].strip().upper()
-            items = dict(cp.items(section))
-            try:
-                raw_path = Path(items.pop("path"))
-                resolved = (base_dir / raw_path).resolve()
-            except KeyError as exc:
-                raise ConfigError(f"[{section}] missing key: path") from exc
-            if not resolved.is_file():
-                raise ConfigError(
-                    f"[portfolio:{acc_id}] path is missing or not a regular file: {resolved}"
-                )
-            if items:
-                logging.warning(
-                    "Ignoring unknown portfolio keys: %s",
-                    ", ".join(sorted(items.keys())),
-                )
-            portfolio_paths[acc_id] = resolved
 
     unknown_accounts = sorted(set(portfolio_paths) - set(accounts.ids))
     if unknown_accounts:
-        raise ConfigError(
-            "[portfolio] unknown account ids: " + ", ".join(unknown_accounts)
-        )
+        raise ConfigError("[account] unknown account ids: " + ", ".join(unknown_accounts))
 
     # [models]
     data = _load_section(cp, "models")

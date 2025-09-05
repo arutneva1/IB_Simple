@@ -145,7 +145,7 @@ wait_before_fallback = 300
 report_dir = reports
 log_level = INFO
 
-[portfolio:acc1]
+[account:acc1]
 path = acc1.csv
 """
 
@@ -258,10 +258,10 @@ wait_before_fallback = 300
 report_dir = reports
 log_level = INFO
 
-[portfolio:ACC1]
+[account:ACC1]
 path = acc1.csv
 
-[portfolio:ACC2]
+[account:ACC2]
 path = acc2.csv
 """
     cfg_path = tmp_path / "settings.ini"
