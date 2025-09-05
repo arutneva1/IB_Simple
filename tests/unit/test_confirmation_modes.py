@@ -46,7 +46,9 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, tmp_path):
     monkeypatch.setattr(rebalance, "setup_logging", lambda *a, **k: None)
 
 
-def test_per_account_prompts_once_per_account(monkeypatch, tmp_path):
+def test_per_account_prompts_once_per_account(
+    monkeypatch, tmp_path, portfolios_csv_path: Path
+):
     _patch_common(monkeypatch, tmp_path)
     prompts: list[str] = []
 
@@ -58,7 +60,7 @@ def test_per_account_prompts_once_per_account(monkeypatch, tmp_path):
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -69,7 +71,7 @@ def test_per_account_prompts_once_per_account(monkeypatch, tmp_path):
     assert prompts == ["Proceed? [y/N]: ", "Proceed? [y/N]: "]
 
 
-def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys):
+def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys, portfolios_csv_path: Path):
     records: list[dict[str, str]] = []
 
     def fake_append(report_dir, ts, row):  # noqa: ARG001
@@ -89,7 +91,7 @@ def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys):
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=False,
         read_only=False,

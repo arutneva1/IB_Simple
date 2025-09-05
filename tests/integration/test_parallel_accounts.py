@@ -97,7 +97,7 @@ async def stub_confirm_per_account(
     )
 
 
-def test_parallel_accounts(monkeypatch, tmp_path):
+def test_parallel_accounts(monkeypatch, tmp_path, portfolios_csv_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
     monkeypatch.setattr(rebalance, "plan_account", stub_plan_account)
     monkeypatch.setattr(rebalance, "confirm_per_account", stub_confirm_per_account)
@@ -117,7 +117,7 @@ def test_parallel_accounts(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -139,7 +139,7 @@ def test_parallel_accounts(monkeypatch, tmp_path):
     assert [row["account_id"] for row in rows] == ["DU111111", "DU222222"]
 
 
-def test_parallel_confirmation_overlap(monkeypatch, tmp_path):
+def test_parallel_confirmation_overlap(monkeypatch, tmp_path, portfolios_csv_path):
     """Confirmations run concurrently when confirmation is auto-approved."""
     confirm_starts.clear()
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
@@ -161,7 +161,7 @@ def test_parallel_confirmation_overlap(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=True,
         read_only=False,
@@ -174,7 +174,7 @@ def test_parallel_confirmation_overlap(monkeypatch, tmp_path):
     assert abs(confirm_starts[1] - confirm_starts[0]) < 0.05
 
 
-def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
+def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path, portfolios_csv_path):
     """Exceptions during serialized confirmation print atomically."""
 
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
@@ -219,7 +219,7 @@ def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -236,7 +236,7 @@ def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
         assert not ("noise" in line and "boom" in line)
 
 
-def test_serialized_planner_output(monkeypatch, capsys, tmp_path):
+def test_serialized_planner_output(monkeypatch, capsys, tmp_path, portfolios_csv_path):
     """Planner output prints atomically under parallel planning."""
 
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
@@ -297,7 +297,7 @@ def test_serialized_planner_output(monkeypatch, capsys, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=True,
         read_only=False,

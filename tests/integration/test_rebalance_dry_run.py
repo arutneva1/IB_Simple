@@ -51,14 +51,14 @@ async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001
     return None
 
 
-def test_rebalance_dry_run(monkeypatch, capsys):
+def test_rebalance_dry_run(monkeypatch, capsys, portfolios_csv_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -73,7 +73,7 @@ def test_rebalance_dry_run(monkeypatch, capsys):
     assert "Proceed?" not in captured
 
 
-def test_rebalance_multiple_accounts_failure(monkeypatch, capsys):
+def test_rebalance_multiple_accounts_failure(monkeypatch, capsys, portfolios_csv_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
@@ -89,7 +89,7 @@ def test_rebalance_multiple_accounts_failure(monkeypatch, capsys):
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,

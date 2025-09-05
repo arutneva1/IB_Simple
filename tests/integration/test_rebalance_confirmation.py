@@ -54,7 +54,9 @@ async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001
 
 
 def test_prompt_default(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    portfolios_csv_path: Path,
 ) -> None:
     """Default execution prompts and aborts when the user declines."""
 
@@ -70,7 +72,7 @@ def test_prompt_default(
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -84,7 +86,9 @@ def test_prompt_default(
 
 
 def test_yes_skips_prompt(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    portfolios_csv_path: Path,
 ) -> None:
     """The --yes flag suppresses the prompt and proceeds."""
 
@@ -114,7 +118,7 @@ def test_yes_skips_prompt(
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=True,
         read_only=False,
@@ -128,7 +132,9 @@ def test_yes_skips_prompt(
 
 
 def test_prompt_global(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    portfolios_csv_path: Path,
 ) -> None:
     """Global confirmation prompts once for all accounts."""
 
@@ -147,7 +153,7 @@ def test_prompt_global(
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -162,7 +168,9 @@ def test_prompt_global(
 
 
 def test_yes_skips_prompt_global(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    portfolios_csv_path: Path,
 ) -> None:
     """--yes skips the global confirmation prompt."""
 
@@ -192,7 +200,7 @@ def test_yes_skips_prompt_global(
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=False,
         yes=True,
         read_only=False,
