@@ -99,7 +99,8 @@ class IBKRClient:
         """Return a snapshot of positions and account balances.
 
         The snapshot contains positions denominated in USD, the available cash
-        in USD and the net liquidation value in USD with any CAD cash deducted.
+        in USD and the net liquidation value in USD with any CAD cash deducted
+        after converting it to USD using the current FX rate.
         """
 
         try:
@@ -136,6 +137,7 @@ class IBKRClient:
             cash_usd = 0.0
             net_liq_usd = 0.0
             cad_cash = 0.0
+            cad_to_usd = 1.0
 
             for value in summary:
                 if value.tag in {"CashBalance", "TotalCashValue"}:
@@ -143,10 +145,14 @@ class IBKRClient:
                         cash_usd = float(value.value)
                     elif value.currency == "CAD":
                         cad_cash = float(value.value)
+                elif (
+                    value.tag == "ExchangeRate" and value.currency == "CAD"
+                ):
+                    cad_to_usd = float(value.value)
                 elif value.tag == "NetLiquidation" and value.currency == "USD":
                     net_liq_usd = float(value.value)
 
-            net_liq_usd -= cad_cash
+            net_liq_usd -= cad_cash * cad_to_usd
 
             snapshot = Snapshot(
                 positions=usd_positions, cash=cash_usd, net_liq=net_liq_usd
