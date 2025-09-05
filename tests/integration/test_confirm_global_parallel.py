@@ -1,4 +1,6 @@
 import asyncio
+import csv
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -6,12 +8,15 @@ from types import SimpleNamespace
 
 import pytest
 
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 from src.core.confirmation import confirm_global
+from src.io.reporting import append_run_summary
 
 pytestmark = pytest.mark.integration
 
 confirm_starts: list[tuple[float, object]] = []
-summary_rows = []
+summary_rows: list[dict[str, object]] = []
 
 
 async def stub_confirm_per_account(
@@ -199,3 +204,73 @@ def test_confirm_global_sequential(monkeypatch, cfg):
     assert all(lock is None for _, lock in confirm_starts)
     assert confirm_starts[1][0] - confirm_starts[0][0] >= 0.05
     assert len(summary_rows) == 2
+
+
+def test_run_summary_file_well_formed(monkeypatch, cfg, tmp_path):
+    """Confirm_global writes a valid run summary when running in parallel."""
+
+    async def stub_confirm(
+        plan,
+        args,
+        cfg,
+        ts_dt,
+        *,
+        client_factory,
+        submit_batch,
+        append_run_summary,
+        write_post_trade_report,
+        compute_drift,
+        prioritize_by_drift,
+        size_orders,
+        output_lock=None,
+    ):
+        row = {
+            "timestamp_run": ts_dt.isoformat(),
+            "account_id": plan["account_id"],
+            "planned_orders": 0,
+            "submitted": 0,
+            "filled": 0,
+            "rejected": 0,
+            "buy_usd": 0.0,
+            "sell_usd": 0.0,
+            "pre_leverage": 0.0,
+            "post_leverage": 0.0,
+            "status": "ok",
+            "error": "",
+        }
+        if output_lock is not None:
+            async with output_lock:
+                append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+        else:
+            append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+
+    monkeypatch.setattr("src.core.confirmation.confirm_per_account", stub_confirm)
+
+    cfg.io.report_dir = str(tmp_path)
+
+    args = SimpleNamespace(dry_run=False, yes=True, read_only=False)
+    ts_dt = datetime.utcnow()
+    plans = [_make_plan("A1"), _make_plan("A2")]
+
+    asyncio.run(
+        confirm_global(
+            plans,
+            args,
+            cfg,
+            ts_dt,
+            client_factory=lambda: None,
+            submit_batch=lambda *a, **k: [],
+            append_run_summary=append_run_summary,
+            write_post_trade_report=lambda *a, **k: Path(""),
+            compute_drift=lambda *a, **k: [],
+            prioritize_by_drift=lambda *a, **k: [],
+            size_orders=lambda *a, **k: ([], 0, 0),
+            parallel_accounts=True,
+        )
+    )
+
+    report_files = list(Path(cfg.io.report_dir).glob("run_summary_*.csv"))
+    assert len(report_files) == 1
+    with report_files[0].open() as fh:
+        rows = list(csv.DictReader(fh))
+    assert {row["account_id"] for row in rows} == {"A1", "A2"}
