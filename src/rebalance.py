@@ -70,9 +70,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         if accounts_path is not None:
             csv_path = accounts_path
         else:
-            csv_path = Path("data/portfolios.csv")
+            csv_path = cfg_dir / "portfolios.csv"
     if not csv_path.is_absolute():
         csv_path = (cfg_dir / csv_path).resolve()
+    else:
+        csv_path = csv_path.resolve()
     portfolio_paths: dict[str, Path] = getattr(cfg, "portfolio_paths", {})
     path_map: dict[str, Path] = {}
     for acct in cfg.accounts.ids:
@@ -364,7 +366,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--csv",
         default=None,
-        help="Path to portfolio CSV (defaults to [accounts] path or data/portfolios.csv)",
+        help=(
+            "Path to portfolio CSV (defaults to [accounts] path or portfolios.csv "
+            "relative to the config file)"
+        ),
     )
     parser.add_argument(
         "--dry-run",
