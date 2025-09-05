@@ -6,8 +6,8 @@ This document outlines a 4-phase plan to implement the SRS add-on for supporting
 
 ## Phase 1 — Config plumbing & compatibility
 **Scope**
-- Add `[accounts]` section to `settings.ini` with `ids=` list and `confirm_mode=` (`per_account` default). 
-- Parse (but do not yet enforce) future-proof per-account overrides; fall back to global values.
+- Add `[accounts]` section to `settings.ini` with `ids=` list and `confirm_mode=` (`per_account` default).
+- Parse and enforce per-account overrides; fall back to global values.
 
 **Code tasks**
 - INI parser updates + validation (non-empty IDs, dedupe, preserve order).

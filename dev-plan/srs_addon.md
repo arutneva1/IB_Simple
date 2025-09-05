@@ -28,7 +28,7 @@ ids = DU111111, DU222222, DU333333   ; comma‑separated account codes
 confirm_mode = per_account            ; per_account | global
 ```
 
-### 2.2 Account‑specific overrides (future‑proof)
+### 2.2 Account‑specific overrides
 ```ini
 [account:DU111111]
 allow_fractional = false
