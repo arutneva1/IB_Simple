@@ -174,7 +174,9 @@ def test_parallel_confirmation_overlap(monkeypatch, tmp_path, portfolios_csv_pat
     assert abs(confirm_starts[1] - confirm_starts[0]) < 0.05
 
 
-def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path, portfolios_csv_path):
+def test_serialized_confirmation_output(
+    monkeypatch, capsys, tmp_path, portfolios_csv_path
+):
     """Exceptions during serialized confirmation print atomically."""
 
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)

@@ -129,6 +129,11 @@ def compute_drift(
     # Union of all symbols from current holdings and targets.
     symbols = set(current_wts) | set(targets)
 
+    # Ensure target-only symbols have associated pricing data.
+    for sym in set(targets) - set(current_wts):
+        if sym != "CASH" and sym not in prices:
+            raise KeyError(f"missing price for {sym}")
+
     drifts: list[Drift] = []
     for symbol in sorted(symbols):
         target = targets.get(symbol, 0.0)
