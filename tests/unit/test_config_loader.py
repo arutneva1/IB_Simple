@@ -168,6 +168,19 @@ def test_portfolio_path_missing(tmp_path: Path) -> None:
     assert "missing.csv" in err
 
 
+def test_portfolio_path_directory(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "settings.ini"
+    cfg_path.write_text(
+        VALID_CONFIG + "\n[portfolio: acc1]\npath = somedir\n"
+    )
+    (tmp_path / "somedir").mkdir()
+    with pytest.raises(ConfigError) as exc:
+        load_config(cfg_path)
+    err = str(exc.value)
+    assert "ACC1" in err
+    assert "somedir" in err
+
+
 def test_missing_accounts_section(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace("\n[accounts]\nids = ACC1, ACC2\n", "\n")
     path = tmp_path / "settings.ini"
