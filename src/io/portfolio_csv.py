@@ -179,7 +179,9 @@ async def load_portfolios_map(
     result: Dict[str, dict[str, dict[str, float]]] = {}
     symbols: set[str] = set()
     for account, p in paths.items():
-        path = Path(p)
+        # Resolve the path so that different references (relative vs. absolute)
+        # to the same file map to a single cache entry.
+        path = Path(p).resolve()
         data = cache.get(path)
         if data is None:
             portfolios, expected = _parse_csv(path, expected)
