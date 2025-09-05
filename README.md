@@ -123,9 +123,13 @@ python -m src.io.validate_config config/settings.ini
 ```
 
 ### Validate portfolio CSV
-Validate a single CSV:
+Validate a single CSV (or all configured per-account files when each account
+has one):
 ```bash
 python -m src.io.validate_portfolios --config config/settings.ini data/portfolios.csv
+
+# if every account has a dedicated portfolio CSV, omit the global file
+python -m src.io.validate_portfolios --config config/settings.ini
 ```
 Validate all portfolio files including account-specific overrides:
 ```bash
