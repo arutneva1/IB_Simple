@@ -43,6 +43,7 @@ section:
 ids = DU111111, DU222222
 confirm_mode = per_account        ; per_account | global
 pacing_sec = 1                    ; seconds to pause between accounts
+parallel = false                  ; true processes accounts concurrently
 ```
 
 The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
@@ -53,6 +54,8 @@ runtime via `--confirm-mode`:
 * `global` shows all account previews first, then prompts once for the batch.
 
 `pacing_sec` throttles between accounts by pausing for the specified number of seconds.
+Set `parallel = true` to plan and execute accounts concurrently. The same can
+be enabled at runtime via `--parallel-accounts`.
 
 Example forcing a global prompt:
 
@@ -133,10 +136,11 @@ Displays the batch summary and exits without placing orders.
 
 ### Dry run across multiple accounts
 When `[accounts]` lists more than one ID, the rebalancer previews each
-account in sequence. Run the same command to simulate the batch:
+account in sequence. Run the same command to simulate the batch, or add
+`--parallel-accounts` to process them concurrently:
 
 ```bash
-python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --dry-run --parallel-accounts --config config/settings.ini --csv data/portfolios.csv
 ```
 
 Each account prints its own table. Example output:
