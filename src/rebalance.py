@@ -232,6 +232,30 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         "error": str(exc),
                     },
                 )
+            except Exception as exc:  # noqa: BLE001
+                logging.exception(
+                    "Unexpected error processing account %s: %s", account_id, exc
+                )
+                print(f"[red]{exc}[/red]")
+                failures.append((account_id, str(exc)))
+                capture_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": plan["planned_orders"],
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": plan["buy_usd"],
+                        "sell_usd": plan["sell_usd"],
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["pre_leverage"],
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
             finally:
                 await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
