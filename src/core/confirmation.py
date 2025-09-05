@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from rich import print
 
@@ -505,8 +505,107 @@ async def confirm_global(
                 failures.append((account_id, str(res)))
         return failures
 
-    for idx, pl in enumerate(plans):
+    sell_plans: list[Plan] = []
+    buy_plans: list[Plan] = []
+    for pl in plans:
+        sell_trades = [t for t in pl["trades"] if t.action == "SELL"]
+        buy_trades = [t for t in pl["trades"] if t.action == "BUY"]
+        if sell_trades:
+            sp = dict(pl)
+            sp["trades"] = sell_trades
+            sp["planned_orders"] = len(sell_trades)
+            sp["sell_usd"] = sum(t.notional for t in sell_trades)
+            sp["buy_usd"] = 0.0
+            sell_plans.append(sp)
+        if buy_trades:
+            bp = dict(pl)
+            bp["trades"] = buy_trades
+            bp["planned_orders"] = len(buy_trades)
+            bp["buy_usd"] = sum(t.notional for t in buy_trades)
+            bp["sell_usd"] = 0.0
+            buy_plans.append(bp)
+
+    failed_accounts: set[str] = set()
+    for idx, pl in enumerate(sell_plans):
         account_id = pl["account_id"]
+        try:
+            await confirm_per_account(
+                pl,
+                args,
+                cfg,
+                ts_dt,
+                client_factory=client_factory,
+                submit_batch=submit_batch,
+                append_run_summary=append_run_summary,
+                write_post_trade_report=write_post_trade_report,
+                compute_drift=compute_drift,
+                prioritize_by_drift=prioritize_by_drift,
+                size_orders=size_orders,
+                output_lock=None,
+            )
+        except (ConfigError, IBKRError, PlanningError) as exc:
+            logging.error("Error processing account %s: %s", account_id, exc)
+            print(f"[red]{exc}[/red]")
+            trades = pl["trades"]
+            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+            append_run_summary(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": len(trades),
+                    "submitted": 0,
+                    "filled": 0,
+                    "rejected": 0,
+                    "buy_usd": buy_usd,
+                    "sell_usd": sell_usd,
+                    "pre_leverage": pl["pre_leverage"],
+                    "post_leverage": pl["pre_leverage"],
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            )
+            failures.append((account_id, str(exc)))
+            failed_accounts.add(account_id)
+        except Exception as exc:  # noqa: BLE001
+            logging.exception(
+                "Unexpected error processing account %s", account_id, exc_info=exc
+            )
+            print(f"[red]{exc}[/red]")
+            trades = pl["trades"]
+            buy_usd = sum(t.notional for t in trades if t.action == "BUY")
+            sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+            append_run_summary(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": len(trades),
+                    "submitted": 0,
+                    "filled": 0,
+                    "rejected": 0,
+                    "buy_usd": buy_usd,
+                    "sell_usd": sell_usd,
+                    "pre_leverage": pl["pre_leverage"],
+                    "post_leverage": pl["pre_leverage"],
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            )
+            failures.append((account_id, str(exc)))
+            failed_accounts.add(account_id)
+        if idx < len(sell_plans) - 1:
+            await asyncio.sleep(pacing_sec)
+
+    if buy_plans:
+        await asyncio.sleep(pacing_sec)
+    for idx, pl in enumerate(buy_plans):
+        account_id = pl["account_id"]
+        if account_id in failed_accounts:
+            continue
         try:
             await confirm_per_account(
                 pl,
@@ -574,7 +673,6 @@ async def confirm_global(
                 },
             )
             failures.append((account_id, str(exc)))
-        if idx < len(plans) - 1:
-            await asyncio.sleep(pacing_sec)
+        await asyncio.sleep(pacing_sec)
 
     return failures

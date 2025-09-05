@@ -234,3 +234,81 @@ def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
     assert noise_lines and error_lines
     for line in lines:
         assert not ("noise" in line and "boom" in line)
+
+
+def test_serialized_planner_output(monkeypatch, capsys, tmp_path):
+    """Planner output prints atomically under parallel planning."""
+
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
+    monkeypatch.setattr(rebalance, "compute_drift", lambda *a, **k: [])
+    monkeypatch.setattr(rebalance, "prioritize_by_drift", lambda *a, **k: [])
+    monkeypatch.setattr(rebalance, "size_orders", lambda *a, **k: ([], 0.0, 0.0))
+    monkeypatch.setattr(rebalance, "render_preview", lambda *a, **k: "")
+    monkeypatch.setattr(
+        rebalance, "write_pre_trade_report", lambda *a, **k: tmp_path / "pre.txt"
+    )
+    monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
+
+    original_plan = rebalance.plan_account
+
+    async def noisy_plan_account(
+        account_id,
+        portfolios,
+        cfg,
+        ts_dt,
+        *,
+        output_lock=None,
+        **kwargs,
+    ):
+        assert output_lock is not None
+
+        async def background() -> None:
+            await rebalance._print_err("[yellow]noise[/yellow]", output_lock)
+
+        asyncio.create_task(background())
+        await asyncio.sleep(0)
+        return await original_plan(
+            account_id,
+            portfolios,
+            cfg,
+            ts_dt,
+            output_lock=output_lock,
+            **kwargs,
+        )
+
+    monkeypatch.setattr(rebalance, "plan_account", noisy_plan_account)
+
+    original_load_config = rebalance.load_config
+
+    def fake_load_config(path):
+        cfg = original_load_config(path)
+        cfg.accounts.ids = ["DU111111", "DU222222"]
+        cfg.accounts.parallel = True
+        cfg.accounts.pacing_sec = 0.0
+        cfg.io.report_dir = str(tmp_path / "reports")
+        return cfg
+
+    monkeypatch.setattr(rebalance, "load_config", fake_load_config)
+
+    async def dummy_confirm(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(rebalance, "confirm_per_account", dummy_confirm)
+
+    args = SimpleNamespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=True,
+        yes=True,
+        read_only=False,
+        parallel_accounts=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    lines = capsys.readouterr().out.splitlines()
+    noise_lines = [line for line in lines if "noise" in line]
+    connect_lines = [line for line in lines if "Connecting to IBKR" in line]
+    assert noise_lines and connect_lines
+    for line in lines:
+        assert not ("noise" in line and "Connecting" in line)

@@ -104,6 +104,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 fetch_price=_fetch_price,
                 render_preview=render_preview,
                 write_pre_trade_report=write_pre_trade_report,
+                output_lock=output_lock,
             )
             if confirm_mode is ConfirmMode.PER_ACCOUNT and not (
                 getattr(accounts, "parallel", False) and not args.yes

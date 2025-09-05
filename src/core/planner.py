@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict
 
+from rich import print
+
 from src.broker.ibkr_client import IBKRClient
 from src.core.drift import Drift
 from src.core.errors import PlanningError
@@ -62,6 +64,7 @@ async def plan_account(
     fetch_price=_fetch_price,
     render_preview=render_preview,
     write_pre_trade_report=write_pre_trade_report,
+    output_lock: asyncio.Lock | None = None,
 ) -> Plan:
     """Plan trades for a single account.
 
@@ -79,9 +82,19 @@ async def plan_account(
     client_factory, compute_drift, prioritize_by_drift, size_orders,
     fetch_price, render_preview, write_pre_trade_report:
         Dependency injection hooks for testing and custom behaviour.
+    output_lock:
+        Optional ``asyncio.Lock`` used to serialize ``print`` output when planning
+        accounts concurrently.
     """
 
-    print(
+    async def _print(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        if output_lock is not None:
+            async with output_lock:
+                print(*args, **kwargs)
+        else:
+            print(*args, **kwargs)
+
+    await _print(
         f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id}) for account {account_id}[/blue]"
     )
     logging.info(
@@ -94,7 +107,7 @@ async def plan_account(
     client = client_factory()
 
     async def _plan_with_client(client):
-        print("[blue]Retrieving account snapshot[/blue]")
+        await _print("[blue]Retrieving account snapshot[/blue]")
         logging.info("Retrieving account snapshot for %s", account_id)
         snapshot = await client.snapshot(account_id)
 
@@ -118,10 +131,10 @@ async def plan_account(
             )
 
         try:
-            print("[blue]Computing drift[/blue]")
+            await _print("[blue]Computing drift[/blue]")
             logging.info("Computing drift for %s", account_id)
             drifts = compute_drift(account_id, current, targets, prices, net_liq, cfg)
-            print("[blue]Prioritizing trades[/blue]")
+            await _print("[blue]Prioritizing trades[/blue]")
             logging.info("Prioritizing trades for %s", account_id)
             prioritized = prioritize_by_drift(account_id, drifts, cfg)
 
@@ -131,7 +144,7 @@ async def plan_account(
                 if d.symbol != "CASH" and d.action in ("BUY", "SELL")
             }
 
-            print(
+            await _print(
                 f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
             )
             logging.info(
@@ -147,14 +160,14 @@ async def plan_account(
                 try:
                     symbol, price = await task
                 except PricingError as exc:
-                    print(f"[red]{exc}[/red]")
+                    await _print(f"[red]{exc}[/red]")
                     logging.error(str(exc))
                     for t in tasks:
                         t.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
                     raise
                 prices[symbol] = price
-                print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
+                await _print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
 
             prices = {sym: prices[sym] for sym in trade_symbols}
         except Exception as exc:  # pragma: no cover - defensive
@@ -188,7 +201,7 @@ async def plan_account(
         finally:
             await client.disconnect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
 
-    print("[blue]Sizing orders[/blue]")
+    await _print("[blue]Sizing orders[/blue]")
     logging.info("Sizing orders for %s", account_id)
     trades, post_gross_exposure, post_leverage = size_orders(
         account_id,
@@ -218,7 +231,7 @@ async def plan_account(
         cfg,
     )
     logging.info("Pre-trade report for %s written to %s", account_id, pre_path)
-    print("[blue]Rendering preview[/blue]")
+    await _print("[blue]Rendering preview[/blue]")
     logging.info("Rendering preview for %s", account_id)
     table = render_preview(
         account_id,
