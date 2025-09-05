@@ -178,6 +178,8 @@ def test_confirm_global_sequential(monkeypatch, cfg):
     args = SimpleNamespace(dry_run=False, yes=True, read_only=False)
     ts_dt = datetime.utcnow()
     plans = [_make_plan("A1"), _make_plan("A2")]
+    for pl in plans:
+        pl["trades"] = [SimpleNamespace(action="SELL", notional=0.0)]
 
     def append_summary(path, ts, row):
         summary_rows.append(row)
@@ -197,6 +199,47 @@ def test_confirm_global_sequential(monkeypatch, cfg):
             size_orders=lambda *a, **k: ([], 0, 0),
             pacing_sec=0.0,
             parallel_accounts=False,
+        )
+    )
+
+    assert len(confirm_starts) == 2
+    assert all(lock is None for _, lock in confirm_starts)
+    assert confirm_starts[1][0] - confirm_starts[0][0] >= 0.05
+    assert len(summary_rows) == 2
+
+
+def test_confirm_global_yes_flag_disables_parallelism(monkeypatch, cfg):
+    confirm_starts.clear()
+    summary_rows.clear()
+    monkeypatch.setattr(
+        "src.core.confirmation.confirm_per_account", stub_confirm_per_account
+    )
+    monkeypatch.setattr("builtins.input", lambda *a, **k: "y")
+
+    args = SimpleNamespace(dry_run=False, yes=False, read_only=False)
+    ts_dt = datetime.utcnow()
+    plans = [_make_plan("A1"), _make_plan("A2")]
+    for pl in plans:
+        pl["trades"] = [SimpleNamespace(action="SELL", notional=0.0)]
+
+    def append_summary(path, ts, row):
+        summary_rows.append(row)
+
+    asyncio.run(
+        confirm_global(
+            plans,
+            args,
+            cfg,
+            ts_dt,
+            client_factory=lambda: None,
+            submit_batch=lambda *a, **k: [],
+            append_run_summary=append_summary,
+            write_post_trade_report=lambda *a, **k: Path(""),
+            compute_drift=lambda *a, **k: [],
+            prioritize_by_drift=lambda *a, **k: [],
+            size_orders=lambda *a, **k: ([], 0, 0),
+            pacing_sec=0.0,
+            parallel_accounts=True,
         )
     )
 
