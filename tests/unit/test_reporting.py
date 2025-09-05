@@ -259,3 +259,56 @@ def test_post_trade_missing_execid_notes(tmp_path):
         row = next(csv.DictReader(f))
     assert row["commission_placeholder"] == "True"
     assert row["notes"] == "missing commission execIds: abc, def"
+
+
+def test_post_trade_report_aggregates_multiple_passes(tmp_path):
+    ts = datetime(2023, 1, 1)
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    trades = [
+        SizedTrade("AAA", "BUY", 5.0, 500.0),
+        SizedTrade("AAA", "BUY", 3.0, 300.0),
+    ]
+    results = [
+        {
+            "symbol": "AAA",
+            "action": "BUY",
+            "status": "Filled",
+            "fill_qty": 5.0,
+            "fill_price": 101.0,
+            "commission": 0.5,
+        },
+        {
+            "symbol": "AAA",
+            "action": "BUY",
+            "status": "Filled",
+            "fill_qty": 3.0,
+            "fill_price": 102.0,
+            "commission": 0.3,
+        },
+    ]
+    prices = {"AAA": 100.0}
+    cfg = _cfg()
+    path = write_post_trade_report(
+        tmp_path,
+        ts,
+        "ACCT",
+        [drift],
+        trades,
+        results,
+        prices,
+        10000.0,
+        9000.0,
+        0.9,
+        10000.0,
+        1.0,
+        cfg,
+    )
+    with path.open() as f:
+        row = next(csv.DictReader(f))
+
+    assert float(row["qty_shares"]) == pytest.approx(8.0)
+    assert float(row["est_value_usd"]) == pytest.approx(800.0)
+    assert float(row["fill_qty"]) == pytest.approx(8.0)
+    avg_price = (5.0 * 101.0 + 3.0 * 102.0) / 8.0
+    assert float(row["fill_price"]) == pytest.approx(avg_price)
+    assert float(row["commission"]) == pytest.approx(0.8)
