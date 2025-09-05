@@ -312,9 +312,9 @@ def load_config(path: Path) -> AppConfig:
                 resolved = (base_dir / raw_path).resolve()
             except NoOptionError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
-            if not resolved.exists():
+            if not resolved.is_file():
                 raise ConfigError(
-                    f"[portfolio:{acc_id}] path does not exist: {resolved}"
+                    f"[portfolio:{acc_id}] path is missing or not a regular file: {resolved}"
                 )
             portfolio_paths[acc_id] = resolved
 
