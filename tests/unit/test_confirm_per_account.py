@@ -593,13 +593,17 @@ def test_confirm_per_account_missing_result_entry(tmp_path):
     async def submit_batch(client, trades, cfg, account_id):  # noqa: ARG001
         return []
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return []
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     def append_run_summary(path, ts_dt, row):  # noqa: ARG001
