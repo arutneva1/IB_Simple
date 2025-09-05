@@ -489,13 +489,17 @@ def test_confirm_per_account_missing_price(tmp_path):
     ):
         return path / "report.json"
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return []
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     class DummyClient:
