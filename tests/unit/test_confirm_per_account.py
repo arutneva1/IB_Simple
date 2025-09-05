@@ -2,9 +2,8 @@ import asyncio
 from datetime import datetime
 from types import SimpleNamespace
 
-from src.core.sizing import SizedTrade
-
 from src.core.confirmation import confirm_per_account
+from src.core.sizing import SizedTrade
 from src.io import (
     IBKR,
     IO,
@@ -199,7 +198,9 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
             )
         return results
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return ["dummy"]
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
@@ -207,7 +208,9 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
 
     calls = {"n": 0}
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         if calls["n"] == 0:
             calls["n"] += 1
             return [SizedTrade("XYZ", "SELL", 1, 11.0)], 0.0, 0.0
