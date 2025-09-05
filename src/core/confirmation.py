@@ -275,26 +275,19 @@ async def confirm_per_account(
 
     post_gross_exposure_actual = net_liq - cash_after
     post_leverage_actual = post_gross_exposure_actual / net_liq if net_liq else 0.0
-    trades_by_symbol = {t.symbol: t for t in all_trades}
     filled = sum(1 for r in all_results if r.get("status") == "Filled")
     rejected = len(all_results) - filled
     buy_usd = 0.0
     sell_usd = 0.0
-    for r in all_results:
-        sym_any = r.get("symbol")
-        if not isinstance(sym_any, str):
-            continue
-        matched_trade = trades_by_symbol.get(sym_any)
-        if matched_trade is None:
-            continue
-        qty_any = r.get("fill_qty")
+    for trade, res in zip(all_trades, all_results):
+        qty_any = res.get("fill_qty")
         if qty_any is None:
-            qty_any = r.get("filled", 0.0)
-        price_any = r.get("fill_price")
+            qty_any = res.get("filled", 0.0)
+        price_any = res.get("fill_price")
         if price_any is None:
-            price_any = r.get("avg_fill_price", 0.0)
+            price_any = res.get("avg_fill_price", 0.0)
         value = float(qty_any) * float(price_any)
-        if matched_trade.action == "BUY":
+        if trade.action == "BUY":
             buy_usd += value
         else:
             sell_usd += value
