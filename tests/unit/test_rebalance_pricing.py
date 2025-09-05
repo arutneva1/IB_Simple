@@ -88,7 +88,9 @@ def _setup_common(
     return captured_pre, captured_fetch, captured_sizing
 
 
-def test_run_fetches_prices_only_for_trades(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_fetches_prices_for_targets_and_trades(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     pre, fetched, sizing = _setup_common(monkeypatch)
 
     async def fake_fetch_price(ib, symbol, cfg):
@@ -106,8 +108,8 @@ def test_run_fetches_prices_only_for_trades(monkeypatch: pytest.MonkeyPatch) -> 
     )
     asyncio.run(rebalance._run(args))
 
-    assert pre == {"AAA": 10.0}
-    assert fetched == ["AAA"]
+    assert pre == {"AAA": 10.0, "BBB": 20.0}
+    assert fetched == ["BBB", "AAA"]
     assert sizing == {"AAA": 15.0}
 
 
@@ -133,6 +135,6 @@ def test_run_aborts_when_trade_price_unavailable(
 
     out, _ = capsys.readouterr()
     assert "bad price" in out
-    assert pre == {"AAA": 10.0}
-    assert fetched == ["AAA"]
+    assert pre == {}
+    assert fetched == ["BBB"]
     assert sizing == {}
