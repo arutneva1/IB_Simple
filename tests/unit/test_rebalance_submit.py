@@ -84,7 +84,13 @@ def test_run_submits_orders_and_prints_summary(monkeypatch, capsys):
         recorded["trades"] = trades
         recorded["account_id"] = account_id
         return [
-            {"symbol": "AAA", "status": "Filled", "filled": 5.0, "avg_fill_price": 10.0}
+            {
+                "symbol": "AAA",
+                "action": "BUY",
+                "status": "Filled",
+                "filled": 5.0,
+                "avg_fill_price": 10.0,
+            }
         ]
 
     monkeypatch.setattr(rebalance, "submit_batch", fake_submit_batch)
@@ -106,6 +112,7 @@ def test_run_logs_error_on_order_failure(monkeypatch, capsys):
         return [
             {
                 "symbol": "AAA",
+                "action": "BUY",
                 "status": "Rejected",
                 "filled": 0.0,
                 "avg_fill_price": 0.0,
@@ -132,6 +139,7 @@ def test_run_performs_additional_pass(monkeypatch):
         return [
             {
                 "symbol": t.symbol,
+                "action": t.action,
                 "status": "Filled",
                 "filled": t.quantity,
                 "avg_fill_price": 10.0,

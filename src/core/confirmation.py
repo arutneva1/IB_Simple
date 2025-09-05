@@ -92,8 +92,6 @@ async def confirm_per_account(
         sell_total = 0.0
         for t in tr_list:
             q = lookup.get((t.symbol, t.action))
-            if q is None:
-                q = lookup.get((t.symbol, None))
             res = q.popleft() if q else {}
             qty_any = res.get("fill_qty")
             if qty_any is None:
@@ -116,8 +114,6 @@ async def confirm_per_account(
         sell_total = 0.0
         for t in tr_list:
             q = lookup.get((t.symbol, t.action))
-            if q is None:
-                q = lookup.get((t.symbol, None))
             res = q.popleft() if q else {}
             qty_any = res.get("fill_qty")
             if qty_any is None:

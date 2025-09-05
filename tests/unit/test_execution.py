@@ -84,6 +84,7 @@ def test_submit_batch_sets_order_account(monkeypatch):
     cfg = _base_cfg()
     res = asyncio.run(submit_batch(client, [trade], cfg, account_id))
     assert res[0]["status"] == "Filled"
+    assert res[0]["action"] == trade.action
 
 
 def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
@@ -114,6 +115,7 @@ def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(10.0)
+    assert res[0]["action"] == trade.action
     messages = "\n".join(r.message for r in caplog.records)
     assert "transitioned to PartiallyFilled" in messages
     assert "transitioned to Filled" in messages
@@ -145,6 +147,7 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
     assert res[0]["filled"] == pytest.approx(1.0)
+    assert res[0]["action"] == trade.action
     assert events == ["algo", "cancel", "plain"]
 
 
@@ -197,6 +200,7 @@ def test_submit_batch_merges_duplicate_trades(monkeypatch):
     res = asyncio.run(submit_batch(client, trades, cfg, "DU"))
 
     assert len(res) == 1
+    assert res[0]["action"] == "BUY"
     assert calls == [3.0]
 
 
@@ -213,6 +217,7 @@ def test_trading_hours_eth_sets_outside_rth(monkeypatch):
     cfg = _base_cfg(trading_hours="eth")
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
+    assert res[0]["action"] == trade.action
 
 
 def test_trading_hours_rth_default(monkeypatch):
@@ -228,6 +233,7 @@ def test_trading_hours_rth_default(monkeypatch):
     cfg = _base_cfg(trading_hours="rth")
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["status"] == "Filled"
+    assert res[0]["action"] == trade.action
 
 
 def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
@@ -283,6 +289,7 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
 
     res = asyncio.run(submit_batch(client, [sized_trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(1.2)
+    assert res[0]["action"] == sized_trade.action
 
     drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
     ts = datetime(2023, 1, 1)
@@ -351,6 +358,7 @@ def test_commission_report_arrives_after_initial_wait(monkeypatch):
     cfg = _base_cfg()
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(1.2)
+    assert res[0]["action"] == trade.action
 
 
 def test_commission_report_before_wait(monkeypatch, caplog):
@@ -387,6 +395,7 @@ def test_commission_report_before_wait(monkeypatch, caplog):
     caplog.set_level(logging.WARNING)
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.5)
+    assert res[0]["action"] == trade.action
     warnings = [rec.message for rec in caplog.records if rec.levelno >= logging.WARNING]
     assert not any("No commission report" in msg for msg in warnings)
 
@@ -415,6 +424,7 @@ def test_placeholder_commission_logs_warning(monkeypatch, caplog):
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.0)
     assert res[0]["commission_placeholder"] is True
+    assert res[0]["action"] == trade.action
     messages = [rec.message for rec in caplog.records]
     assert any("No commission report for execId" in m for m in messages)
 
@@ -449,6 +459,8 @@ def test_trade_level_commission_report(monkeypatch):
     res = asyncio.run(submit_batch(client, [trade], cfg, "DU"))
     assert res[0]["commission"] == pytest.approx(0.5)
     assert res[0]["commission_placeholder"] is False
+    assert res[0]["action"] == trade.action
+    assert res[0]["action"] == trade.action
 
 
 def test_client_level_commission_report(monkeypatch):
