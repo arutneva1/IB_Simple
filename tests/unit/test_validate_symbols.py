@@ -93,3 +93,21 @@ def test_disconnect_error_suppressed(monkeypatch) -> None:
     )
     assert ib.calls == ["SPY"]
     assert ib.disconnects == 1
+
+
+def test_connection_failure(monkeypatch) -> None:
+    ib = setup_fake_ib(monkeypatch)
+
+    async def fail_connect(host, port, clientId):  # noqa: N803 - mimics upstream
+        raise RuntimeError("boom")
+
+    ib.connectAsync = fail_connect
+    with pytest.raises(PortfolioCSVError) as excinfo:
+        asyncio.run(
+            portfolio_csv.validate_symbols(
+                ["SPY"], host="127.0.0.1", port=4001, client_id=1
+            )
+        )
+    assert "IB connection failed: boom" in str(excinfo.value)
+    assert ib.calls == []
+    assert ib.disconnects == 1
