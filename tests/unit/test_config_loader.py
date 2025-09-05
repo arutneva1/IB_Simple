@@ -216,3 +216,30 @@ def test_account_overrides_allow_fractional(tmp_path: Path) -> None:
     assert cfg.rebalance.allow_fractional is False
     cfg_acc = merge_account_overrides(cfg, "ACC1")
     assert cfg_acc.rebalance.allow_fractional is True
+
+
+def test_account_overrides_min_order_usd(tmp_path: Path) -> None:
+    content = VALID_CONFIG + "\n[account:ACC1]\nmin_order_usd = 100\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.rebalance.min_order_usd == 500
+    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    assert cfg_acc.rebalance.min_order_usd == 100
+
+
+def test_account_overrides_cash_buffer_abs(tmp_path: Path) -> None:
+    content = (
+        VALID_CONFIG
+        + "\n[account:ACC1]\n"
+        + "cash_buffer_type = abs\n"
+        + "cash_buffer_abs = 2500\n"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.rebalance.cash_buffer_type == "pct"
+    assert cfg.rebalance.cash_buffer_abs is None
+    cfg_acc = merge_account_overrides(cfg, "ACC1")
+    assert cfg_acc.rebalance.cash_buffer_type == "abs"
+    assert cfg_acc.rebalance.cash_buffer_abs == 2500
