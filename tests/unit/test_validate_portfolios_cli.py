@@ -41,3 +41,45 @@ def test_cli_error(tmp_path: Path) -> None:
     )
     assert result.returncode != 0
     assert "Missing columns" in result.stdout
+
+
+def test_cli_all_ok(tmp_path: Path) -> None:
+    global_csv = tmp_path / "pf.csv"
+    global_csv.write_text("ETF,SMURF,BADASS,GLTR\nCASH,100%,100%,100%\n")
+    cfg = Path(__file__).resolve().parents[2] / "config" / "settings.ini"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg),
+            "--all",
+            str(global_csv),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "OK"
+
+
+def test_cli_all_error(tmp_path: Path) -> None:
+    global_csv = tmp_path / "pf.csv"
+    global_csv.write_text("ETF,SMURF,BADASS\nCASH,100%,100%\n")
+    cfg = Path(__file__).resolve().parents[2] / "config" / "settings.ini"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg),
+            "--all",
+            str(global_csv),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "Missing columns" in result.stdout

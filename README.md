@@ -122,8 +122,13 @@ python -m src.io.validate_config config/settings.ini
 ```
 
 ### Validate portfolio CSV
+Validate a single CSV:
 ```bash
 python -m src.io.validate_portfolios --config config/settings.ini data/portfolios.csv
+```
+Validate all portfolio files including account-specific overrides:
+```bash
+python -m src.io.validate_portfolios --config config/settings.ini --all data/portfolios.csv
 ```
 An active IBKR session (TWS or IB Gateway) must be running so the tool can
 verify ticker symbols.
