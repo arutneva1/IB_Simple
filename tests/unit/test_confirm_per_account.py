@@ -489,13 +489,17 @@ def test_confirm_per_account_missing_price(tmp_path):
     ):
         return path / "report.json"
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return []
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     class DummyClient:
@@ -604,7 +608,9 @@ def test_confirm_per_account_multiple_same_symbol_trades_ignore_stray_fills(tmp_
             },
         ]
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         captured["positions"] = positions.copy()
         captured["prices"] = prices.copy()
         return []
@@ -612,7 +618,9 @@ def test_confirm_per_account_multiple_same_symbol_trades_ignore_stray_fills(tmp_
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     def append_run_summary(path, ts_dt, row):  # noqa: ARG001
@@ -737,13 +745,17 @@ def test_confirm_per_account_totals_skip_unmatched_fills(tmp_path):
             },
         ]
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return []
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     def append_run_summary(path, ts_dt, row):  # noqa: ARG001

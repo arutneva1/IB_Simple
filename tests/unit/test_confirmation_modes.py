@@ -71,7 +71,9 @@ def test_per_account_prompts_once_per_account(
     assert prompts == ["Proceed? [y/N]: ", "Proceed? [y/N]: "]
 
 
-def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys, portfolios_csv_path: Path):
+def test_global_prompt_once_and_aborts(
+    monkeypatch, tmp_path, capsys, portfolios_csv_path: Path
+):
     records: list[dict[str, str]] = []
 
     def fake_append(report_dir, ts, row):  # noqa: ARG001
