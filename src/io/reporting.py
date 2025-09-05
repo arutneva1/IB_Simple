@@ -208,7 +208,9 @@ def write_post_trade_report(
                 prev.notional + t.notional,
             )
         else:
-            aggregated_trades[key] = SizedTrade(t.symbol, t.action, t.quantity, t.notional)
+            aggregated_trades[key] = SizedTrade(
+                t.symbol, t.action, t.quantity, t.notional
+            )
 
     aggregated_results: dict[tuple[str | None, str | None], dict[str, Any]] = {}
     for r in results:
