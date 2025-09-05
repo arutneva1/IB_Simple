@@ -9,7 +9,9 @@ from .config_loader import ConfigError, load_config
 from .portfolio_csv import PortfolioCSVError, load_portfolios, load_portfolios_map
 
 
-async def main(path: str | None = None, *, config_path: str, validate_all: bool = False) -> None:
+async def main(
+    path: str | None = None, *, config_path: str, validate_all: bool = False
+) -> None:
     """Validate portfolio CSVs printing ``OK`` on success.
 
     Parameters
@@ -37,14 +39,20 @@ async def main(path: str | None = None, *, config_path: str, validate_all: bool 
         if validate_all or all_have_paths:
             if not all_have_paths:
                 if path is None:
-                    print("CSV path required for accounts without overrides")
+                    missing_ids = ", ".join(missing)
+                    print(
+                        "CSV path required for accounts without overrides: "
+                        f"{missing_ids}"
+                    )
                     raise SystemExit(1)
                 path_map = {
                     acct: cfg.portfolio_paths.get(acct, Path(path))
                     for acct in cfg.accounts.ids
                 }
             else:
-                path_map = {acct: cfg.portfolio_paths[acct] for acct in cfg.accounts.ids}
+                path_map = {
+                    acct: cfg.portfolio_paths[acct] for acct in cfg.accounts.ids
+                }
             await load_portfolios_map(
                 path_map,
                 host=cfg.ibkr.host,
