@@ -5,13 +5,13 @@ This module parses ``settings.ini`` files into structured dataclasses.
 
 from __future__ import annotations
 
+import logging
 from configparser import ConfigParser, NoOptionError, NoSectionError
 from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Mapping
-import logging
 
 
 class ConfigError(Exception):

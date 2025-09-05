@@ -232,6 +232,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                         "error": str(exc),
                     },
                 )
+            finally:
+                await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
     if confirm_mode is ConfirmMode.GLOBAL:
         plans.sort(key=lambda p: str(p["account_id"]))
