@@ -120,10 +120,19 @@ async def confirm_per_account(
             filled = float(qty_any)
             price_any = res.get("fill_price")
             if price_any is None:
-                price_any = res.get("avg_fill_price", prices.get(t.symbol, 0.0))
-            price = float(price_any)
+                price_any = res.get("avg_fill_price")
+            if price_any is None:
+                prior = prices.get(t.symbol)
+                if prior is None or prior <= 0:
+                    raise IBKRError(f"Missing fill price for {t.symbol}")
+                price = float(prior)
+            else:
+                price = float(price_any)
             if price <= 0:
-                price = prices.get(t.symbol, 0.0)
+                prior = prices.get(t.symbol)
+                if prior is None or prior <= 0:
+                    raise IBKRError(f"Missing fill price for {t.symbol}")
+                price = float(prior)
             value = filled * price
             if t.action == "BUY":
                 positions[t.symbol] = positions.get(t.symbol, 0.0) + filled
@@ -258,9 +267,34 @@ async def confirm_per_account(
     cash_after = current["CASH"]
     positions = current.copy()
     prices_before = prices.copy()
-    buy_pass, sell_pass, cash_after = _apply_fills(
-        trades, results, positions, prices, cash_after
-    )
+    try:
+        buy_pass, sell_pass, cash_after = _apply_fills(
+            trades, results, positions, prices, cash_after
+        )
+    except IBKRError as exc:
+        logging.error("%s", exc)
+        filled = sum(1 for r in results if r.get("status") == "Filled")
+        rejected = len(results) - filled
+        buy_usd_actual, sell_usd_actual = _totals(trades, results)
+        cash_after = current["CASH"] - buy_usd_actual + sell_usd_actual
+        post_leverage_actual = (net_liq - cash_after) / net_liq if net_liq else 0.0
+        await _append(
+            {
+                "timestamp_run": ts_dt.isoformat(),
+                "account_id": account_id,
+                "planned_orders": planned_orders,
+                "submitted": len(results),
+                "filled": filled,
+                "rejected": rejected,
+                "buy_usd": buy_usd_actual,
+                "sell_usd": sell_usd_actual,
+                "pre_leverage": pre_leverage,
+                "post_leverage": post_leverage_actual,
+                "status": "failed",
+                "error": str(exc),
+            }
+        )
+        raise
     buy_usd_actual += buy_pass
     sell_usd_actual += sell_pass
 
@@ -348,9 +382,38 @@ async def confirm_per_account(
                 }
             )
             raise IBKRError("One or more orders failed to fill")
-        buy_pass, sell_pass, cash_after = _apply_fills(
-            extra_trades, extra_results, positions, prices, cash_after
-        )
+        try:
+            buy_pass, sell_pass, cash_after = _apply_fills(
+                extra_trades, extra_results, positions, prices, cash_after
+            )
+        except IBKRError as exc:
+            logging.error("%s", exc)
+            extra_buy, extra_sell = _totals(extra_trades, extra_results)
+            buy_usd_actual += extra_buy
+            sell_usd_actual += extra_sell
+            cash_after = current["CASH"] - buy_usd_actual + sell_usd_actual
+            current_trades = all_trades + list(extra_trades)
+            current_results = all_results + list(extra_results)
+            filled = sum(1 for r in current_results if r.get("status") == "Filled")
+            rejected = len(current_results) - filled
+            post_leverage_actual = (net_liq - cash_after) / net_liq if net_liq else 0.0
+            await _append(
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": len(current_trades),
+                    "submitted": len(current_results),
+                    "filled": filled,
+                    "rejected": rejected,
+                    "buy_usd": buy_usd_actual,
+                    "sell_usd": sell_usd_actual,
+                    "pre_leverage": pre_leverage,
+                    "post_leverage": post_leverage_actual,
+                    "status": "failed",
+                    "error": str(exc),
+                }
+            )
+            raise
         buy_usd_actual += buy_pass
         sell_usd_actual += sell_pass
         all_trades.extend(extra_trades)
