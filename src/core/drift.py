@@ -11,6 +11,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from src.io import ConfigError
+
 
 @dataclass(frozen=True)
 class Drift:
@@ -53,6 +55,11 @@ def compute_drift(
 ) -> list[Drift]:
     """Compute portfolio drift records.
 
+    The ``net_liq`` value is reduced by any configured cash buffer in
+    ``cfg.rebalance``.  The resulting investable net liquidation value is
+    floored at zero to avoid negative weights; if the buffer exceeds the
+    available ``net_liq`` a :class:`ConfigError` is raised.
+
     Parameters
     ----------
     account_id:
@@ -68,7 +75,8 @@ def compute_drift(
     net_liq:
         Net liquidation value of the portfolio in USD.
     cfg:
-        Configuration object (unused but accepted for future expansion).
+        Configuration object with optional ``rebalance`` settings, including
+        ``cash_buffer_type`` and ``cash_buffer_pct``/``cash_buffer_abs``.
 
     Returns
     -------
@@ -97,13 +105,21 @@ def compute_drift(
     if cfg is not None:
         try:
             reb = cfg.rebalance  # type: ignore[attr-defined]
-            buffer_type = getattr(reb, "cash_buffer_type", "pct").lower()
-            if buffer_type == "pct":
-                investable_net_liq -= net_liq * getattr(reb, "cash_buffer_pct", 0.0)
-            elif buffer_type == "abs":
-                investable_net_liq -= getattr(reb, "cash_buffer_abs", 0.0)
         except AttributeError:
             pass
+        else:
+            buffer_type = getattr(reb, "cash_buffer_type", "pct").lower()
+            if buffer_type == "pct":
+                buffer = net_liq * getattr(reb, "cash_buffer_pct", 0.0)
+            elif buffer_type == "abs":
+                buffer = getattr(reb, "cash_buffer_abs", 0.0)
+            else:
+                buffer = 0.0
+            if buffer > net_liq:
+                raise ConfigError("cash buffer exceeds available net liquidity")
+            investable_net_liq -= buffer
+
+    investable_net_liq = max(investable_net_liq, 0.0)
 
     current_wts = {
         sym: (val / investable_net_liq * 100.0 if investable_net_liq else 0.0)
