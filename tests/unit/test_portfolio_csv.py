@@ -173,7 +173,7 @@ CASH,50%,50%,50%
 
 
 def test_load_portfolios_map_relative_and_absolute(tmp_path: Path, monkeypatch) -> None:
-    """Relative and absolute paths to the same file should share cache."""
+    """Relative/absolute paths share cache but return independent copies."""
 
     content = """ETF,SMURF,BADASS,GLTR
 BLOK,50%,50%,0%
@@ -203,4 +203,8 @@ CASH,50%,50%,100%
     )
 
     assert calls == 1
-    assert result["acct1"] is result["acct2"]
+    assert result["acct1"] == result["acct2"]
+    assert result["acct1"] is not result["acct2"]
+
+    result["acct1"]["CASH"]["smurf"] = 0.0
+    assert result["acct2"]["CASH"]["smurf"] == 50.0

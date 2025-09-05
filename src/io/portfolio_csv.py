@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import csv
 from pathlib import Path
 from typing import Dict, Iterable, Mapping
@@ -188,6 +189,6 @@ async def load_portfolios_map(
             _validate_totals(portfolios)
             cache[path] = portfolios
             symbols.update(portfolios.keys())
-        result[account] = cache[path]
+        result[account] = copy.deepcopy(cache[path])
     await validate_symbols(symbols, host=host, port=port, client_id=client_id)
     return result
