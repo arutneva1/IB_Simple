@@ -180,8 +180,7 @@ def test_portfolio_path_directory(tmp_path: Path) -> None:
 def test_portfolio_section_unknown_keys(tmp_path: Path, caplog) -> None:
     cfg_path = tmp_path / "settings.ini"
     cfg_path.write_text(
-        VALID_CONFIG
-        + "\n[portfolio: acc1]\npath = foo.csv\nfoo = bar\nunknown = baz\n"
+        VALID_CONFIG + "\n[portfolio: acc1]\npath = foo.csv\nfoo = bar\nunknown = baz\n"
     )
     (tmp_path / "foo.csv").write_text("")
     with caplog.at_level(logging.WARNING):
