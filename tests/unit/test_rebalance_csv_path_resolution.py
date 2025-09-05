@@ -1,4 +1,4 @@
-"""Tests for resolving CSV paths relative to the config file."""
+"""Tests for resolving paths relative to the config file."""
 
 import asyncio
 import sys
@@ -10,6 +10,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.rebalance as rebalance
+from src.io import AppConfig
 from src.io.config_loader import ConfirmMode
 from src.io.config_loader import load_config as real_load_config
 from tests.unit.test_config_loader import VALID_CONFIG
@@ -153,3 +154,84 @@ def test_default_csv_path_from_config(
 
     expected = csv_path.resolve()
     assert captured == {"ACC1": expected, "ACC2": expected}
+
+
+def test_report_dir_resolved_relative_to_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    captured_setup: dict[str, Path] = {}
+    captured_append: dict[str, Path] = {}
+
+    def fake_setup_logging(report_dir, *args, **kwargs):  # noqa: ANN001,ARG001
+        captured_setup["dir"] = report_dir
+
+    def fake_append(report_dir, ts, row):  # noqa: ANN001,ARG001
+        captured_append["dir"] = report_dir
+
+    async def fake_load_portfolios(path_map, *, host, port, client_id):  # noqa: ARG001
+        return {aid: {} for aid in path_map}
+
+    async def fake_plan_account(
+        account_id, portfolios, cfg, ts_dt, **kwargs
+    ):  # noqa: ARG001
+        return {
+            "account_id": account_id,
+            "drifts": [],
+            "trades": [],
+            "prices": {},
+            "current": {},
+            "targets": {},
+            "net_liq": 0.0,
+            "pre_gross_exposure": 0.0,
+            "pre_leverage": 0.0,
+            "post_leverage": 0.0,
+            "planned_orders": 0,
+            "buy_usd": 0.0,
+            "sell_usd": 0.0,
+        }
+
+    async def fake_confirm_global(
+        plans, args, cfg, ts_dt, **kwargs
+    ):  # noqa: ANN001,ARG001
+        kwargs["append_run_summary"](Path("ignored"), ts_dt, {"account_id": "ACC1"})
+        return []
+
+    monkeypatch.setattr(rebalance, "setup_logging", fake_setup_logging)
+    monkeypatch.setattr(rebalance, "append_run_summary", fake_append)
+    monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
+    monkeypatch.setattr(rebalance, "plan_account", fake_plan_account)
+    monkeypatch.setattr(rebalance, "confirm_global", fake_confirm_global)
+
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    cfg_path = cfg_dir / "settings.ini"
+    cfg_path.write_text(VALID_CONFIG)
+
+    cfg_holder: dict[str, AppConfig] = {}
+
+    def fake_load_config(_path):  # noqa: ARG001
+        cfg = real_load_config(cfg_path)
+        cfg.accounts.pacing_sec = 0.0
+        cfg.accounts.confirm_mode = ConfirmMode.GLOBAL
+        cfg.io.report_dir = "reports"
+        cfg_holder["cfg"] = cfg
+        return cfg
+
+    monkeypatch.setattr(rebalance, "load_config", fake_load_config)
+
+    args = Namespace(
+        config=str(cfg_path),
+        csv="../default.csv",
+        dry_run=True,
+        yes=True,
+        read_only=False,
+        confirm_mode=None,
+        parallel_accounts=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    expected = (cfg_dir / "reports").resolve()
+    assert captured_setup["dir"] == expected
+    assert captured_append["dir"] == expected
+    assert cfg_holder["cfg"].io.report_dir == str(expected)

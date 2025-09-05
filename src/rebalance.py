@@ -53,6 +53,10 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cfg: AppConfig = load_config(cfg_path)
     cfg_path = cfg_path.resolve()
     cfg_dir = cfg_path.parent
+    report_dir = Path(cfg.io.report_dir)
+    if not report_dir.is_absolute():
+        report_dir = (cfg_dir / report_dir).resolve()
+    cfg.io.report_dir = str(report_dir)
     cli_confirm_mode = getattr(args, "confirm_mode", None)
     if cli_confirm_mode:
         cfg.accounts.confirm_mode = ConfirmMode(cli_confirm_mode)
@@ -60,7 +64,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         cfg.accounts.parallel = True
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
-    setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
+    setup_logging(report_dir, cfg.io.log_level, timestamp)
     logging.info("Loaded configuration from %s", cfg_path)
 
     if csv_arg is not None:
@@ -152,7 +156,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             pre_leverage = plan["pre_leverage"] if plan else 0.0
             if not any(r.get("account_id") == account_id for r in summary_rows):
                 capture_summary(
-                    Path(cfg.io.report_dir),
+                    report_dir,
                     ts_dt,
                     {
                         "timestamp_run": ts_dt.isoformat(),
@@ -180,7 +184,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             pre_leverage = plan["pre_leverage"] if plan else 0.0
             if not any(r.get("account_id") == account_id for r in summary_rows):
                 capture_summary(
-                    Path(cfg.io.report_dir),
+                    report_dir,
                     ts_dt,
                     {
                         "timestamp_run": ts_dt.isoformat(),
@@ -226,7 +230,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 await _print_err(f"[red]{res}[/red]", output_lock)
                 failures.append((aid, str(res)))
                 capture_summary(
-                    Path(cfg.io.report_dir),
+                    report_dir,
                     ts_dt,
                     {
                         "timestamp_run": ts_dt.isoformat(),
@@ -283,7 +287,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 failures.append((account_id, str(exc)))
                 if not any(r.get("account_id") == account_id for r in summary_rows):
                     capture_summary(
-                        Path(cfg.io.report_dir),
+                        report_dir,
                         ts_dt,
                         {
                             "timestamp_run": ts_dt.isoformat(),
@@ -308,7 +312,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 failures.append((account_id, str(exc)))
                 if not any(r.get("account_id") == account_id for r in summary_rows):
                     capture_summary(
-                        Path(cfg.io.report_dir),
+                        report_dir,
                         ts_dt,
                         {
                             "timestamp_run": ts_dt.isoformat(),
@@ -351,7 +355,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
     summary_rows.sort(key=lambda r: str(r.get("account_id", "")))
     for row in summary_rows:
-        append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+        append_run_summary(report_dir, ts_dt, row)
 
     if failures:
         await _print_err("[red]One or more accounts failed:[/red]", output_lock)
