@@ -138,8 +138,7 @@ def test_portfolio_paths_resolve_from_config_dir(
 ) -> None:
     cfg_dir = tmp_path / "cfg"
     cfg_dir.mkdir()
-    portfolio_rel = Path("data/foo.csv")
-    (cfg_dir / portfolio_rel).parent.mkdir(parents=True)
+    portfolio_rel = Path("foo.csv")
     (cfg_dir / portfolio_rel).write_text("")
     cfg_path = cfg_dir / "settings.ini"
     cfg_content = (
@@ -161,8 +160,7 @@ def test_accounts_path_resolves_from_config_dir(
 ) -> None:
     cfg_dir = tmp_path / "cfg"
     cfg_dir.mkdir()
-    rel = Path("data/foo.csv")
-    (cfg_dir / rel).parent.mkdir(parents=True)
+    rel = Path("foo.csv")
     (cfg_dir / rel).write_text("")
     cfg_path = cfg_dir / "settings.ini"
     cfg_content = VALID_CONFIG.replace(
