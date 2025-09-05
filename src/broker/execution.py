@@ -146,6 +146,16 @@ async def submit_batch(
                 status = getattr(ib_trade.orderStatus, "status", "")
 
         if status != "Filled":
+            try:
+                ib.cancelOrder(ib_trade.order)
+                await _wait(ib_trade, st.symbol)
+            except Exception as exc:  # pragma: no cover - network errors
+                log.warning(
+                    "Failed to cancel order %s for %s: %s",
+                    getattr(getattr(ib_trade, "order", None), "orderId", None),
+                    st.symbol,
+                    exc,
+                )
             raise IBKRError(
                 f"order submission for {st.symbol} failed with status {status}"
             )
