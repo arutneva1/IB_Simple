@@ -28,6 +28,7 @@ async def confirm_per_account(
     size_orders,
 ) -> None:
     """Handle confirmation, execution, and reporting for a single account."""
+    cfg = merge_account_overrides(cfg, plan["account_id"])
 
     account_id = plan["account_id"]
     trades = plan["trades"]

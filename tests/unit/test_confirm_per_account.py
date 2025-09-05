@@ -1,0 +1,130 @@
+import asyncio
+from datetime import datetime
+from types import SimpleNamespace
+
+from src.core.confirmation import confirm_per_account
+from src.io import (
+    IBKR,
+    IO,
+    AccountOverride,
+    Accounts,
+    AppConfig,
+    ConfirmMode,
+    Execution,
+    Models,
+    Pricing,
+    Rebalance,
+)
+
+
+def test_confirm_per_account_applies_overrides(tmp_path):
+    cfg = AppConfig(
+        ibkr=IBKR(host="localhost", port=4001, client_id=1, read_only=False),
+        models=Models(smurf=0.5, badass=0.3, gltr=0.2),
+        rebalance=Rebalance(
+            trigger_mode="band",
+            per_holding_band_bps=0,
+            portfolio_total_band_bps=0,
+            min_order_usd=10,
+            cash_buffer_type="abs",
+            cash_buffer_pct=None,
+            cash_buffer_abs=0.0,
+            allow_fractional=False,
+            max_leverage=1.0,
+            maintenance_buffer_pct=0.0,
+            trading_hours="rth",
+            max_passes=2,
+        ),
+        pricing=Pricing(price_source="last", fallback_to_snapshot=False),
+        execution=Execution(
+            order_type="market",
+            algo_preference="adaptive",
+            fallback_plain_market=False,
+            batch_orders=False,
+            commission_report_timeout=0.0,
+            wait_before_fallback=0.0,
+        ),
+        io=IO(report_dir=str(tmp_path), log_level="INFO"),
+        accounts=Accounts(ids=["ACC1"], confirm_mode=ConfirmMode.PER_ACCOUNT),
+        account_overrides={"ACC1": AccountOverride(min_order_usd=100)},
+    )
+
+    plan = {
+        "account_id": "ACC1",
+        "trades": [],
+        "drifts": [],
+        "prices": {},
+        "current": {"CASH": 1000.0},
+        "targets": {},
+        "net_liq": 1000.0,
+        "pre_gross_exposure": 0.0,
+        "pre_leverage": 0.0,
+        "post_leverage": 0.0,
+        "table": "",
+        "planned_orders": 0,
+        "buy_usd": 0.0,
+        "sell_usd": 0.0,
+    }
+
+    args = SimpleNamespace(dry_run=False, read_only=False, yes=True)
+
+    recorded = []
+
+    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):
+        recorded.append(cfg.rebalance.min_order_usd)
+        return []
+
+    def prioritize_by_drift(account_id, drifts, cfg):
+        return []
+
+    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):
+        return [], 0.0, 0.0
+
+    def append_run_summary(path, ts_dt, row):
+        pass
+
+    def write_post_trade_report(
+        path,
+        ts_dt,
+        account_id,
+        drifts,
+        trades,
+        results,
+        prices_before,
+        net_liq,
+        pre_gross_exposure,
+        pre_leverage,
+        post_gross_exposure_actual,
+        post_leverage_actual,
+        cfg,
+    ):
+        return path / "report.json"
+
+    async def submit_batch(client, trades, cfg, account_id):
+        return []
+
+    class DummyClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+    ts_dt = datetime.utcnow()
+    asyncio.run(
+        confirm_per_account(
+            plan,
+            args,
+            cfg,
+            ts_dt,
+            client_factory=DummyClient,
+            submit_batch=submit_batch,
+            append_run_summary=append_run_summary,
+            write_post_trade_report=write_post_trade_report,
+            compute_drift=compute_drift,
+            prioritize_by_drift=prioritize_by_drift,
+            size_orders=size_orders,
+        )
+    )
+
+    assert recorded == [100]
