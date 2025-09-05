@@ -15,6 +15,8 @@ conda activate ibkr-rebal
 pip install -r requirements.txt -r requirements-dev.txt
 python -m src.rebalance --config config/settings.ini
 ```
+FYI - The -m option tells Python to treat the following argument (src.rebalance) as a module name rather than a file path. 
+
 Consecutive use
 ```bash
 cd IB_Trade
