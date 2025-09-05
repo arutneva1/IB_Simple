@@ -1,7 +1,7 @@
 import asyncio
 import sys
-from pathlib import Path
 from argparse import Namespace
+from pathlib import Path
 
 import pytest
 
