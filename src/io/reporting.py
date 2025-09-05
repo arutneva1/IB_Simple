@@ -195,8 +195,97 @@ def write_post_trade_report(
         "notes",
     ]
 
-    trades_by_key = {(t.symbol, t.action): t for t in trades}
-    results_by_key = {(r.get("symbol"), r.get("action")): r for r in results}
+    # Aggregate trades and results across all passes for each (symbol, action)
+    aggregated_trades: dict[tuple[str, str], SizedTrade] = {}
+    for t in trades:
+        key = (t.symbol, t.action)
+        if key in aggregated_trades:
+            prev = aggregated_trades[key]
+            aggregated_trades[key] = SizedTrade(
+                t.symbol,
+                t.action,
+                prev.quantity + t.quantity,
+                prev.notional + t.notional,
+            )
+        else:
+            aggregated_trades[key] = SizedTrade(
+                t.symbol, t.action, t.quantity, t.notional
+            )
+
+    aggregated_results: dict[tuple[str | None, str | None], dict[str, Any]] = {}
+    for r in results:
+        sym = r.get("symbol")
+        if sym is None:
+            continue
+        act = r.get("action")
+        key = (sym, act)
+        qty_any = r.get("fill_qty")
+        if qty_any is None:
+            qty_any = r.get("filled", 0.0)
+        qty = float(qty_any or 0.0)
+        price_any = r.get("fill_price")
+        if price_any is None:
+            price_any = r.get("avg_fill_price", 0.0)
+        price = float(price_any or 0.0)
+        exec_comms = r.get("exec_commissions")
+        if isinstance(exec_comms, dict) and exec_comms:
+            commission = sum(exec_comms.values())
+        else:
+            commission = float(r.get("commission", 0.0))
+
+        ts_any = r.get("fill_time")
+        if isinstance(ts_any, datetime):
+            ts_str = ts_any.isoformat()
+        elif ts_any is None:
+            ts_str = None
+        else:
+            ts_str = str(ts_any)
+
+        agg = aggregated_results.get(key)
+        if agg is None:
+            aggregated_results[key] = {
+                "fill_qty": qty,
+                "_fill_value": qty * price,
+                "fill_price": price,
+                "fill_time": ts_str,
+                "commission": commission,
+                "commission_placeholder": r.get("commission_placeholder", False),
+                "status": r.get("status"),
+                "error": r.get("error", ""),
+                "notes": r.get("notes", ""),
+                "missing_exec_ids": list(r.get("missing_exec_ids", [])),
+            }
+        else:
+            agg["fill_qty"] += qty
+            agg["_fill_value"] += qty * price
+            if ts_str is not None:
+                agg["fill_time"] = ts_str
+            agg["commission"] += commission
+            agg["commission_placeholder"] = agg["commission_placeholder"] or bool(
+                r.get("commission_placeholder", False)
+            )
+            status = r.get("status")
+            if status:
+                agg["status"] = status
+            error = r.get("error")
+            if error:
+                agg["error"] = "; ".join(filter(None, [agg.get("error", ""), error]))
+            notes = r.get("notes")
+            if notes:
+                agg["notes"] = "; ".join(filter(None, [agg.get("notes", ""), notes]))
+            agg.setdefault("missing_exec_ids", [])
+            agg["missing_exec_ids"].extend(r.get("missing_exec_ids", []))
+
+    # Finalize aggregated results by computing weighted average fill price
+    results_by_key: dict[tuple[str | None, str | None], dict[str, Any]] = {}
+    for key, agg in aggregated_results.items():
+        qty = agg.get("fill_qty", 0.0)
+        value = agg.pop("_fill_value", 0.0)
+        if qty:
+            agg["fill_price"] = value / qty
+        results_by_key[key] = agg
+
+    trades_by_key = aggregated_trades
     timestamp_run = ts.isoformat()
     order_type = cfg.execution.order_type
     algo = cfg.execution.algo_preference
