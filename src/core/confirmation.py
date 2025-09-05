@@ -26,6 +26,7 @@ async def confirm_per_account(
     compute_drift,
     prioritize_by_drift,
     size_orders,
+    output_lock: asyncio.Lock | None = None,
 ) -> None:
     """Handle confirmation, execution, and reporting for a single account."""
     cfg = merge_account_overrides(cfg, plan["account_id"])
@@ -45,9 +46,16 @@ async def confirm_per_account(
     buy_usd = plan["buy_usd"]
     sell_usd = plan["sell_usd"]
 
-    print(table)
+    async def _print(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        if output_lock is not None:
+            async with output_lock:
+                print(*args, **kwargs)
+        else:
+            print(*args, **kwargs)
+
+    await _print(table)
     if args.dry_run:
-        print("[green]Dry run complete (no orders submitted).[/green]")
+        await _print("[green]Dry run complete (no orders submitted).[/green]")
         logging.info("Dry run complete (no orders submitted).")
         append_run_summary(
             Path(cfg.io.report_dir),
@@ -70,7 +78,7 @@ async def confirm_per_account(
         return
 
     if cfg.ibkr.read_only or args.read_only:
-        print(
+        await _print(
             "[yellow]Read-only mode: trading is disabled; no orders will be submitted.[/yellow]"
         )
         logging.info(
@@ -99,7 +107,7 @@ async def confirm_per_account(
     if not args.yes:
         resp = input("Proceed? [y/N]: ").strip().lower()
         if resp != "y":
-            print("[yellow]Aborted by user.[/yellow]")
+            await _print("[yellow]Aborted by user.[/yellow]")
             logging.info("Aborted by user.")
             append_run_summary(
                 Path(cfg.io.report_dir),
@@ -121,7 +129,7 @@ async def confirm_per_account(
             )
             return
 
-    print("[blue]Submitting batch market orders[/blue]")
+    await _print("[blue]Submitting batch market orders[/blue]")
     logging.info("Submitting batch market orders for %s", account_id)
     client = client_factory()
     if hasattr(client, "__aenter__"):
@@ -140,7 +148,7 @@ async def confirm_per_account(
     for res in results:
         qty = res.get("fill_qty", res.get("filled", 0))
         price = res.get("fill_price", res.get("avg_fill_price", 0))
-        print(
+        await _print(
             f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
         )
         logging.info("%s: %s %s @ %s", res.get("symbol"), res.get("status"), qty, price)
@@ -195,7 +203,7 @@ async def confirm_per_account(
         )
         if not extra_trades:
             break
-        print(
+        await _print(
             f"[blue]Submitting additional batch market orders (pass {passes + 1})[/blue]"
         )
         logging.info(
@@ -223,7 +231,7 @@ async def confirm_per_account(
         for res in extra_results:
             qty = res.get("fill_qty", res.get("filled", 0))
             price = res.get("fill_price", res.get("avg_fill_price", 0))
-            print(
+            await _print(
                 f"[green]{res.get('symbol')}: {res.get('status')} {qty} @ {price}[/green]"
             )
             logging.info(

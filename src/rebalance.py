@@ -74,6 +74,10 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     accounts = cfg.accounts
     confirm_mode = getattr(accounts, "confirm_mode", ConfirmMode.PER_ACCOUNT)
 
+    output_lock: asyncio.Lock | None = None
+    if args.yes and getattr(accounts, "parallel", False):
+        output_lock = asyncio.Lock()
+
     async def handle_account(account_id: str) -> Plan | None:
         plan: Plan | None = None
         try:
@@ -107,6 +111,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     compute_drift=compute_drift,
                     prioritize_by_drift=prioritize_by_drift,
                     size_orders=size_orders,
+                    output_lock=output_lock,
                 )
                 return None
             return plan
@@ -209,6 +214,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     compute_drift=compute_drift,
                     prioritize_by_drift=prioritize_by_drift,
                     size_orders=size_orders,
+                    output_lock=output_lock,
                 )
             except (ConfigError, IBKRError, PlanningError) as exc:
                 logging.error("Error processing account %s: %s", account_id, exc)
