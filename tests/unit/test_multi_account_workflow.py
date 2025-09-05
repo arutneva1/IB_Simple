@@ -57,15 +57,16 @@ async def _run_rebalance(monkeypatch):
         io=SimpleNamespace(report_dir="reports", log_level="INFO"),
         accounts=SimpleNamespace(ids=["acct1", "bad", "acct2"]),
         rebalance=SimpleNamespace(min_order_usd=0),
+        portfolio_paths={"acct1": Path("p1.csv"), "acct2": Path("p2.csv")},
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _p: cfg)
 
     async def fake_load_portfolios(paths, *, host, port, client_id):  # noqa: ARG001
         data = {
-            "AAA": {"smurf": 0.5, "badass": 0.3, "gltr": 0.2},
-            "BBB": {"smurf": 0.5, "badass": 0.3, "gltr": 0.2},
+            "acct1": {"AAA": {"smurf": 0.5, "badass": 0.3, "gltr": 0.2}},
+            "acct2": {"BBB": {"smurf": 0.5, "badass": 0.3, "gltr": 0.2}},
         }
-        return {aid: data for aid in paths}
+        return {aid: data.get(aid, {}) for aid in paths}
 
     monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
 
@@ -150,7 +151,13 @@ async def _run_rebalance(monkeypatch):
             p["symbol"]: float(p.get("market_price") or p.get("avg_cost"))
             for p in snap["positions"]
         }
-        targets = {s: 0.38 for s in ("AAA", "BBB")}
+        if account_id == "acct1":
+            targets = {"AAA": 0.38}
+        else:
+            targets = {"BBB": 0.38}
+        # ensure prices for target symbols
+        prices.setdefault("AAA", 10.0)
+        prices.setdefault("BBB", 10.0)
         return current, targets, prices, float(snap["net_liq"])
 
     expected = {}

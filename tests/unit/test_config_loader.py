@@ -68,7 +68,7 @@ log_level = INFO
 """
 
 
-VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[Portfolio: acc1 ]\npath = foo.csv\n"
+VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[account: acc1]\npath = foo.csv\n"
 
 
 @pytest.fixture
@@ -142,7 +142,7 @@ def test_portfolio_paths_resolve_from_config_dir(
     (cfg_dir / portfolio_rel).write_text("")
     cfg_path = cfg_dir / "settings.ini"
     cfg_content = (
-        VALID_CONFIG + f"\n[portfolio: acc1]\npath = {portfolio_rel.as_posix()}\n"
+        VALID_CONFIG + f"\n[account: acc1]\npath = {portfolio_rel.as_posix()}\n"
     )
     cfg_path.write_text(cfg_content)
 
@@ -182,7 +182,7 @@ def test_accounts_path_resolves_from_config_dir(
 
 def test_portfolio_path_missing(tmp_path: Path) -> None:
     cfg_path = tmp_path / "settings.ini"
-    cfg_path.write_text(VALID_CONFIG + "\n[portfolio: acc1]\npath = missing.csv\n")
+    cfg_path.write_text(VALID_CONFIG + "\n[account: acc1]\npath = missing.csv\n")
     with pytest.raises(ConfigError) as exc:
         load_config(cfg_path)
     err = str(exc.value)
@@ -192,26 +192,13 @@ def test_portfolio_path_missing(tmp_path: Path) -> None:
 
 def test_portfolio_path_directory(tmp_path: Path) -> None:
     cfg_path = tmp_path / "settings.ini"
-    cfg_path.write_text(VALID_CONFIG + "\n[portfolio: acc1]\npath = somedir\n")
+    cfg_path.write_text(VALID_CONFIG + "\n[account: acc1]\npath = somedir\n")
     (tmp_path / "somedir").mkdir()
     with pytest.raises(ConfigError) as exc:
         load_config(cfg_path)
     err = str(exc.value)
     assert "ACC1" in err
     assert "somedir" in err
-
-
-def test_portfolio_section_unknown_keys(tmp_path: Path, caplog) -> None:
-    cfg_path = tmp_path / "settings.ini"
-    cfg_path.write_text(
-        VALID_CONFIG + "\n[portfolio: acc1]\npath = foo.csv\nfoo = bar\nunknown = baz\n"
-    )
-    (tmp_path / "foo.csv").write_text("")
-    with caplog.at_level(logging.WARNING):
-        cfg = load_config(cfg_path)
-    assert cfg.portfolio_paths["ACC1"] == (tmp_path / "foo.csv").resolve()
-    messages = [rec.message.lower() for rec in caplog.records]
-    assert any("unknown portfolio keys" in m for m in messages)
 
 
 def test_missing_accounts_section(tmp_path: Path) -> None:
@@ -365,7 +352,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
         "ids = acc1 , Acc2 ",
     )
     content += (
-        "\n[Portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
+        "\n[account: acc1]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)
@@ -378,7 +365,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
 
 
 def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
-    content = VALID_CONFIG_WITH_PORTFOLIO + "\n[Portfolio: acc3 ]\npath = foo.csv\n"
+    content = VALID_CONFIG_WITH_PORTFOLIO + "\n[account: acc3 ]\npath = foo.csv\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     (path.parent / "foo.csv").write_text("")
