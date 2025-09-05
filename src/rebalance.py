@@ -44,6 +44,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cli_confirm_mode = getattr(args, "confirm_mode", None)
     if cli_confirm_mode:
         cfg.accounts.confirm_mode = ConfirmMode(cli_confirm_mode)
+    if getattr(args, "parallel_accounts", False):
+        cfg.accounts.parallel = True
     ts_dt = datetime.now(timezone.utc)
     timestamp = ts_dt.strftime("%Y%m%dT%H%M%S")
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
@@ -58,11 +60,15 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         client_id=cfg.ibkr.client_id,
     )
     failures: list[tuple[str, str]] = []
+    summary_rows: list[dict[str, object]] = []
+
+    def capture_summary(_: Path, __: datetime, row: dict[str, object]) -> None:
+        summary_rows.append(row)
 
     accounts = cfg.accounts
     confirm_mode = getattr(accounts, "confirm_mode", ConfirmMode.PER_ACCOUNT)
-    plans: list[Plan] = []
-    for account_id in accounts.ids:
+
+    async def handle_account(account_id: str) -> Plan | None:
         plan: Plan | None = None
         try:
             cfg_acct = merge_account_overrides(cfg, account_id)
@@ -87,14 +93,14 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     ts_dt,
                     client_factory=IBKRClient,
                     submit_batch=submit_batch,
-                    append_run_summary=append_run_summary,
+                    append_run_summary=capture_summary,
                     write_post_trade_report=write_post_trade_report,
                     compute_drift=compute_drift,
                     prioritize_by_drift=prioritize_by_drift,
                     size_orders=size_orders,
                 )
-            else:
-                plans.append(plan)
+                return None
+            return plan
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
             print(f"[red]{exc}[/red]")
@@ -103,7 +109,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             buy_usd = plan["buy_usd"] if plan else 0.0
             sell_usd = plan["sell_usd"] if plan else 0.0
             pre_leverage = plan["pre_leverage"] if plan else 0.0
-            append_run_summary(
+            capture_summary(
                 Path(cfg.io.report_dir),
                 ts_dt,
                 {
@@ -121,10 +127,30 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     "error": str(exc),
                 },
             )
-        finally:
+            return None
+
+    plans: list[Plan] = []
+    if getattr(accounts, "parallel", False):
+        tasks = []
+        pacing = getattr(accounts, "pacing_sec", 0.0)
+        for idx, account_id in enumerate(accounts.ids):
+            async def start_after_delay(aid: str, delay: float) -> Plan | None:
+                if delay:
+                    await asyncio.sleep(delay)
+                return await handle_account(aid)
+
+            tasks.append(asyncio.create_task(start_after_delay(account_id, idx * pacing)))
+        results = await asyncio.gather(*tasks)
+        plans.extend([p for p in results if p is not None])
+    else:
+        for account_id in accounts.ids:
+            plan = await handle_account(account_id)
+            if plan is not None:
+                plans.append(plan)
             await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
     if confirm_mode is ConfirmMode.GLOBAL:
+        plans.sort(key=lambda p: p["account_id"])
         failures.extend(
             await confirm_global(
                 plans,
@@ -133,7 +159,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 ts_dt,
                 client_factory=IBKRClient,
                 submit_batch=submit_batch,
-                append_run_summary=append_run_summary,
+                append_run_summary=capture_summary,
                 write_post_trade_report=write_post_trade_report,
                 compute_drift=compute_drift,
                 prioritize_by_drift=prioritize_by_drift,
@@ -141,6 +167,10 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 pacing_sec=getattr(accounts, "pacing_sec", 0),
             )
         )
+
+    summary_rows.sort(key=lambda r: r.get("account_id", ""))
+    for row in summary_rows:
+        append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
 
     if failures:
         print("[red]One or more accounts failed:[/red]")
@@ -182,6 +212,11 @@ def main(argv: list[str] | None = None) -> None:
         "--confirm-mode",
         choices=[mode.value for mode in ConfirmMode],
         help="Confirmation mode: per-account or global",
+    )
+    parser.add_argument(
+        "--parallel-accounts",
+        action="store_true",
+        help="Plan and execute accounts concurrently",
     )
     args = parser.parse_args(argv if argv is not None else [])
 

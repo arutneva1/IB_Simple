@@ -108,6 +108,7 @@ class Accounts:
     ids: list[str]
     confirm_mode: ConfirmMode
     pacing_sec: float = 0.0
+    parallel: bool = False
 
 
 @dataclass
@@ -267,7 +268,16 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError("[accounts] pacing_sec must be a float") from exc
     if pacing_sec < 0:
         raise ConfigError("[accounts] pacing_sec must be >= 0")
-    accounts = Accounts(ids=ids, confirm_mode=confirm_mode, pacing_sec=pacing_sec)
+    try:
+        parallel = cp.getboolean("accounts", "parallel", fallback=False)
+    except ValueError as exc:
+        raise ConfigError("[accounts] parallel must be a boolean") from exc
+    accounts = Accounts(
+        ids=ids,
+        confirm_mode=confirm_mode,
+        pacing_sec=pacing_sec,
+        parallel=parallel,
+    )
 
     ibkr = IBKR(
         host=host,

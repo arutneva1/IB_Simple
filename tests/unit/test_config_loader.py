@@ -103,7 +103,10 @@ def test_load_valid_config(config_file: Path) -> None:
         ),
         io=IO(report_dir="reports", log_level="INFO"),
         accounts=Accounts(
-            ids=["ACC1", "ACC2"], confirm_mode=ConfirmMode.PER_ACCOUNT, pacing_sec=0.0
+            ids=["ACC1", "ACC2"],
+            confirm_mode=ConfirmMode.PER_ACCOUNT,
+            pacing_sec=0.0,
+            parallel=False,
         ),
     )
     assert cfg == expected
@@ -146,6 +149,17 @@ def test_accounts_ids_trim_and_deduplicate(tmp_path: Path) -> None:
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
+
+
+def test_accounts_parallel_flag(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "ids = ACC1, ACC2",
+        "ids = ACC1, ACC2\nparallel = true",
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.accounts.parallel is True
 
 
 def test_single_account_id(tmp_path: Path) -> None:
