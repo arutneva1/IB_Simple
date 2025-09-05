@@ -143,13 +143,13 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         tasks: list[asyncio.Task] = []
         task_accounts: list[str] = []
         pacing = getattr(accounts, "pacing_sec", 0.0)
+
+        async def start_after_delay(aid: str, delay: float) -> Plan | None:
+            if delay:
+                await asyncio.sleep(delay)
+            return await handle_account(aid)
+
         for idx, account_id in enumerate(accounts.ids):
-
-            async def start_after_delay(aid: str, delay: float) -> Plan | None:
-                if delay:
-                    await asyncio.sleep(delay)
-                return await handle_account(aid)
-
             tasks.append(
                 asyncio.create_task(start_after_delay(account_id, idx * pacing))
             )
