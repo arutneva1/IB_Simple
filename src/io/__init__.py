@@ -8,6 +8,7 @@ types without reaching into the underlying modules.
 from .config_loader import (
     IBKR,
     IO,
+    AccountOverride,
     Accounts,
     AppConfig,
     ConfigError,
@@ -16,8 +17,8 @@ from .config_loader import (
     Models,
     Pricing,
     Rebalance,
-    account_overrides,
     load_config,
+    merge_account_overrides,
 )
 from .portfolio_csv import PortfolioCSVError, load_portfolios, validate_symbols
 from .reporting import (
@@ -35,11 +36,12 @@ __all__ = [
     "Execution",
     "IBKR",
     "IO",
-    "account_overrides",
+    "AccountOverride",
     "Models",
     "Pricing",
     "Rebalance",
     "load_config",
+    "merge_account_overrides",
     "PortfolioCSVError",
     "load_portfolios",
     "validate_symbols",

@@ -11,6 +11,7 @@ from ib_async.order import MarketOrder, TagValue
 
 from src.core.sizing import SizedTrade as Trade
 from src.io import AppConfig as Config
+from src.io import merge_account_overrides
 
 from .errors import IBKRError
 from .ibkr_client import IBKRClient
@@ -41,6 +42,7 @@ async def submit_batch(
         Structured execution results for each trade.
     """
 
+    cfg = merge_account_overrides(cfg, account_id)
     log.info("Starting batch execution of %d trades", len(trades))
     ib = cast(Any, client._ib)
 

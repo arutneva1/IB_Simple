@@ -20,6 +20,8 @@ import math
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+from src.io import merge_account_overrides
+
 from .drift import Drift
 
 
@@ -83,6 +85,8 @@ def size_orders(
     """
 
     logging.debug("Sizing orders for account %s", account_id)
+
+    cfg = merge_account_overrides(cfg, account_id)
 
     (
         min_order_usd,

@@ -16,7 +16,6 @@ from src.io.config_loader import (  # noqa: E402
     Models,
     Pricing,
     Rebalance,
-    account_overrides,
     load_config,
 )
 
@@ -163,8 +162,9 @@ def test_account_section_unknown_keys(tmp_path: Path) -> None:
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
-    assert account_overrides["ACC1"]["foo"] == "bar"
-    assert account_overrides["ACC1"]["unknown"] == "baz"
+    overrides = cfg.account_overrides["ACC1"]
+    assert overrides.extra["foo"] == "bar"
+    assert overrides.extra["unknown"] == "baz"
 
 
 def test_ibkr_account_id_rejected(tmp_path: Path) -> None:

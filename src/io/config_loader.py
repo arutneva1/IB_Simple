@@ -6,10 +6,11 @@ This module parses ``settings.ini`` files into structured dataclasses.
 from __future__ import annotations
 
 from configparser import ConfigParser, NoOptionError, NoSectionError
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path
-from typing import Dict
+from types import SimpleNamespace
+from typing import Any, Dict, Mapping
 
 
 class ConfigError(Exception):
@@ -89,6 +90,18 @@ class IO:
 
 
 @dataclass
+class AccountOverride:
+    """Per-account override values for rebalance settings."""
+
+    allow_fractional: bool | None = None
+    min_order_usd: int | None = None
+    cash_buffer_type: str | None = None
+    cash_buffer_pct: float | None = None
+    cash_buffer_abs: float | None = None
+    extra: Dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class Accounts:
     """Configuration for multiple trading accounts."""
 
@@ -108,11 +121,10 @@ class AppConfig:
     execution: Execution
     io: IO
     accounts: Accounts
+    account_overrides: Dict[str, AccountOverride] = field(default_factory=dict)
 
 
 TOLERANCE = 0.001
-
-account_overrides: Dict[str, Dict[str, str]] = {}
 
 
 def _load_section(cp: ConfigParser, section: str) -> Dict[str, str]:
@@ -120,6 +132,79 @@ def _load_section(cp: ConfigParser, section: str) -> Dict[str, str]:
         return dict(cp.items(section))
     except NoSectionError as exc:
         raise ConfigError(f"Missing section [{section}]") from exc
+
+
+def _parse_account_override(items: Mapping[str, str]) -> AccountOverride:
+    """Convert raw key/value pairs into an :class:`AccountOverride`."""
+
+    ov = AccountOverride()
+    for key, val in items.items():
+        lk = key.lower()
+        if lk == "allow_fractional":
+            ov.allow_fractional = val.lower() in {"1", "true", "yes", "on"}
+        elif lk == "min_order_usd":
+            try:
+                ov.min_order_usd = int(val)
+            except ValueError as exc:
+                raise ConfigError(
+                    f"[account] invalid int for min_order_usd: {val}"
+                ) from exc
+        elif lk == "cash_buffer_type":
+            ov.cash_buffer_type = val.lower()
+        elif lk == "cash_buffer_pct":
+            try:
+                ov.cash_buffer_pct = float(val)
+            except ValueError as exc:
+                raise ConfigError(
+                    f"[account] invalid float for cash_buffer_pct: {val}"
+                ) from exc
+        elif lk == "cash_buffer_abs":
+            try:
+                ov.cash_buffer_abs = float(val)
+            except ValueError as exc:
+                raise ConfigError(
+                    f"[account] invalid float for cash_buffer_abs: {val}"
+                ) from exc
+        else:
+            ov.extra[key] = val
+    return ov
+
+
+def merge_account_overrides(cfg: Any, account_id: str) -> Any:
+    """Return a copy of ``cfg`` with overrides for ``account_id`` applied."""
+
+    overrides = getattr(cfg, "account_overrides", {}).get(account_id)
+    if not overrides:
+        return cfg
+
+    reb_updates = {}
+    for field_name in (
+        "allow_fractional",
+        "min_order_usd",
+        "cash_buffer_type",
+        "cash_buffer_pct",
+        "cash_buffer_abs",
+    ):
+        val = getattr(overrides, field_name)
+        if val is not None:
+            reb_updates[field_name] = val
+
+    if not reb_updates:
+        return cfg
+
+    reb_src = getattr(cfg, "rebalance", None)
+    if reb_src is None:
+        return cfg
+    try:
+        reb = replace(reb_src, **reb_updates)
+    except TypeError:
+        reb = SimpleNamespace(**{**getattr(reb_src, "__dict__", {}), **reb_updates})
+    try:
+        return replace(cfg, rebalance=reb)
+    except TypeError:
+        cfg_dict = {**getattr(cfg, "__dict__", {})}
+        cfg_dict["rebalance"] = reb
+        return SimpleNamespace(**cfg_dict)
 
 
 def load_config(path: Path) -> AppConfig:
@@ -191,11 +276,12 @@ def load_config(path: Path) -> AppConfig:
         read_only=read_only,
     )
 
-    account_overrides.clear()
+    account_overrides: Dict[str, AccountOverride] = {}
     for section in cp.sections():
         if section.startswith("account:"):
             acc_id = section.split("account:", 1)[1]
-            account_overrides[acc_id] = dict(cp.items(section))
+            items = dict(cp.items(section))
+            account_overrides[acc_id] = _parse_account_override(items)
 
     # [models]
     data = _load_section(cp, "models")
@@ -325,6 +411,7 @@ def load_config(path: Path) -> AppConfig:
         execution=execution,
         io=io_cfg,
         accounts=accounts,
+        account_overrides=account_overrides,
     )
 
 
