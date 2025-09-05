@@ -51,7 +51,7 @@ async def confirm_per_account(
     post_leverage = plan["post_leverage"]
     table = plan["table"]
     planned_orders = plan["planned_orders"]
-    planned_orders_initial = planned_orders
+    planned_orders_total = planned_orders
     buy_usd = plan["buy_usd"]
     sell_usd = plan["sell_usd"]
     buy_usd_actual = 0.0
@@ -320,6 +320,7 @@ async def confirm_per_account(
         )
         if not extra_trades:
             break
+        planned_orders_total += len(extra_trades)
         await _print(
             f"[blue]Submitting additional batch market orders (pass {passes + 1})[/blue]"
         )
@@ -454,7 +455,7 @@ async def confirm_per_account(
         {
             "timestamp_run": ts_dt.isoformat(),
             "account_id": account_id,
-            "planned_orders": planned_orders_initial,
+            "planned_orders": planned_orders_total,
             "submitted": len(trades),
             "filled": filled,
             "rejected": rejected,
