@@ -2,7 +2,7 @@ import asyncio
 import sys
 import time
 from pathlib import Path
-from types import SimpleNamespace
+from argparse import Namespace
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
@@ -61,7 +61,7 @@ def test_parallel_accounts_flag_overrides_config(
 
     monkeypatch.setattr(rebalance, "load_config", fake_load_config)
 
-    args = SimpleNamespace(
+    args = Namespace(
         config="config/settings.ini",
         csv="data/portfolios.csv",
         dry_run=True,
