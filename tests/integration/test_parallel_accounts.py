@@ -73,6 +73,7 @@ async def stub_confirm_per_account(
     size_orders,  # noqa: ARG002
     output_lock=None,  # noqa: ARG002
 ):
+    assert output_lock is not None
     confirm_starts.append(time.perf_counter())
     client_factory()
     await asyncio.sleep(0.1)

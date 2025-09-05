@@ -75,7 +75,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     confirm_mode = getattr(accounts, "confirm_mode", ConfirmMode.PER_ACCOUNT)
 
     output_lock: asyncio.Lock | None = None
-    if args.yes and getattr(accounts, "parallel", False):
+    if getattr(accounts, "parallel", False):
         output_lock = asyncio.Lock()
 
     async def handle_account(account_id: str) -> Plan | None:
