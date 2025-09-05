@@ -1,8 +1,8 @@
 import asyncio
-import time
-from types import SimpleNamespace
-from pathlib import Path
 import sys
+import time
+from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
@@ -11,13 +11,17 @@ import pytest
 import src.rebalance as rebalance
 
 
-def test_parallel_accounts_flag_overrides_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_parallel_accounts_flag_overrides_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     plan_starts: list[float] = []
 
     async def fake_load_portfolios(path_map, *, host, port, client_id):  # noqa: ARG001
         return {aid: {} for aid in path_map}
 
-    async def stub_plan_account(account_id, portfolios, cfg, ts_dt, **kwargs):  # noqa: ARG001
+    async def stub_plan_account(
+        account_id, portfolios, cfg, ts_dt, **kwargs
+    ):  # noqa: ARG001
         plan_starts.append(time.perf_counter())
         await asyncio.sleep(0.1)
         return {
