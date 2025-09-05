@@ -146,6 +146,37 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 },
             )
             return None
+        except Exception as exc:  # noqa: BLE001
+            logging.exception("Unhandled error processing account %s", account_id)
+            if output_lock is not None:
+                async with output_lock:
+                    print(f"[red]{exc}[/red]")
+            else:
+                print(f"[red]{exc}[/red]")
+            failures.append((account_id, str(exc)))
+            planned_orders = plan["planned_orders"] if plan else 0
+            buy_usd = plan["buy_usd"] if plan else 0.0
+            sell_usd = plan["sell_usd"] if plan else 0.0
+            pre_leverage = plan["pre_leverage"] if plan else 0.0
+            capture_summary(
+                Path(cfg.io.report_dir),
+                ts_dt,
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": planned_orders,
+                    "submitted": 0,
+                    "filled": 0,
+                    "rejected": 0,
+                    "buy_usd": buy_usd,
+                    "sell_usd": sell_usd,
+                    "pre_leverage": pre_leverage,
+                    "post_leverage": pre_leverage,
+                    "status": "failed",
+                    "error": str(exc),
+                },
+            )
+            return None
 
     plans: list[Plan] = []
     if getattr(accounts, "parallel", False):
@@ -168,27 +199,14 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         )
         for aid, res in zip(task_accounts, results):
             if isinstance(res, Exception):
-                logging.error("Unhandled error processing account %s: %s", aid, res)
-                print(f"[red]{res}[/red]")
-                failures.append((aid, str(res)))
-                capture_summary(
-                    Path(cfg.io.report_dir),
-                    ts_dt,
-                    {
-                        "timestamp_run": ts_dt.isoformat(),
-                        "account_id": aid,
-                        "planned_orders": 0,
-                        "submitted": 0,
-                        "filled": 0,
-                        "rejected": 0,
-                        "buy_usd": 0.0,
-                        "sell_usd": 0.0,
-                        "pre_leverage": 0.0,
-                        "post_leverage": 0.0,
-                        "status": "failed",
-                        "error": str(res),
-                    },
+                logging.exception(
+                    "Unhandled error processing account %s", aid, exc_info=res
                 )
+                if output_lock is not None:
+                    async with output_lock:
+                        print(f"[red]{res}[/red]")
+                else:
+                    print(f"[red]{res}[/red]")
             elif res is not None:
                 plans.append(res)
     else:
