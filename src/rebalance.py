@@ -98,7 +98,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 await confirm_per_account(
                     plan,
                     args,
-                    cfg_acct,
+                    cfg,
                     ts_dt,
                     client_factory=IBKRClient,
                     submit_batch=submit_batch,
@@ -197,11 +197,10 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         for plan in plans:
             account_id = plan["account_id"]
             try:
-                cfg_acct = merge_account_overrides(cfg, account_id)
                 await confirm_per_account(
                     plan,
                     args,
-                    cfg_acct,
+                    cfg,
                     ts_dt,
                     client_factory=IBKRClient,
                     submit_batch=submit_batch,
