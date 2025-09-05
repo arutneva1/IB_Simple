@@ -214,7 +214,10 @@ def test_confirm_global_yes_flag_disables_parallelism(monkeypatch, cfg):
     monkeypatch.setattr(
         "src.core.confirmation.confirm_per_account", stub_confirm_per_account
     )
-    monkeypatch.setattr("builtins.input", lambda *a, **k: "y")
+    async def fake_prompt(*a, **k):
+        return "y"
+
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = SimpleNamespace(dry_run=False, yes=False, read_only=False)
     ts_dt = datetime.utcnow()

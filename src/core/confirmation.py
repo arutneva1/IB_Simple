@@ -15,6 +15,11 @@ from src.core.planner import Plan
 from src.io import AppConfig, ConfigError, merge_account_overrides
 
 
+async def _prompt_user(prompt: str) -> str:
+    """Prompt the user without blocking the event loop."""
+    return await asyncio.to_thread(input, prompt)
+
+
 async def confirm_per_account(
     plan: Plan,
     args: Any,
@@ -110,7 +115,7 @@ async def confirm_per_account(
         return
 
     if not args.yes:
-        resp = input("Proceed? [y/N]: ").strip().lower()
+        resp = (await _prompt_user("Proceed? [y/N]: ")).strip().lower()
         if resp != "y":
             await _print("[yellow]Aborted by user.[/yellow]")
             logging.info("Aborted by user.")
@@ -416,7 +421,7 @@ async def confirm_global(
         return failures
 
     if not args.yes:
-        resp = input("Proceed? [y/N]: ").strip().lower()
+        resp = (await _prompt_user("Proceed? [y/N]: ")).strip().lower()
         if resp != "y":
             print("[yellow]Aborted by user.[/yellow]")
             logging.info("Aborted by user.")

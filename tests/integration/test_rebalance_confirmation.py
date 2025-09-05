@@ -62,11 +62,11 @@ def test_prompt_default(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
-    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+    async def fake_prompt(prompt: str) -> str:  # pragma: no cover - trivial
         print(prompt, end="")
         return "n"
 
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = Namespace(
         config="config/settings.ini",
@@ -92,10 +92,10 @@ def test_yes_skips_prompt(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
-    def fail_input(*args, **kwargs) -> str:  # pragma: no cover - should not be called
-        raise AssertionError("input() should not be invoked when --yes is used")
+    async def fail_prompt(*args, **kwargs) -> str:  # pragma: no cover - should not be called
+        raise AssertionError("prompt should not be invoked when --yes is used")
 
-    monkeypatch.setattr("builtins.input", fail_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fail_prompt)
 
     async def fake_submit_batch(client, trades, cfg, account_id):  # noqa: ARG001
         return [
@@ -136,12 +136,12 @@ def test_prompt_global(
 
     prompts: list[str] = []
 
-    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+    async def fake_prompt(prompt: str) -> str:  # pragma: no cover - trivial
         prompts.append(prompt)
         print(prompt, end="")
         return "n"
 
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = Namespace(
         config="config/settings.ini",
@@ -168,10 +168,10 @@ def test_yes_skips_prompt_global(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
-    def fail_input(*args, **kwargs) -> str:  # pragma: no cover - should not be called
-        raise AssertionError("input() should not be invoked when --yes is used")
+    async def fail_prompt(*args, **kwargs) -> str:  # pragma: no cover - should not be called
+        raise AssertionError("prompt should not be invoked when --yes is used")
 
-    monkeypatch.setattr("builtins.input", fail_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fail_prompt)
 
     async def fake_submit_batch(client, trades, cfg, account_id):  # noqa: ARG001
         return [

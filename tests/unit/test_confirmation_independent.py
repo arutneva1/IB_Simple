@@ -65,10 +65,10 @@ def test_independent_confirmation_statuses(monkeypatch, tmp_path):
 
     responses = iter(["y", "n"])
 
-    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+    async def fake_prompt(prompt: str) -> str:  # pragma: no cover - trivial
         return next(responses)
 
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = Namespace(
         config="config/settings.ini",

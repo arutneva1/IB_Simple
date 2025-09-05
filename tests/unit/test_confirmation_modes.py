@@ -50,11 +50,11 @@ def test_per_account_prompts_once_per_account(monkeypatch, tmp_path):
     _patch_common(monkeypatch, tmp_path)
     prompts: list[str] = []
 
-    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+    async def fake_prompt(prompt: str) -> str:  # pragma: no cover - trivial
         prompts.append(prompt)
         return "n"
 
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = Namespace(
         config="config/settings.ini",
@@ -81,11 +81,11 @@ def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys):
 
     prompts: list[str] = []
 
-    def fake_input(prompt: str) -> str:  # pragma: no cover - trivial
+    async def fake_prompt(prompt: str) -> str:  # pragma: no cover - trivial
         prompts.append(prompt)
         return "n"
 
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr("src.core.confirmation._prompt_user", fake_prompt)
 
     args = Namespace(
         config="config/settings.ini",
