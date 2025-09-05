@@ -7,7 +7,6 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
-import src.io.portfolio_csv as portfolio_csv
 import src.io.validate_portfolios as validate_portfolios
 from tests.unit.test_config_loader import VALID_CONFIG
 
@@ -145,7 +144,7 @@ wait_before_fallback = 300
 report_dir = reports
 log_level = INFO
 
-[account:acc1]
+[account:ACC1]
 path = acc1.csv
 """
 
@@ -157,15 +156,17 @@ path = acc1.csv
     acct_csv = tmp_path / "acc1.csv"
     acct_csv.write_text("ETF,SMURF,BADASS,GLTR\nCASH,100%,100%,100%\n")
 
-    seen: list[Path] = []
+    seen: dict[str, Path] = {}
 
-    orig_parse = portfolio_csv._parse_csv
+    orig = validate_portfolios.load_portfolios_map
 
-    def fake_parse(path: Path, expected: list[str] | None = None):
-        seen.append(Path(path).resolve())
-        return orig_parse(path, expected)
+    async def fake_load_portfolios_map(paths, *, host, port, client_id):  # noqa: ARG001
+        seen.update({k: Path(v).resolve() for k, v in paths.items()})
+        return await orig(paths, host=host, port=port, client_id=client_id)
 
-    monkeypatch.setattr(portfolio_csv, "_parse_csv", fake_parse)
+    monkeypatch.setattr(
+        validate_portfolios, "load_portfolios_map", fake_load_portfolios_map
+    )
 
     other_dir = tmp_path / "other"
     other_dir.mkdir()
@@ -177,7 +178,8 @@ path = acc1.csv
         )
     )
 
-    assert {global_csv.resolve(), acct_csv.resolve()} == set(seen)
+    expected = {"ACC1": acct_csv.resolve(), "ACC2": global_csv.resolve()}
+    assert seen == expected
 
 
 def test_uses_accounts_path_from_config(
