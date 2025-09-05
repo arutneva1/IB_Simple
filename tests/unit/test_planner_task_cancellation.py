@@ -3,12 +3,15 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
+from src.broker.ibkr_client import IBKRClient
 from src.core.drift import Drift
 from src.core.errors import PlanningError
 from src.core.planner import plan_account
+from src.io import AppConfig
 
 
 def test_tasks_cancelled_on_unexpected_error() -> None:
@@ -33,7 +36,7 @@ def test_tasks_cancelled_on_unexpected_error() -> None:
     def fake_prioritize(account_id, drifts, cfg):
         return drifts
 
-    class FakeClient:
+    class FakeClient(IBKRClient):
         def __init__(self) -> None:
             self._ib = object()
 
@@ -46,11 +49,14 @@ def test_tasks_cancelled_on_unexpected_error() -> None:
         async def snapshot(self, account_id):
             return {"positions": [], "cash": 0.0, "net_liq": 0.0}
 
-    cfg = SimpleNamespace(
-        ibkr=SimpleNamespace(host="h", port=1, client_id=1),
-        models=SimpleNamespace(smurf=1.0, badass=0.0, gltr=0.0),
-        pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
-        io=SimpleNamespace(report_dir="reports", log_level="INFO"),
+    cfg = cast(
+        AppConfig,
+        SimpleNamespace(
+            ibkr=SimpleNamespace(host="h", port=1, client_id=1),
+            models=SimpleNamespace(smurf=1.0, badass=0.0, gltr=0.0),
+            pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
+            io=SimpleNamespace(report_dir="reports", log_level="INFO"),
+        ),
     )
 
     portfolios = {
