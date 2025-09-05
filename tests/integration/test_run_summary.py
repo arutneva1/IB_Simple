@@ -67,7 +67,7 @@ def test_run_summary(tmp_path, monkeypatch):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,

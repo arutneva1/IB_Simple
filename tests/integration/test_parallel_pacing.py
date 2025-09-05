@@ -112,7 +112,7 @@ def test_parallel_pacing(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,
