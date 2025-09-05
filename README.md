@@ -95,7 +95,8 @@ $10 while all other accounts require whole-share orders of at least $50.
 ### Per-account portfolio files
 
 By default all accounts share the CSV passed via `--csv`.  Specify a separate
-portfolio for an account using `[portfolio:<ID>]` blocks:
+portfolio for an account using `[portfolio:<ID>]` blocks. Section names are
+case-insensitive, so `[Portfolio:<ID>]` is also accepted:
 
 ```ini
 [portfolio:DU111111]
