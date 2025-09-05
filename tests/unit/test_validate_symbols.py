@@ -23,6 +23,8 @@ class FakeIB:
         }
         self.calls: list[str] = []
         self.connected: bool = False
+        self.disconnects: int = 0
+        self.raise_disconnect: bool = False
 
     async def reqContractDetailsAsync(self, contract):
         self.calls.append(contract.symbol)
@@ -34,8 +36,11 @@ class FakeIB:
     ):  # noqa: N803 (upstream uses camelCase)
         self.connected = True
 
-    def disconnect(self):
+    async def disconnectAsync(self):
+        self.disconnects += 1
         self.connected = False
+        if self.raise_disconnect:
+            raise RuntimeError("disconnect failed")
 
 
 def setup_fake_ib(monkeypatch) -> FakeIB:
@@ -52,6 +57,7 @@ def test_validate_symbols_valid(monkeypatch) -> None:
         )
     )
     assert ib.calls == ["BLOK", "SPY"]
+    assert ib.disconnects == 1
 
 
 def test_validate_symbols_unknown(monkeypatch) -> None:
@@ -63,6 +69,7 @@ def test_validate_symbols_unknown(monkeypatch) -> None:
             )
         )
     assert ib.calls == ["BLOK", "BAD"]
+    assert ib.disconnects == 1
 
 
 def test_validate_symbols_skips_cash(monkeypatch) -> None:
@@ -73,3 +80,16 @@ def test_validate_symbols_skips_cash(monkeypatch) -> None:
         )
     )
     assert ib.calls == ["SPY"]
+    assert ib.disconnects == 1
+
+
+def test_disconnect_error_suppressed(monkeypatch) -> None:
+    ib = setup_fake_ib(monkeypatch)
+    ib.raise_disconnect = True
+    asyncio.run(
+        portfolio_csv.validate_symbols(
+            ["SPY"], host="127.0.0.1", port=4001, client_id=1
+        )
+    )
+    assert ib.calls == ["SPY"]
+    assert ib.disconnects == 1

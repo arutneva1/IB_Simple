@@ -75,17 +75,10 @@ async def validate_symbols(
             if contract is None or contract.currency != "USD" or cd.stockType != "ETF":
                 raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
     finally:
-        is_connected = getattr(ib, "isConnected", None)
         try:
-            connected = (
-                is_connected()
-                if callable(is_connected)
-                else getattr(ib, "connected", False)
-            )
+            await ib.disconnectAsync()
         except Exception:
-            connected = getattr(ib, "connected", False)
-        if connected:
-            ib.disconnect()
+            pass
 
 
 async def load_portfolios(
