@@ -20,14 +20,14 @@ pytest -q -m "not integration"
 
 ### Customize sample files
 
-The repository includes example `config/settings.ini` and `data/portfolios.csv`.
+The repository includes example `config/settings.ini` and `config/portfolios.csv`.
 Make copies of these files outside version control and edit them with your own
 IBKR host and target weights. Account IDs are listed under the `[accounts]`
 section:
 
 ```bash
 cp config/settings.ini my_settings.ini
-cp data/portfolios.csv my_portfolios.csv
+cp config/portfolios.csv my_portfolios.csv
 ```
 
 Blank cells in the CSV represent 0% allocations. Use the copied files via
@@ -44,7 +44,7 @@ ids = DU111111, DU222222
 confirm_mode = per_account        ; per_account | global
 pacing_sec = 1                    ; seconds to pause between accounts
 parallel = false                  ; true processes accounts concurrently
-path = data/portfolios.csv        ; portfolio CSV (relative to settings.ini)
+path = portfolios.csv        ; portfolio CSV (relative to settings.ini)
 ```
 
 The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
@@ -67,7 +67,7 @@ the directory containing `settings.ini`.
 Example forcing a global prompt:
 
 ```bash
-python src/rebalance.py --dry-run --confirm-mode global --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --dry-run --confirm-mode global --config config/settings.ini --csv config/portfolios.csv
 ```
 
 Orders sent to Interactive Brokers are tagged with the respective account code
@@ -105,10 +105,10 @@ resolved relative to the directory containing `settings.ini`:
 
 ```ini
 [portfolio:DU111111]
-path = data/portfolios_DU111111.csv  # relative to settings.ini
+path = portfolios_DU111111.csv  # relative to settings.ini
 
 [portfolio:DU222222]
-path = data/portfolios_DU222222.csv
+path = portfolios_DU222222.csv
 ```
 
 Accounts without an override use the global CSV. `validate_portfolios --all`
@@ -116,7 +116,7 @@ needs a valid global CSV unless every account has an override. Example run
 mixing global and per-account files:
 
 ```bash
-python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --config config/settings.ini --csv config/portfolios.csv
 ```
 
 ## Usage
@@ -130,14 +130,14 @@ python -m src.io.validate_config config/settings.ini
 Validate a single CSV (or all configured per-account files when each account
 has one):
 ```bash
-python -m src.io.validate_portfolios --config config/settings.ini data/portfolios.csv
+python -m src.io.validate_portfolios --config config/settings.ini config/portfolios.csv
 
 # if every account has a dedicated portfolio CSV, omit the global file
 python -m src.io.validate_portfolios --config config/settings.ini
 ```
 Validate all portfolio files including account-specific overrides:
 ```bash
-python -m src.io.validate_portfolios --config config/settings.ini --all data/portfolios.csv
+python -m src.io.validate_portfolios --config config/settings.ini --all config/portfolios.csv
 ```
 An active IBKR session (TWS or IB Gateway) must be running so the tool can
 verify ticker symbols.
@@ -171,7 +171,7 @@ The main rebalancer prints a batch summary preview before submitting trades.
 Launch IB Gateway or Trader Workstation, then run:
 
 ```bash
-python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --dry-run --config config/settings.ini --csv config/portfolios.csv
 ```
 Displays the batch summary and exits without placing orders.
 
@@ -182,7 +182,7 @@ account in sequence. Run the same command to simulate the batch, or add
 remain serialized without `--yes` so prompts appear one at a time:
 
 ```bash
-python src/rebalance.py --dry-run --parallel-accounts --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --dry-run --parallel-accounts --config config/settings.ini --csv config/portfolios.csv
 ```
 
 Each account prints its own table. Example output:
@@ -226,19 +226,19 @@ processed.
 
 ### Interactive execution
 ```bash
-python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --config config/settings.ini --csv config/portfolios.csv
 ```
 Shows the preview and waits for `y` before trading.
 
 ### Non-interactive execution
 ```bash
-python src/rebalance.py --yes --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --yes --config config/settings.ini --csv config/portfolios.csv
 ```
 Skips the confirmation prompt and submits orders immediately.
 
 ### Read-only guard
 ```bash
-python src/rebalance.py --read-only --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --read-only --config config/settings.ini --csv config/portfolios.csv
 ```
 Forces preview-only mode even if `--yes` is used.
 
