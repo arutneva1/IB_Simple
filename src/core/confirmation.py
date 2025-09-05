@@ -234,7 +234,9 @@ async def confirm_per_account(
         logging.error("One or more orders failed to fill")
         filled = sum(1 for r in results if r.get("status") == "Filled")
         rejected = len(results) - filled
-        buy_fail, sell_fail = _totals(trades, results)
+        buy_usd_actual, sell_usd_actual = _totals(trades, results)
+        cash_after = current["CASH"] - buy_usd_actual + sell_usd_actual
+        post_leverage_actual = (net_liq - cash_after) / net_liq if net_liq else 0.0
         await _append(
             {
                 "timestamp_run": ts_dt.isoformat(),
@@ -243,10 +245,10 @@ async def confirm_per_account(
                 "submitted": len(trades),
                 "filled": filled,
                 "rejected": rejected,
-                "buy_usd": buy_fail,
-                "sell_usd": sell_fail,
+                "buy_usd": buy_usd_actual,
+                "sell_usd": sell_usd_actual,
                 "pre_leverage": pre_leverage,
-                "post_leverage": pre_leverage,
+                "post_leverage": post_leverage_actual,
                 "status": "failed",
                 "error": "One or more orders failed to fill",
             }
@@ -321,12 +323,14 @@ async def confirm_per_account(
         if any(r.get("status") != "Filled" for r in extra_results):
             logging.error("One or more orders failed to fill")
             extra_buy, extra_sell = _totals(extra_trades, extra_results)
-            buy_total = buy_usd_actual + extra_buy
-            sell_total = sell_usd_actual + extra_sell
+            buy_usd_actual += extra_buy
+            sell_usd_actual += extra_sell
+            cash_after = current["CASH"] - buy_usd_actual + sell_usd_actual
             current_trades = all_trades + list(extra_trades)
             current_results = all_results + list(extra_results)
             filled = sum(1 for r in current_results if r.get("status") == "Filled")
             rejected = len(current_results) - filled
+            post_leverage_actual = (net_liq - cash_after) / net_liq if net_liq else 0.0
             await _append(
                 {
                     "timestamp_run": ts_dt.isoformat(),
@@ -335,10 +339,10 @@ async def confirm_per_account(
                     "submitted": len(current_results),
                     "filled": filled,
                     "rejected": rejected,
-                    "buy_usd": buy_total,
-                    "sell_usd": sell_total,
+                    "buy_usd": buy_usd_actual,
+                    "sell_usd": sell_usd_actual,
                     "pre_leverage": pre_leverage,
-                    "post_leverage": pre_leverage,
+                    "post_leverage": post_leverage_actual,
                     "status": "failed",
                     "error": "One or more orders failed to fill",
                 }
