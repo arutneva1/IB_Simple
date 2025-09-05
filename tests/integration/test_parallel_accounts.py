@@ -71,6 +71,7 @@ async def stub_confirm_per_account(
     compute_drift,  # noqa: ARG002
     prioritize_by_drift,  # noqa: ARG002
     size_orders,  # noqa: ARG002
+    output_lock=None,  # noqa: ARG002
 ):
     confirm_starts.append(time.perf_counter())
     client_factory()
