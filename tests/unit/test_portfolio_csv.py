@@ -152,9 +152,7 @@ BLOK,0%,0%,0%,0%
 """
     path = tmp_path / "pf.csv"
     path.write_text(content)
-    with pytest.raises(
-        PortfolioCSVError, match=r"Duplicate columns: BADASS, SMURF"
-    ):
+    with pytest.raises(PortfolioCSVError, match=r"Duplicate columns: BADASS, SMURF"):
         asyncio.run(load_portfolios(path, host="127.0.0.1", port=4001, client_id=1))
 
 

@@ -92,7 +92,9 @@ def test_yes_skips_prompt(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
-    async def fail_prompt(*args, **kwargs) -> str:  # pragma: no cover - should not be called
+    async def fail_prompt(
+        *args, **kwargs
+    ) -> str:  # pragma: no cover - should not be called
         raise AssertionError("prompt should not be invoked when --yes is used")
 
     monkeypatch.setattr("src.core.confirmation._prompt_user", fail_prompt)
@@ -168,7 +170,9 @@ def test_yes_skips_prompt_global(
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
 
-    async def fail_prompt(*args, **kwargs) -> str:  # pragma: no cover - should not be called
+    async def fail_prompt(
+        *args, **kwargs
+    ) -> str:  # pragma: no cover - should not be called
         raise AssertionError("prompt should not be invoked when --yes is used")
 
     monkeypatch.setattr("src.core.confirmation._prompt_user", fail_prompt)
