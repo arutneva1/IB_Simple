@@ -162,6 +162,38 @@ async def confirm_per_account(
         logging.info("%s: %s %s @ %s", res.get("symbol"), res.get("status"), qty, price)
     if any(r.get("status") != "Filled" for r in results):
         logging.error("One or more orders failed to fill")
+        filled = sum(1 for r in results if r.get("status") == "Filled")
+        rejected = len(results) - filled
+        buy_usd_actual = 0.0
+        sell_usd_actual = 0.0
+        for trade, res in zip(trades, results):
+            qty_any = res.get("fill_qty")
+            if qty_any is None:
+                qty_any = res.get("filled", 0.0)
+            price_any = res.get("fill_price")
+            if price_any is None:
+                price_any = res.get("avg_fill_price", 0.0)
+            value = float(qty_any) * float(price_any)
+            if trade.action == "BUY":
+                buy_usd_actual += value
+            else:
+                sell_usd_actual += value
+        await _append(
+            {
+                "timestamp_run": ts_dt.isoformat(),
+                "account_id": account_id,
+                "planned_orders": planned_orders,
+                "submitted": len(trades),
+                "filled": filled,
+                "rejected": rejected,
+                "buy_usd": buy_usd_actual,
+                "sell_usd": sell_usd_actual,
+                "pre_leverage": pre_leverage,
+                "post_leverage": pre_leverage,
+                "status": "failed",
+                "error": "One or more orders failed to fill",
+            }
+        )
         raise IBKRError("One or more orders failed to fill")
 
     cash_after = current["CASH"]
@@ -247,6 +279,40 @@ async def confirm_per_account(
             )
         if any(r.get("status") != "Filled" for r in extra_results):
             logging.error("One or more orders failed to fill")
+            current_trades = all_trades + list(extra_trades)
+            current_results = all_results + list(extra_results)
+            filled = sum(1 for r in current_results if r.get("status") == "Filled")
+            rejected = len(current_results) - filled
+            buy_usd_actual = 0.0
+            sell_usd_actual = 0.0
+            for trade, res in zip(current_trades, current_results):
+                qty_any = res.get("fill_qty")
+                if qty_any is None:
+                    qty_any = res.get("filled", 0.0)
+                price_any = res.get("fill_price")
+                if price_any is None:
+                    price_any = res.get("avg_fill_price", 0.0)
+                value = float(qty_any) * float(price_any)
+                if trade.action == "BUY":
+                    buy_usd_actual += value
+                else:
+                    sell_usd_actual += value
+            await _append(
+                {
+                    "timestamp_run": ts_dt.isoformat(),
+                    "account_id": account_id,
+                    "planned_orders": len(current_trades),
+                    "submitted": len(current_results),
+                    "filled": filled,
+                    "rejected": rejected,
+                    "buy_usd": buy_usd_actual,
+                    "sell_usd": sell_usd_actual,
+                    "pre_leverage": pre_leverage,
+                    "post_leverage": pre_leverage,
+                    "status": "failed",
+                    "error": "One or more orders failed to fill",
+                }
+            )
             raise IBKRError("One or more orders failed to fill")
         results_by_symbol = {r.get("symbol"): r for r in extra_results}
         for trade in extra_trades:
