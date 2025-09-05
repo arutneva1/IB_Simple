@@ -146,6 +146,18 @@ BLOK,0%,0%,0%
         asyncio.run(load_portfolios(path, host="127.0.0.1", port=4001, client_id=1))
 
 
+def test_duplicate_columns_once(tmp_path: Path) -> None:
+    content = """ETF,SMURF,BADASS,SMURF,BADASS
+BLOK,0%,0%,0%,0%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+    with pytest.raises(
+        PortfolioCSVError, match=r"Duplicate columns: BADASS, SMURF"
+    ):
+        asyncio.run(load_portfolios(path, host="127.0.0.1", port=4001, client_id=1))
+
+
 @pytest.mark.parametrize(
     "value,expected",
     [
