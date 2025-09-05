@@ -145,9 +145,7 @@ class IBKRClient:
                         cash_usd = float(value.value)
                     elif value.currency == "CAD":
                         cad_cash = float(value.value)
-                elif (
-                    value.tag == "ExchangeRate" and value.currency == "CAD"
-                ):
+                elif value.tag == "ExchangeRate" and value.currency == "CAD":
                     cad_to_usd = float(value.value)
                 elif value.tag == "NetLiquidation" and value.currency == "USD":
                     net_liq_usd = float(value.value)
