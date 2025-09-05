@@ -63,20 +63,26 @@ python src/rebalance.py --dry-run --confirm-mode global --config config/settings
 Orders sent to Interactive Brokers are tagged with the respective account code
 so each account's trades remain isolated.
 
-### Account-specific overrides (experimental)
+### Account-specific overrides
 
 `settings.ini` may contain optional `[account:<ID>]` blocks to override
-settings for a single account. The configuration loader parses these sections,
-but the application currently ignores them, so they behave like placeholders for
-future features.
+settings for a single account.  Values inside these blocks take precedence over
+the global `[rebalance]` settings for that account only; other accounts continue
+to use the global defaults.  Keys that are not specified fall back to the
+global values.
 
 ```ini
+[rebalance]
+allow_fractional = false
+min_order_usd = 50
+
 [account:DU111111]
-allow_fractional = true       ; overrides [rebalance] allow_fractional
+allow_fractional = true       ; only DU111111 allows fractional shares
+min_order_usd = 10            ; lower minimum order just for DU111111
 ```
 
-Any keys omitted in the block fall back to the global values defined elsewhere
-in the file (for example, `[rebalance]` or `[accounts]`).
+In this example, account `DU111111` can submit fractional orders as small as
+$10 while all other accounts require whole-share orders of at least $50.
 
 ## Usage
 

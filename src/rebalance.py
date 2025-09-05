@@ -20,7 +20,13 @@ from src.core.errors import PlanningError
 from src.core.planner import Plan, _fetch_price, plan_account
 from src.core.preview import render as render_preview
 from src.core.sizing import size_orders
-from src.io import AppConfig, ConfigError, ConfirmMode, load_config
+from src.io import (
+    AppConfig,
+    ConfigError,
+    ConfirmMode,
+    load_config,
+    merge_account_overrides,
+)
 from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
 from src.io.reporting import (
     append_run_summary,
@@ -59,10 +65,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     for account_id in accounts.ids:
         plan: Plan | None = None
         try:
+            cfg_acct = merge_account_overrides(cfg, account_id)
             plan = await plan_account(
                 account_id,
                 portfolios,
-                cfg,
+                cfg_acct,
                 ts_dt,
                 client_factory=IBKRClient,
                 compute_drift=compute_drift,
@@ -76,7 +83,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 await confirm_per_account(
                     plan,
                     args,
-                    cfg,
+                    cfg_acct,
                     ts_dt,
                     client_factory=IBKRClient,
                     submit_batch=submit_batch,
