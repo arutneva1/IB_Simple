@@ -163,7 +163,7 @@ Displays the batch summary and exits without placing orders.
 When `[accounts]` lists more than one ID, the rebalancer previews each
 account in sequence. Run the same command to simulate the batch, or add
 `--parallel-accounts` to process them concurrently. Per-account confirmations
-remain serialized so prompts appear one at a time:
+remain serialized without `--yes` so prompts appear one at a time:
 
 ```bash
 python src/rebalance.py --dry-run --parallel-accounts --config config/settings.ini --csv data/portfolios.csv
