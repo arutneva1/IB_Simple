@@ -21,8 +21,9 @@ pytest -q -m "not integration"
 ### Customize sample files
 
 The repository includes example `config/settings.ini` and `config/portfolios.csv`.
-Make copies of these files outside version control and edit them with your own
-IBKR host and target weights. Account IDs are listed under the `[accounts]`
+Provide your own portfolio CSV next to `settings.ini` when using the tool. Make
+copies of these files outside version control and edit them with your own IBKR
+host and target weights. Account IDs are listed under the `[accounts]`
 section:
 
 ```bash
