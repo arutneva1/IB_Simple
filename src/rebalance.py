@@ -92,7 +92,9 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 render_preview=render_preview,
                 write_pre_trade_report=write_pre_trade_report,
             )
-            if confirm_mode is ConfirmMode.PER_ACCOUNT:
+            if confirm_mode is ConfirmMode.PER_ACCOUNT and not (
+                getattr(accounts, "parallel", False) and not args.yes
+            ):
                 await confirm_per_account(
                     plan,
                     args,
@@ -158,6 +160,51 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             if plan is not None:
                 plans.append(plan)
             await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
+
+    if (
+        getattr(accounts, "parallel", False)
+        and confirm_mode is ConfirmMode.PER_ACCOUNT
+        and not args.yes
+    ):
+        for plan in plans:
+            account_id = plan["account_id"]
+            try:
+                cfg_acct = merge_account_overrides(cfg, account_id)
+                await confirm_per_account(
+                    plan,
+                    args,
+                    cfg_acct,
+                    ts_dt,
+                    client_factory=IBKRClient,
+                    submit_batch=submit_batch,
+                    append_run_summary=capture_summary,
+                    write_post_trade_report=write_post_trade_report,
+                    compute_drift=compute_drift,
+                    prioritize_by_drift=prioritize_by_drift,
+                    size_orders=size_orders,
+                )
+            except (ConfigError, IBKRError, PlanningError) as exc:
+                logging.error("Error processing account %s: %s", account_id, exc)
+                print(f"[red]{exc}[/red]")
+                failures.append((account_id, str(exc)))
+                capture_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": account_id,
+                        "planned_orders": plan["planned_orders"],
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": plan["buy_usd"],
+                        "sell_usd": plan["sell_usd"],
+                        "pre_leverage": plan["pre_leverage"],
+                        "post_leverage": plan["pre_leverage"],
+                        "status": "failed",
+                        "error": str(exc),
+                    },
+                )
 
     if confirm_mode is ConfirmMode.GLOBAL:
         plans.sort(key=lambda p: str(p["account_id"]))

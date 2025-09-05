@@ -10,6 +10,8 @@ import src.rebalance as rebalance
 
 pytestmark = pytest.mark.integration
 
+confirm_starts: list[float] = []
+
 
 class DummyClient:
     instances: list["DummyClient"] = []
@@ -70,6 +72,7 @@ async def stub_confirm_per_account(
     prioritize_by_drift,  # noqa: ARG002
     size_orders,  # noqa: ARG002
 ):
+    confirm_starts.append(time.perf_counter())
     client_factory()
     await asyncio.sleep(0.1)
     append_run_summary(
@@ -122,7 +125,8 @@ def test_parallel_accounts(monkeypatch, tmp_path):
     start = time.perf_counter()
     asyncio.run(rebalance._run(args))
     duration = time.perf_counter() - start
-    assert duration < 0.3
+    assert duration < 0.4
+    assert confirm_starts[1] - confirm_starts[0] >= 0.1
 
     assert len({id(c) for c in DummyClient.instances}) == len(DummyClient.instances)
 
