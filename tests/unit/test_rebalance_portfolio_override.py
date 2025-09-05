@@ -52,6 +52,7 @@ def test_rebalance_uses_portfolio_overrides(
     def fake_load_config(path):  # noqa: ARG001
         cfg_path = tmp_path / "settings.ini"
         cfg_path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
+        (tmp_path / "foo.csv").write_text("")
         cfg = real_load_config(cfg_path)
         cfg.accounts.pacing_sec = 0.0
         cfg.accounts.confirm_mode = ConfirmMode.GLOBAL

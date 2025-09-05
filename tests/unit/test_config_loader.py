@@ -82,6 +82,7 @@ def config_file(tmp_path: Path) -> Path:
 def config_file_with_portfolio(tmp_path: Path) -> Path:
     path = tmp_path / "settings.ini"
     path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
+    (tmp_path / "foo.csv").write_text("")
     return path
 
 
@@ -153,6 +154,18 @@ def test_portfolio_paths_resolve_from_config_dir(
     cfg = load_config(cfg_path)
 
     assert cfg.portfolio_paths == {"ACC1": (cfg_dir / portfolio_rel).resolve()}
+
+
+def test_portfolio_path_missing(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "settings.ini"
+    cfg_path.write_text(
+        VALID_CONFIG + "\n[portfolio: acc1]\npath = missing.csv\n"
+    )
+    with pytest.raises(ConfigError) as exc:
+        load_config(cfg_path)
+    err = str(exc.value)
+    assert "ACC1" in err
+    assert "missing.csv" in err
 
 
 def test_missing_accounts_section(tmp_path: Path) -> None:
@@ -300,6 +313,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)
+    (path.parent / "foo.csv").write_text("")
     cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
     assert cfg.portfolio_paths["ACC1"] == (path.parent / "foo.csv").resolve()
@@ -311,6 +325,7 @@ def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
     content = VALID_CONFIG_WITH_PORTFOLIO + "\n[Portfolio: acc3 ]\npath = foo.csv\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
+    (path.parent / "foo.csv").write_text("")
     with pytest.raises(ConfigError) as exc:
         load_config(path)
     assert "ACC3" in str(exc.value)

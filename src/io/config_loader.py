@@ -309,9 +309,14 @@ def load_config(path: Path) -> AppConfig:
             acc_id = section.split(":", 1)[1].strip().upper()
             try:
                 raw_path = Path(cp.get(section, "path"))
-                portfolio_paths[acc_id] = (base_dir / raw_path).resolve()
+                resolved = (base_dir / raw_path).resolve()
             except NoOptionError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
+            if not resolved.exists():
+                raise ConfigError(
+                    f"[portfolio:{acc_id}] path does not exist: {resolved}"
+                )
+            portfolio_paths[acc_id] = resolved
 
     unknown_accounts = sorted(set(portfolio_paths) - set(accounts.ids))
     if unknown_accounts:
