@@ -6,6 +6,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, cast
+from types import SimpleNamespace
 
 from rich import print
 
@@ -491,6 +492,8 @@ async def confirm_global(
 ) -> list[tuple[str, str]]:
     """Handle global confirmation workflow for multiple accounts."""
 
+    args = SimpleNamespace(**vars(args))
+
     for plan in plans:
         print(plan["table"])
 
@@ -580,6 +583,7 @@ async def confirm_global(
                     },
                 )
             return failures
+        args.yes = True
 
     use_parallel = parallel_accounts and args.yes and pacing_sec == 0
     output_lock: asyncio.Lock | None = None
