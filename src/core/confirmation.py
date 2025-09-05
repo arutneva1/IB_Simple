@@ -10,7 +10,7 @@ from src.broker.errors import IBKRError
 from src.broker.ibkr_client import IBKRClient
 from src.core.errors import PlanningError
 from src.core.planner import Plan
-from src.io import AppConfig, ConfigError
+from src.io import AppConfig, ConfigError, merge_account_overrides
 
 
 async def confirm_per_account(
@@ -347,6 +347,7 @@ async def confirm_global(
         print(plan["table"])
 
     failures: list[tuple[str, str]] = []
+    cfg_by_account: dict[str, AppConfig] = {}
 
     if args.dry_run:
         print("[green]Dry run complete (no orders submitted).[/green]")
@@ -436,6 +437,10 @@ async def confirm_global(
     # Phase 1: submit sells
     for plan in plans:
         account_id = plan["account_id"]
+        cfg_acc = cfg_by_account.get(account_id)
+        if cfg_acc is None:
+            cfg_acc = merge_account_overrides(cfg, account_id)
+            cfg_by_account[account_id] = cfg_acc
         trades = plan["trades"]
         sell_trades = [t for t in trades if t.action == "SELL"]
         try:
@@ -443,22 +448,24 @@ async def confirm_global(
             logging.info("Submitting sell orders for %s", account_id)
             client = client_factory()
             if hasattr(client, "__aenter__"):
-                setattr(client, "_host", cfg.ibkr.host)
-                setattr(client, "_port", cfg.ibkr.port)
-                setattr(client, "_client_id", cfg.ibkr.client_id)
+                setattr(client, "_host", cfg_acc.ibkr.host)
+                setattr(client, "_port", cfg_acc.ibkr.port)
+                setattr(client, "_client_id", cfg_acc.ibkr.client_id)
                 async with client:
                     plan["sell_results"] = await submit_batch(
-                        client, sell_trades, cfg, account_id
+                        client, sell_trades, cfg_acc, account_id
                     )
             else:
-                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.connect(
+                    cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
+                )
                 try:
                     plan["sell_results"] = await submit_batch(
-                        client, sell_trades, cfg, account_id
+                        client, sell_trades, cfg_acc, account_id
                     )
                 finally:
                     await client.disconnect(
-                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
                     )
             sell_results = cast(list[dict[str, Any]], plan.get("sell_results", []))
             for res in sell_results:
@@ -507,6 +514,10 @@ async def confirm_global(
         if cast(bool, plan.get("failed")):
             continue
         account_id = plan["account_id"]
+        cfg_acc = cfg_by_account.get(account_id)
+        if cfg_acc is None:
+            cfg_acc = merge_account_overrides(cfg, account_id)
+            cfg_by_account[account_id] = cfg_acc
         trades = plan["trades"]
         buy_trades = [t for t in trades if t.action == "BUY"]
         try:
@@ -514,22 +525,24 @@ async def confirm_global(
             logging.info("Submitting buy orders for %s", account_id)
             client = client_factory()
             if hasattr(client, "__aenter__"):
-                setattr(client, "_host", cfg.ibkr.host)
-                setattr(client, "_port", cfg.ibkr.port)
-                setattr(client, "_client_id", cfg.ibkr.client_id)
+                setattr(client, "_host", cfg_acc.ibkr.host)
+                setattr(client, "_port", cfg_acc.ibkr.port)
+                setattr(client, "_client_id", cfg_acc.ibkr.client_id)
                 async with client:
                     plan["buy_results"] = await submit_batch(
-                        client, buy_trades, cfg, account_id
+                        client, buy_trades, cfg_acc, account_id
                     )
             else:
-                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.connect(
+                    cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
+                )
                 try:
                     plan["buy_results"] = await submit_batch(
-                        client, buy_trades, cfg, account_id
+                        client, buy_trades, cfg_acc, account_id
                     )
                 finally:
                     await client.disconnect(
-                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
                     )
             buy_results = cast(list[dict[str, Any]], plan.get("buy_results", []))
             for res in buy_results:
@@ -579,6 +592,10 @@ async def confirm_global(
         if cast(bool, plan.get("failed")):
             continue
         account_id = plan["account_id"]
+        cfg_acc = cfg_by_account.get(account_id)
+        if cfg_acc is None:
+            cfg_acc = merge_account_overrides(cfg, account_id)
+            cfg_by_account[account_id] = cfg_acc
         trades = plan["trades"]
         prices = plan["prices"]
         current = plan["current"]
@@ -643,24 +660,26 @@ async def confirm_global(
 
         all_trades = list(trades)
         all_results = list(results)
-        max_passes = getattr(cfg.rebalance, "max_passes", 1)
+        max_passes = getattr(cfg_acc.rebalance, "max_passes", 1)
         passes = 1
         targets = plan["targets"]
         while passes < max_passes:
-            buffer_type = getattr(cfg.rebalance, "cash_buffer_type", "pct")
+            buffer_type = getattr(cfg_acc.rebalance, "cash_buffer_type", "pct")
             if buffer_type == "pct":
-                reserve = net_liq * getattr(cfg.rebalance, "cash_buffer_pct", 0.0)
+                reserve = net_liq * getattr(
+                    cfg_acc.rebalance, "cash_buffer_pct", 0.0
+                )
             else:
-                reserve = getattr(cfg.rebalance, "cash_buffer_abs", 0.0)
+                reserve = getattr(cfg_acc.rebalance, "cash_buffer_abs", 0.0)
             available_cash = cash_after - reserve
-            if available_cash < cfg.rebalance.min_order_usd:
+            if available_cash < cfg_acc.rebalance.min_order_usd:
                 break
             iter_drifts = compute_drift(
-                account_id, positions, targets, prices, net_liq, cfg
+                account_id, positions, targets, prices, net_liq, cfg_acc
             )
-            iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
+            iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg_acc)
             extra_trades, _, _ = size_orders(
-                account_id, iter_prioritized, prices, cash_after, net_liq, cfg
+                account_id, iter_prioritized, prices, cash_after, net_liq, cfg_acc
             )
             if not extra_trades:
                 break
@@ -674,22 +693,24 @@ async def confirm_global(
             )
             client = client_factory()
             if hasattr(client, "__aenter__"):
-                setattr(client, "_host", cfg.ibkr.host)
-                setattr(client, "_port", cfg.ibkr.port)
-                setattr(client, "_client_id", cfg.ibkr.client_id)
+                setattr(client, "_host", cfg_acc.ibkr.host)
+                setattr(client, "_port", cfg_acc.ibkr.port)
+                setattr(client, "_client_id", cfg_acc.ibkr.client_id)
                 async with client:
                     extra_results = await submit_batch(
-                        client, extra_trades, cfg, account_id
+                        client, extra_trades, cfg_acc, account_id
                     )
             else:
-                await client.connect(cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id)
+                await client.connect(
+                    cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
+                )
                 try:
                     extra_results = await submit_batch(
-                        client, extra_trades, cfg, account_id
+                        client, extra_trades, cfg_acc, account_id
                     )
                 finally:
                     await client.disconnect(
-                        cfg.ibkr.host, cfg.ibkr.port, cfg.ibkr.client_id
+                        cfg_acc.ibkr.host, cfg_acc.ibkr.port, cfg_acc.ibkr.client_id
                     )
             for res in extra_results:
                 qty = res.get("fill_qty", res.get("filled", 0))
