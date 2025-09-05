@@ -666,9 +666,7 @@ async def confirm_global(
         while passes < max_passes:
             buffer_type = getattr(cfg_acc.rebalance, "cash_buffer_type", "pct")
             if buffer_type == "pct":
-                reserve = net_liq * getattr(
-                    cfg_acc.rebalance, "cash_buffer_pct", 0.0
-                )
+                reserve = net_liq * getattr(cfg_acc.rebalance, "cash_buffer_pct", 0.0)
             else:
                 reserve = getattr(cfg_acc.rebalance, "cash_buffer_abs", 0.0)
             available_cash = cash_after - reserve
