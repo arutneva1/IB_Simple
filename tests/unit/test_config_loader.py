@@ -128,7 +128,31 @@ def test_load_config_with_portfolio_section(
     config_file_with_portfolio: Path,
 ) -> None:
     cfg = load_config(config_file_with_portfolio)
-    assert cfg.portfolio_paths == {"ACC1": Path("foo.csv")}
+    expected = {"ACC1": (config_file_with_portfolio.parent / "foo.csv").resolve()}
+    assert cfg.portfolio_paths == expected
+
+
+def test_portfolio_paths_resolve_from_config_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    portfolio_rel = Path("data/foo.csv")
+    (cfg_dir / portfolio_rel).parent.mkdir(parents=True)
+    (cfg_dir / portfolio_rel).write_text("")
+    cfg_path = cfg_dir / "settings.ini"
+    cfg_content = (
+        VALID_CONFIG + f"\n[portfolio: acc1]\npath = {portfolio_rel.as_posix()}\n"
+    )
+    cfg_path.write_text(cfg_content)
+
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+
+    cfg = load_config(cfg_path)
+
+    assert cfg.portfolio_paths == {"ACC1": (cfg_dir / portfolio_rel).resolve()}
 
 
 def test_missing_accounts_section(tmp_path: Path) -> None:
@@ -278,7 +302,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
     path.write_text(content)
     cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
-    assert cfg.portfolio_paths["ACC1"] == Path("foo.csv")
+    assert cfg.portfolio_paths["ACC1"] == (path.parent / "foo.csv").resolve()
     cfg_acc = merge_account_overrides(cfg, "acc2")
     assert cfg_acc.rebalance.min_order_usd == 100
 

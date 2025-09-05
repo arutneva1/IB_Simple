@@ -223,6 +223,8 @@ def load_config(path: Path) -> AppConfig:
     if not cp.read(path):
         raise ConfigError(f"Cannot read config: {path}")
 
+    base_dir = path.parent
+
     # [ibkr]
     try:
         host = cp.get("ibkr", "host")
@@ -306,7 +308,8 @@ def load_config(path: Path) -> AppConfig:
         if section.lower().startswith("portfolio:"):
             acc_id = section.split(":", 1)[1].strip().upper()
             try:
-                portfolio_paths[acc_id] = Path(cp.get(section, "path"))
+                raw_path = Path(cp.get(section, "path"))
+                portfolio_paths[acc_id] = (base_dir / raw_path).resolve()
             except NoOptionError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
 
