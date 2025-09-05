@@ -68,7 +68,7 @@ log_level = INFO
 """
 
 
-VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[portfolio: acc1 ]\npath = foo.csv\n"
+VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[Portfolio: acc1 ]\npath = foo.csv\n"
 
 
 @pytest.fixture
@@ -272,7 +272,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
         "ids = acc1 , Acc2 ",
     )
     content += (
-        "\n[portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
+        "\n[Portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
     )
     path = tmp_path / "settings.ini"
     path.write_text(content)
@@ -284,7 +284,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
 
 
 def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
-    content = VALID_CONFIG_WITH_PORTFOLIO + "\n[portfolio: acc3 ]\npath = foo.csv\n"
+    content = VALID_CONFIG_WITH_PORTFOLIO + "\n[Portfolio: acc3 ]\npath = foo.csv\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError) as exc:

@@ -303,8 +303,8 @@ def load_config(path: Path) -> AppConfig:
 
     portfolio_paths: Dict[str, Path] = {}
     for section in cp.sections():
-        if section.startswith("portfolio:"):
-            acc_id = section.split("portfolio:", 1)[1].strip().upper()
+        if section.lower().startswith("portfolio:"):
+            acc_id = section.split(":", 1)[1].strip().upper()
             try:
                 portfolio_paths[acc_id] = Path(cp.get(section, "path"))
             except NoOptionError as exc:
