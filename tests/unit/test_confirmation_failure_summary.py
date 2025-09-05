@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
+from src.broker.errors import IBKRError  # noqa: E402
 from src.core import confirmation  # noqa: E402
 from src.core.confirmation import confirm_global  # noqa: E402
 from src.core.sizing import SizedTrade  # noqa: E402
@@ -22,7 +23,6 @@ from src.io import (  # noqa: E402
     Rebalance,
 )
 from src.io.reporting import append_run_summary  # noqa: E402
-from src.broker.errors import IBKRError  # noqa: E402
 
 
 def test_failing_confirmation_writes_single_summary(tmp_path, monkeypatch):
@@ -112,7 +112,9 @@ def test_failing_confirmation_writes_single_summary(tmp_path, monkeypatch):
         )
         raise IBKRError("boom")
 
-    monkeypatch.setattr(confirmation, "confirm_per_account", failing_confirm_per_account)
+    monkeypatch.setattr(
+        confirmation, "confirm_per_account", failing_confirm_per_account
+    )
 
     failures = asyncio.run(
         confirm_global(
