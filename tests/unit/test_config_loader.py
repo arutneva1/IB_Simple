@@ -68,10 +68,20 @@ log_level = INFO
 """
 
 
+VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[portfolio: acc1 ]\npath = foo.csv\n"
+
+
 @pytest.fixture
 def config_file(tmp_path: Path) -> Path:
     path = tmp_path / "settings.ini"
     path.write_text(VALID_CONFIG)
+    return path
+
+
+@pytest.fixture
+def config_file_with_portfolio(tmp_path: Path) -> Path:
+    path = tmp_path / "settings.ini"
+    path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
     return path
 
 
@@ -112,6 +122,13 @@ def test_load_valid_config(config_file: Path) -> None:
         ),
     )
     assert cfg == expected
+
+
+def test_load_config_with_portfolio_section(
+    config_file_with_portfolio: Path,
+) -> None:
+    cfg = load_config(config_file_with_portfolio)
+    assert cfg.portfolio_paths == {"ACC1": Path("foo.csv")}
 
 
 def test_missing_accounts_section(tmp_path: Path) -> None:
@@ -267,7 +284,9 @@ def test_account_id_normalization(tmp_path: Path) -> None:
 
 
 def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
-    content = VALID_CONFIG + "\n[portfolio: acc3 ]\npath = foo.csv\n"
+    content = (
+        VALID_CONFIG_WITH_PORTFOLIO + "\n[portfolio: acc3 ]\npath = foo.csv\n"
+    )
     path = tmp_path / "settings.ini"
     path.write_text(content)
     with pytest.raises(ConfigError) as exc:
