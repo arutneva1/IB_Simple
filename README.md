@@ -62,7 +62,7 @@ be enabled at runtime via `--parallel-accounts`. When running with
 plans are computed concurrently but confirmations are serialized per account to
 avoid overlapping prompts.
 
-Paths in `[accounts]` and `[portfolio:<ID>]` sections are resolved relative to
+Paths in `[accounts]` and `[account:<ID>]` sections are resolved relative to
 the directory containing `settings.ini`.
 
 Example forcing a global prompt:
@@ -100,19 +100,18 @@ $10 while all other accounts require whole-share orders of at least $50.
 ### Per-account portfolio files
 
 By default all accounts share the CSV passed via `--csv`. Specify a separate
-portfolio for an account using `[portfolio:<ID>]` blocks. Section names are
-case-insensitive, so `[Portfolio:<ID>]` is also accepted. Paths here are
-resolved relative to the directory containing `settings.ini`:
+portfolio for an account by adding `path` inside the `[account:<ID>]` block.
+Paths are resolved relative to the directory containing `settings.ini`:
 
 ```ini
-[portfolio:DU111111]
+[account:DU111111]
 path = portfolios_DU111111.csv  # relative to settings.ini
 
-[portfolio:DU222222]
+[account:DU222222]
 path = portfolios_DU222222.csv
 ```
 
-Accounts without an override use the global CSV. `validate_portfolios --all`
+Accounts without a `path` entry use the global CSV. `validate_portfolios --all`
 needs a valid global CSV unless every account has an override. Example run
 mixing global and per-account files:
 
