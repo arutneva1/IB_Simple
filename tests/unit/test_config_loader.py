@@ -69,9 +69,7 @@ log_level = INFO
 
 
 # Configuration variant with a per-account portfolio path override.
-VALID_CONFIG_WITH_ACCOUNT_PATH = (
-    VALID_CONFIG + "\n[account: acc1]\npath = foo.csv\n"
-)
+VALID_CONFIG_WITH_ACCOUNT_PATH = VALID_CONFIG + "\n[account: acc1]\npath = foo.csv\n"
 
 
 @pytest.fixture
@@ -368,9 +366,7 @@ def test_account_id_normalization(tmp_path: Path) -> None:
 
 
 def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
-    content = (
-        VALID_CONFIG_WITH_ACCOUNT_PATH + "\n[account: acc3 ]\npath = foo.csv\n"
-    )
+    content = VALID_CONFIG_WITH_ACCOUNT_PATH + "\n[account: acc3 ]\npath = foo.csv\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
     (path.parent / "foo.csv").write_text("")
