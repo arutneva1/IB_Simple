@@ -28,8 +28,8 @@ class DummyClient:
         pass
 
 
-async def fake_load_portfolios(csv_path, host, port, client_id):  # noqa: ARG001
-    return {}
+async def fake_load_portfolios(path_map, host, port, client_id):  # noqa: ARG001
+    return {aid: {} for aid in path_map}
 
 
 async def stub_plan_account(

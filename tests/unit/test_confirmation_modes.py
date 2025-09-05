@@ -22,8 +22,8 @@ class DummyClient:
         return {"positions": [], "cash": 0.0, "net_liq": 0.0}
 
 
-async def fake_load_portfolios(path, *, host, port, client_id):  # noqa: ARG001
-    return {}
+async def fake_load_portfolios(paths, *, host, port, client_id):  # noqa: ARG001
+    return {aid: {} for aid in paths}
 
 
 def _patch_common(monkeypatch: pytest.MonkeyPatch, tmp_path):

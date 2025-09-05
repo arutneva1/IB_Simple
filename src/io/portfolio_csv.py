@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import csv
 from pathlib import Path
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Mapping
 
 from ib_async import IB
 from ib_async.contract import Stock
@@ -99,8 +99,16 @@ async def load_portfolios(
         percentage strings.
     """
 
+    portfolios, _ = _parse_csv(path, ["ETF", "SMURF", "BADASS", "GLTR"])
+    await validate_symbols(portfolios.keys(), host=host, port=port, client_id=client_id)
+    _validate_totals(portfolios)
+    return portfolios
+
+
+def _parse_csv(
+    path: Path, expected: list[str] | None = None
+) -> tuple[dict[str, dict[str, float]], list[str]]:
     with path.open(newline="") as fh:
-        # Allow top-of-file comments or blank lines in sample CSVs.
         filtered = (
             line for line in fh if line.strip() and not line.lstrip().startswith("#")
         )
@@ -108,20 +116,20 @@ async def load_portfolios(
         fieldnames = reader.fieldnames
         if fieldnames is None:
             raise PortfolioCSVError("Missing header")
-        expected = ["ETF", "SMURF", "BADASS", "GLTR"]
-        if len(fieldnames) != len(set(fieldnames)):
-            dupes = [n for n in fieldnames if fieldnames.count(n) > 1]
+        field_list = list(fieldnames)
+        if len(field_list) != len(set(field_list)):
+            dupes = [n for n in field_list if field_list.count(n) > 1]
             raise PortfolioCSVError(f"Duplicate columns: {', '.join(dupes)}")
-        if set(fieldnames) != set(expected):
-            extra = set(fieldnames) - set(expected)
-            missing = set(expected) - set(fieldnames)
+        exp = expected or field_list
+        if set(field_list) != set(exp):
+            extra = set(field_list) - set(exp)
+            missing = set(exp) - set(field_list)
             parts = []
             if extra:
                 parts.append(f"Unknown columns: {', '.join(sorted(extra))}")
             if missing:
                 parts.append(f"Missing columns: {', '.join(sorted(missing))}")
             raise PortfolioCSVError("; ".join(parts))
-
         portfolios: Dict[str, Dict[str, float]] = {}
         for row in reader:
             symbol = (row.get("ETF") or "").strip()
@@ -130,21 +138,22 @@ async def load_portfolios(
             if symbol in portfolios:
                 raise PortfolioCSVError(f"Duplicate ETF symbol: {symbol}")
             weights: Dict[str, float] = {}
-            for model in ("SMURF", "BADASS", "GLTR"):
+            for model in field_list[1:]:
                 raw = row.get(model) or ""
                 weight = _parse_percent(raw, symbol=symbol, model=model)
                 weights[model.lower()] = weight
             portfolios[symbol] = weights
+    return portfolios, field_list
 
-    await validate_symbols(portfolios.keys(), host=host, port=port, client_id=client_id)
 
-    totals = {"smurf": 0.0, "badass": 0.0, "gltr": 0.0}
+def _validate_totals(portfolios: Dict[str, Dict[str, float]]) -> None:
+    models = next(iter(portfolios.values())).keys() if portfolios else []
+    totals = {m: 0.0 for m in models}
     for symbol, weights in portfolios.items():
         if symbol == "CASH":
             continue
         for model, weight in weights.items():
             totals[model] += weight
-
     cash_weights = portfolios.get("CASH")
     for model, total in totals.items():
         if cash_weights is None:
@@ -160,4 +169,23 @@ async def load_portfolios(
                     f"{model.upper()}: assets {total:.2f}% + CASH {cash:.2f}% = "
                     f"{combined:.2f}%, expected 100%"
                 )
-    return portfolios
+
+
+async def load_portfolios_map(
+    paths: Mapping[str, Path], *, host: str, port: int, client_id: int
+) -> dict[str, dict[str, dict[str, float]]]:
+    expected: list[str] | None = ["ETF", "SMURF", "BADASS", "GLTR"]
+    cache: Dict[Path, dict[str, dict[str, float]]] = {}
+    result: Dict[str, dict[str, dict[str, float]]] = {}
+    symbols: set[str] = set()
+    for account, p in paths.items():
+        path = Path(p)
+        data = cache.get(path)
+        if data is None:
+            portfolios, expected = _parse_csv(path, expected)
+            _validate_totals(portfolios)
+            cache[path] = portfolios
+            symbols.update(portfolios.keys())
+        result[account] = cache[path]
+    await validate_symbols(symbols, host=host, port=port, client_id=client_id)
+    return result

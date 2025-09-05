@@ -20,7 +20,12 @@ from .config_loader import (
     load_config,
     merge_account_overrides,
 )
-from .portfolio_csv import PortfolioCSVError, load_portfolios, validate_symbols
+from .portfolio_csv import (
+    PortfolioCSVError,
+    load_portfolios,
+    load_portfolios_map,
+    validate_symbols,
+)
 from .reporting import (
     append_run_summary,
     setup_logging,
@@ -44,6 +49,7 @@ __all__ = [
     "merge_account_overrides",
     "PortfolioCSVError",
     "load_portfolios",
+    "load_portfolios_map",
     "validate_symbols",
     "setup_logging",
     "write_pre_trade_report",

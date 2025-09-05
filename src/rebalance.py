@@ -27,7 +27,8 @@ from src.io import (
     load_config,
     merge_account_overrides,
 )
-from src.io.portfolio_csv import PortfolioCSVError, load_portfolios
+from src.io.portfolio_csv import PortfolioCSVError
+from src.io.portfolio_csv import load_portfolios_map as load_portfolios
 from src.io.reporting import (
     append_run_summary,
     setup_logging,
@@ -51,10 +52,15 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
     logging.info("Loaded configuration from %s", cfg_path)
 
-    print(f"[blue]Loading portfolios from {csv_path}[/blue]")
-    logging.info("Loading portfolios from %s", csv_path)
-    portfolios = await load_portfolios(
-        csv_path,
+    portfolio_paths = getattr(cfg, "portfolio_paths", {})
+    path_map = {
+        acct: Path(portfolio_paths.get(acct, csv_path)) for acct in cfg.accounts.ids
+    }
+    print("[blue]Loading portfolios[/blue]")
+    for acct, p in path_map.items():
+        logging.info("Portfolio for %s loaded from %s", acct, p)
+    portfolios_by_account = await load_portfolios(
+        path_map,
         host=cfg.ibkr.host,
         port=cfg.ibkr.port,
         client_id=cfg.ibkr.client_id,
@@ -72,6 +78,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         plan: Plan | None = None
         try:
             cfg_acct = merge_account_overrides(cfg, account_id)
+            portfolios = portfolios_by_account[account_id]
             plan = await plan_account(
                 account_id,
                 portfolios,
@@ -153,7 +160,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
 
     if confirm_mode is ConfirmMode.GLOBAL:
-        plans.sort(key=lambda p: p["account_id"])
+        plans.sort(key=lambda p: str(p["account_id"]))
         failures.extend(
             await confirm_global(
                 plans,
@@ -171,7 +178,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             )
         )
 
-    summary_rows.sort(key=lambda r: r.get("account_id", ""))
+    summary_rows.sort(key=lambda r: str(r.get("account_id", "")))
     for row in summary_rows:
         append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
 
