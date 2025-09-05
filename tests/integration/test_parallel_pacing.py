@@ -92,7 +92,7 @@ async def stub_confirm_per_account(
     )
 
 
-def test_parallel_pacing(monkeypatch, tmp_path):
+def test_parallel_pacing(monkeypatch, tmp_path, portfolios_csv_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
     monkeypatch.setattr(rebalance, "plan_account", stub_plan_account)
     monkeypatch.setattr(rebalance, "confirm_per_account", stub_confirm_per_account)
@@ -112,7 +112,7 @@ def test_parallel_pacing(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,

@@ -49,7 +49,7 @@ async def fake_validate_symbols(symbols, host, port, client_id):  # noqa: ARG001
     return None
 
 
-def test_run_summary(tmp_path, monkeypatch):
+def test_run_summary(tmp_path, monkeypatch, portfolios_csv_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyIBKRClient)
     monkeypatch.setattr(rebalance, "_fetch_price", fake_fetch_price)
     monkeypatch.setattr(portfolio_csv, "validate_symbols", fake_validate_symbols)
@@ -67,7 +67,7 @@ def test_run_summary(tmp_path, monkeypatch):
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,

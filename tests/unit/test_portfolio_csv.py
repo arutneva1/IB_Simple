@@ -57,10 +57,9 @@ def fake_ib(monkeypatch):
 
 
 @pytest.fixture()
-def portfolios_csv(tmp_path: Path) -> Path:
-    src = Path(__file__).resolve().parents[2] / "data" / "portfolios.csv"
+def portfolios_csv(tmp_path: Path, portfolios_csv_path: Path) -> Path:
     dst = tmp_path / "portfolios.csv"
-    dst.write_text(src.read_text())
+    dst.write_text(portfolios_csv_path.read_text())
     return dst
 
 

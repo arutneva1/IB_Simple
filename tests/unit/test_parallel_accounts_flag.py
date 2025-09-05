@@ -13,7 +13,7 @@ from src.io import AppConfig
 
 
 def test_parallel_accounts_flag_overrides_config(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, portfolios_csv_path: Path
 ) -> None:
     plan_starts: list[float] = []
 
@@ -64,7 +64,7 @@ def test_parallel_accounts_flag_overrides_config(
 
     args = Namespace(
         config="config/settings.ini",
-        csv=str(Path("..") / "data" / "portfolios.csv"),
+        csv=str(portfolios_csv_path),
         dry_run=True,
         yes=False,
         read_only=False,
