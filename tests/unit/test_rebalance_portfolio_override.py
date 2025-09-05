@@ -10,7 +10,9 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 import src.rebalance as rebalance
 from src.io.config_loader import ConfirmMode
 from src.io.config_loader import load_config as real_load_config
-from tests.unit.test_config_loader import VALID_CONFIG_WITH_ACCOUNT_PATH
+from tests.unit.test_config_loader import VALID_CONFIG
+
+VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[account: acc1]\npath = p1.csv\n"
 
 
 def test_rebalance_uses_portfolio_overrides(
@@ -51,13 +53,12 @@ def test_rebalance_uses_portfolio_overrides(
 
     def fake_load_config(path):  # noqa: ARG001
         cfg_path = tmp_path / "settings.ini"
-        cfg_path.write_text(VALID_CONFIG_WITH_ACCOUNT_PATH)
-        (tmp_path / "foo.csv").write_text("")
+        cfg_path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
+        (tmp_path / "p1.csv").write_text("")
         cfg = real_load_config(cfg_path)
         cfg.accounts.pacing_sec = 0.0
         cfg.accounts.confirm_mode = ConfirmMode.GLOBAL
         cfg.io.report_dir = str(tmp_path)
-        cfg.portfolio_paths["ACC1"] = tmp_path / "p1.csv"
         return cfg
 
     monkeypatch.setattr(rebalance, "load_config", fake_load_config)
