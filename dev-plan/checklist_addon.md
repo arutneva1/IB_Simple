@@ -7,7 +7,7 @@ Use this checklist to track progress through each phase.
 ## Phase 1 — Config plumbing & compatibility
 - [ ] Add `[accounts]` section to `settings.ini`
 - [ ] Validate multiple IDs and confirm precedence
-- [ ] Implement account overrides (future-proof parsing)
+- [ ] Implement and enforce account overrides
 - [ ] Unit tests for parsing and compatibility
 - [ ] Update README with config examples
 
