@@ -32,8 +32,8 @@ class DummyIBKRClient:
         raise KeyboardInterrupt
 
 
-async def fake_load_portfolios(path, *, host, port, client_id):  # noqa: ARG001
-    return {}
+async def fake_load_portfolios(paths, *, host, port, client_id):  # noqa: ARG001
+    return {aid: {} for aid in paths}
 
 
 def test_main_handles_keyboard_interrupt(monkeypatch: pytest.MonkeyPatch, capsys):

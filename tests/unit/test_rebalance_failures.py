@@ -21,8 +21,8 @@ def _setup(monkeypatch: pytest.MonkeyPatch):
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _p: cfg)
 
-    async def fake_load_portfolios(path, *, host, port, client_id):  # noqa: ARG001
-        return {}
+    async def fake_load_portfolios(paths, *, host, port, client_id):  # noqa: ARG001
+        return {aid: {} for aid in paths}
 
     monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
 

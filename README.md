@@ -87,6 +87,26 @@ min_order_usd = 10            ; lower minimum order just for DU111111
 In this example, account `DU111111` can submit fractional orders as small as
 $10 while all other accounts require whole-share orders of at least $50.
 
+### Per-account portfolio files
+
+By default all accounts share the CSV passed via `--csv`.  Specify a separate
+portfolio for an account using `[portfolio:<ID>]` blocks:
+
+```ini
+[portfolio:DU111111]
+path = data/portfolios_DU111111.csv
+
+[portfolio:DU222222]
+path = data/portfolios_DU222222.csv
+```
+
+Accounts without an override use the global CSV.  Example run mixing global and
+per-account files:
+
+```bash
+python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
+```
+
 ## Usage
 
 ### Validate configuration

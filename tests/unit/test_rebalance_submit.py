@@ -32,8 +32,9 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
     )
     monkeypatch.setattr(rebalance, "load_config", lambda _: cfg)
 
-    async def fake_load_portfolios(path, *, host, port, client_id):
-        return {"AAA": {"smurf": 1.0, "badass": 0.0, "gltr": 0.0}}
+    async def fake_load_portfolios(paths, *, host, port, client_id):
+        data = {"AAA": {"smurf": 1.0, "badass": 0.0, "gltr": 0.0}}
+        return {aid: data for aid in paths}
 
     monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
 
