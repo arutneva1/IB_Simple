@@ -351,6 +351,7 @@ async def confirm_global(
     prioritize_by_drift,
     size_orders,
     pacing_sec: float = 0.0,
+    parallel_accounts: bool = True,
 ) -> list[tuple[str, str]]:
     """Handle global confirmation workflow for multiple accounts."""
 
@@ -444,7 +445,7 @@ async def confirm_global(
                 )
             return failures
 
-    use_parallel = args.yes and pacing_sec == 0
+    use_parallel = parallel_accounts and args.yes and pacing_sec == 0
     output_lock: asyncio.Lock | None = None
     if use_parallel:
         output_lock = asyncio.Lock()
