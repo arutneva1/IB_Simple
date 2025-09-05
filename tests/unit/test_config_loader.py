@@ -68,7 +68,10 @@ log_level = INFO
 """
 
 
-VALID_CONFIG_WITH_PORTFOLIO = VALID_CONFIG + "\n[account: acc1]\npath = foo.csv\n"
+# Configuration variant with a per-account portfolio path override.
+VALID_CONFIG_WITH_ACCOUNT_PATH = (
+    VALID_CONFIG + "\n[account: acc1]\npath = foo.csv\n"
+)
 
 
 @pytest.fixture
@@ -79,9 +82,9 @@ def config_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def config_file_with_portfolio(tmp_path: Path) -> Path:
+def config_file_with_account_path(tmp_path: Path) -> Path:
     path = tmp_path / "settings.ini"
-    path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
+    path.write_text(VALID_CONFIG_WITH_ACCOUNT_PATH)
     (tmp_path / "foo.csv").write_text("")
     return path
 
@@ -126,10 +129,10 @@ def test_load_valid_config(config_file: Path) -> None:
 
 
 def test_load_config_with_portfolio_section(
-    config_file_with_portfolio: Path,
+    config_file_with_account_path: Path,
 ) -> None:
-    cfg = load_config(config_file_with_portfolio)
-    expected = {"ACC1": (config_file_with_portfolio.parent / "foo.csv").resolve()}
+    cfg = load_config(config_file_with_account_path)
+    expected = {"ACC1": (config_file_with_account_path.parent / "foo.csv").resolve()}
     assert cfg.portfolio_paths == expected
 
 
@@ -365,7 +368,9 @@ def test_account_id_normalization(tmp_path: Path) -> None:
 
 
 def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
-    content = VALID_CONFIG_WITH_PORTFOLIO + "\n[account: acc3 ]\npath = foo.csv\n"
+    content = (
+        VALID_CONFIG_WITH_ACCOUNT_PATH + "\n[account: acc3 ]\npath = foo.csv\n"
+    )
     path = tmp_path / "settings.ini"
     path.write_text(content)
     (path.parent / "foo.csv").write_text("")
