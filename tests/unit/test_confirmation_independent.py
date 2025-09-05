@@ -58,7 +58,9 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, tmp_path, records, executed):
     monkeypatch.setattr(rebalance.asyncio, "sleep", fake_sleep)
 
 
-def test_independent_confirmation_statuses(monkeypatch, tmp_path, portfolios_csv_path: Path):
+def test_independent_confirmation_statuses(
+    monkeypatch, tmp_path, portfolios_csv_path: Path
+):
     records: list[dict[str, str]] = []
     executed: list[str] = []
     _patch_common(monkeypatch, tmp_path, records, executed)
