@@ -200,7 +200,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
         )
         for aid, res in zip(task_accounts, results):
             if isinstance(res, Exception):
-                logging.exception(
+                logging.error(
                     "Unhandled error processing account %s", aid, exc_info=res
                 )
                 await _print_err(f"[red]{res}[/red]", output_lock)
