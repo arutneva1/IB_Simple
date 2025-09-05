@@ -5,8 +5,8 @@ import logging
 from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping, cast
 from types import SimpleNamespace
+from typing import Any, Mapping, cast
 
 from rich import print
 

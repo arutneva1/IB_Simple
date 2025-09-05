@@ -173,7 +173,11 @@ def _validate_totals(portfolios: Dict[str, Dict[str, float]]) -> None:
 
 
 async def load_portfolios_map(
-    paths: Mapping[str, Path], *, host: str, port: int, client_id: int,
+    paths: Mapping[str, Path],
+    *,
+    host: str,
+    port: int,
+    client_id: int,
     expected: list[str] | None = None,
 ) -> dict[str, dict[str, dict[str, float]]]:
     expected = expected or ["ETF", "SMURF", "BADASS", "GLTR"]
