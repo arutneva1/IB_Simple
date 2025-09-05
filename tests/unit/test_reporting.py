@@ -116,6 +116,7 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
     results = [
         {
             "symbol": "AAA",
+            "action": "BUY",
             "status": "Filled",
             "filled": 8.0,
             "avg_fill_price": 110.0,
@@ -228,6 +229,7 @@ def test_post_trade_missing_execid_notes(tmp_path):
     results = [
         {
             "symbol": "AAA",
+            "action": "BUY",
             "status": "Filled",
             "filled": 10.0,
             "avg_fill_price": 100.0,

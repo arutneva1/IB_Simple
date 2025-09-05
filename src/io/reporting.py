@@ -195,8 +195,10 @@ def write_post_trade_report(
         "notes",
     ]
 
-    trades_by_symbol = {t.symbol: t for t in trades}
-    results_by_symbol = {r.get("symbol"): r for r in results}
+    trades_by_key = {(t.symbol, t.action): t for t in trades}
+    results_by_key = {
+        (r.get("symbol"), r.get("action")): r for r in results
+    }
     timestamp_run = ts.isoformat()
     order_type = cfg.execution.order_type
     algo = cfg.execution.algo_preference
@@ -205,8 +207,8 @@ def write_post_trade_report(
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
         for d in sorted(drifts, key=lambda d: d.symbol):
-            trade = trades_by_symbol.get(d.symbol)
-            res = results_by_symbol.get(d.symbol, {})
+            trade = trades_by_key.get((d.symbol, d.action))
+            res = results_by_key.get((d.symbol, d.action), {})
             planned_qty = trade.quantity if trade else 0.0
             est_price = prices.get(d.symbol, 1.0 if d.symbol == "CASH" else 0.0)
             est_value = trade.notional if trade else 0.0

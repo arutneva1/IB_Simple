@@ -291,6 +291,7 @@ async def submit_batch(
         except Exception:  # pragma: no cover - defensive
             pass
         return {
+            "action": st.action,
             "symbol": st.symbol,
             "order_id": getattr(ib_trade.order, "orderId", None),
             "status": status,

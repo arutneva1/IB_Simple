@@ -199,6 +199,7 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
             results.append(
                 {
                     "symbol": t.symbol,
+                    "action": t.action,
                     "status": "Filled",
                     "fill_qty": t.quantity,
                     "fill_price": price,
@@ -330,6 +331,7 @@ def test_confirm_per_account_logs_failed_summary(tmp_path):
         return [
             {
                 "symbol": trades[0].symbol,
+                "action": trades[0].action,
                 "status": "Rejected",
                 "fill_qty": 0,
                 "fill_price": 0.0,
@@ -464,6 +466,7 @@ def test_confirm_per_account_missing_price(tmp_path):
         return [
             {
                 "symbol": trades[0].symbol,
+                "action": trades[0].action,
                 "status": "Filled",
                 "fill_qty": trades[0].quantity,
             }
@@ -603,6 +606,7 @@ def test_confirm_per_account_multiple_same_symbol_trades_ignore_stray_fills(tmp_
             {
                 "symbol": "XYZ",
                 "status": "Filled",
+                "action": "SELL",
                 "fill_qty": 100,
                 "fill_price": 99.0,
             },
@@ -740,6 +744,7 @@ def test_confirm_per_account_totals_skip_unmatched_fills(tmp_path):
             {
                 "symbol": "XYZ",
                 "status": "Cancelled",
+                "action": "SELL",
                 "fill_qty": 100,
                 "fill_price": 99.0,
             },

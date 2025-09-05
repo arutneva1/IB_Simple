@@ -81,6 +81,7 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
             results.append(
                 {
                     "symbol": t.symbol,
+                    "action": t.action,
                     "status": "Filled",
                     "fill_qty": t.quantity,
                     "fill_price": 10.0,

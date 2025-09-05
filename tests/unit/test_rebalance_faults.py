@@ -147,6 +147,7 @@ def test_global_confirmation_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
         return [
             {
                 "symbol": t.symbol,
+                "action": t.action,
                 "status": "Filled",
                 "fill_qty": t.quantity,
                 "fill_price": 1.0,

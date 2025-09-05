@@ -107,6 +107,7 @@ def test_yes_skips_prompt(
         return [
             {
                 "symbol": t.symbol,
+                "action": t.action,
                 "status": "Filled",
                 "filled": t.quantity,
                 "avg_fill_price": 0.0,
@@ -189,6 +190,7 @@ def test_yes_skips_prompt_global(
         return [
             {
                 "symbol": t.symbol,
+                "action": t.action,
                 "status": "Filled",
                 "filled": t.quantity,
                 "avg_fill_price": 0.0,
