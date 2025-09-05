@@ -325,7 +325,9 @@ def load_config(path: Path) -> AppConfig:
 
     unknown_accounts = sorted(set(portfolio_paths) - set(accounts.ids))
     if unknown_accounts:
-        raise ConfigError("[account] unknown account ids: " + ", ".join(unknown_accounts))
+        raise ConfigError(
+            "[account] unknown account ids: " + ", ".join(unknown_accounts)
+        )
 
     # [models]
     data = _load_section(cp, "models")
