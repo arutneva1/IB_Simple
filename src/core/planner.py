@@ -169,10 +169,10 @@ async def plan_account(
                 prices[symbol] = price
                 await _print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
 
-            prices = {sym: prices[sym] for sym in trade_symbols}
+            trade_prices = {sym: prices[sym] for sym in trade_symbols}
         except Exception as exc:  # pragma: no cover - defensive
             raise PlanningError(str(exc)) from exc
-        return current, prices, net_liq, drifts, prioritized, targets
+        return current, prices, trade_prices, net_liq, drifts, prioritized, targets
 
     if hasattr(client, "__aenter__"):
         setattr(client, "_host", cfg.ibkr.host)
@@ -182,6 +182,7 @@ async def plan_account(
             (
                 current,
                 prices,
+                trade_prices,
                 net_liq,
                 drifts,
                 prioritized,
@@ -193,6 +194,7 @@ async def plan_account(
             (
                 current,
                 prices,
+                trade_prices,
                 net_liq,
                 drifts,
                 prioritized,
@@ -206,7 +208,7 @@ async def plan_account(
     trades, post_gross_exposure, post_leverage = size_orders(
         account_id,
         prioritized,
-        prices,
+        trade_prices,
         current["CASH"],
         net_liq,
         cfg,
