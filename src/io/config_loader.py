@@ -298,8 +298,8 @@ def load_config(path: Path) -> AppConfig:
 
     account_overrides: Dict[str, AccountOverride] = {}
     for section in cp.sections():
-        if section.startswith("account:"):
-            acc_id = section.split("account:", 1)[1].strip().upper()
+        if section.lower().startswith("account:"):
+            acc_id = section.split(":", 1)[1].strip().upper()
             items = dict(cp.items(section))
             account_overrides[acc_id] = _parse_account_override(items)
 
