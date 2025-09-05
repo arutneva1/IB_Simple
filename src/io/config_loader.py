@@ -310,6 +310,12 @@ def load_config(path: Path) -> AppConfig:
             except NoOptionError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
 
+    unknown_accounts = sorted(set(portfolio_paths) - set(accounts.ids))
+    if unknown_accounts:
+        raise ConfigError(
+            "[portfolio] unknown account ids: " + ", ".join(unknown_accounts)
+        )
+
     # [models]
     data = _load_section(cp, "models")
     required_models = ["smurf", "badass", "gltr"]

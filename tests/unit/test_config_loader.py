@@ -264,3 +264,12 @@ def test_account_id_normalization(tmp_path: Path) -> None:
     assert cfg.portfolio_paths["ACC1"] == "foo.csv"
     cfg_acc = merge_account_overrides(cfg, "acc2")
     assert cfg_acc.rebalance.min_order_usd == 100
+
+
+def test_portfolio_override_unknown_account(tmp_path: Path) -> None:
+    content = VALID_CONFIG + "\n[portfolio: acc3 ]\npath = foo.csv\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError) as exc:
+        load_config(path)
+    assert "ACC3" in str(exc.value)
