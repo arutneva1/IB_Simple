@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import logging
 
 import pytest
 
@@ -171,15 +172,18 @@ def test_single_account_id(tmp_path: Path) -> None:
     assert cfg.accounts.ids == ["ACC1"]
 
 
-def test_account_section_unknown_keys(tmp_path: Path) -> None:
+def test_account_section_unknown_keys(tmp_path: Path, caplog) -> None:
     content = VALID_CONFIG + "\n[account:ACC1]\nfoo = bar\nunknown = baz\n"
     path = tmp_path / "settings.ini"
     path.write_text(content)
-    cfg = load_config(path)
+    with caplog.at_level(logging.WARNING):
+        cfg = load_config(path)
     assert cfg.accounts.ids == ["ACC1", "ACC2"]
     overrides = cfg.account_overrides["ACC1"]
     assert overrides.extra["foo"] == "bar"
     assert overrides.extra["unknown"] == "baz"
+    messages = [rec.message.lower() for rec in caplog.records]
+    assert any("unknown account override keys" in m for m in messages)
 
 
 def test_ibkr_account_id_rejected(tmp_path: Path) -> None:

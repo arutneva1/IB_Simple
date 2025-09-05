@@ -77,6 +77,8 @@ the global `[rebalance]` settings for that account only; other accounts continue
 to use the global defaults.  Keys that are not specified fall back to the
 global values.
 
+Unknown options in an `[account:<ID>]` block are ignored and generate a warning.
+
 ```ini
 [rebalance]
 allow_fractional = false

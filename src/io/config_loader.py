@@ -11,6 +11,7 @@ from enum import Enum
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Mapping
+import logging
 
 
 class ConfigError(Exception):
@@ -169,6 +170,11 @@ def _parse_account_override(items: Mapping[str, str]) -> AccountOverride:
                 ) from exc
         else:
             ov.extra[key] = val
+    if ov.extra:
+        logging.warning(
+            "Ignoring unknown account override keys: %s",
+            ", ".join(sorted(ov.extra.keys())),
+        )
     return ov
 
 
