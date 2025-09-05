@@ -374,7 +374,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--parallel-accounts",
         action="store_true",
-        help="Plan and execute accounts concurrently",
+        help=(
+            "Plan and execute accounts concurrently; prompts remain serialized "
+            "without --yes"
+        ),
     )
     args = parser.parse_args(argv if argv is not None else [])
 
