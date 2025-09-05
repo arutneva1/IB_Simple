@@ -1,5 +1,5 @@
-import sys
 import asyncio
+import sys
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
