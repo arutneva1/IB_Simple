@@ -71,8 +71,12 @@ async def confirm_per_account(
         else:
             append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
 
-    def _build_lookup(res_list: list[Mapping[str, Any]]) -> dict[tuple[str | None, str | None], deque[Mapping[str, Any]]]:
-        lookup: dict[tuple[str | None, str | None], deque[Mapping[str, Any]]] = defaultdict(deque)
+    def _build_lookup(
+        res_list: list[Mapping[str, Any]],
+    ) -> dict[tuple[str | None, str | None], deque[Mapping[str, Any]]]:
+        lookup: dict[tuple[str | None, str | None], deque[Mapping[str, Any]]] = (
+            defaultdict(deque)
+        )
         for r in res_list:
             sym = r.get("symbol")
             if sym is None:
@@ -94,7 +98,9 @@ async def confirm_per_account(
             price_any = res.get("fill_price")
             if price_any is None:
                 price_any = res.get("avg_fill_price", 0.0)
-            value = float(qty_any) * float(price_any)
+            qty = float(qty_any or 0.0)
+            price = float(price_any or 0.0)
+            value = qty * price
             if t.action == "BUY":
                 buy_total += value
             else:

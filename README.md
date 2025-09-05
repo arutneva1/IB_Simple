@@ -44,6 +44,7 @@ ids = DU111111, DU222222
 confirm_mode = per_account        ; per_account | global
 pacing_sec = 1                    ; seconds to pause between accounts
 parallel = false                  ; true processes accounts concurrently
+path = data/portfolios.csv        ; portfolio CSV (relative to settings.ini)
 ```
 
 The same `portfolios.csv` applies to all listed accounts. `confirm_mode`
@@ -59,6 +60,9 @@ be enabled at runtime via `--parallel-accounts`. When running with
 `confirm_mode = per_account` and interactive prompts (i.e., without `--yes`),
 plans are computed concurrently but confirmations are serialized per account to
 avoid overlapping prompts.
+
+Paths in `[accounts]` and `[portfolio:<ID>]` sections are resolved relative to
+the directory containing `settings.ini`.
 
 Example forcing a global prompt:
 

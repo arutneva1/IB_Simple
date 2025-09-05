@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.io.portfolio_csv as portfolio_csv
 import src.io.validate_portfolios as validate_portfolios
+from tests.unit.test_config_loader import VALID_CONFIG
 
 
 def test_cli_ok(tmp_path: Path) -> None:
@@ -166,13 +167,48 @@ path = acc1.csv
 
     monkeypatch.setattr(portfolio_csv, "_parse_csv", fake_parse)
 
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+
     asyncio.run(
         validate_portfolios.main(
-            str(global_csv), config_path=str(cfg_path), validate_all=True
+            "global.csv", config_path=str(cfg_path), validate_all=True
         )
     )
 
     assert {global_csv.resolve(), acct_csv.resolve()} == set(seen)
+
+
+def test_uses_accounts_path_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    cfg_path = cfg_dir / "settings.ini"
+    cfg_content = VALID_CONFIG.replace(
+        "[accounts]\nids = ACC1, ACC2\n",
+        "[accounts]\nids = ACC1, ACC2\npath = pf.csv\n",
+    )
+    cfg_path.write_text(cfg_content)
+    csv_path = cfg_dir / "pf.csv"
+    csv_path.write_text("ETF,SMURF,BADASS,GLTR\nCASH,100%,100%,100%\n")
+
+    other = tmp_path / "other"
+    other.mkdir()
+    monkeypatch.chdir(other)
+
+    seen: list[Path] = []
+
+    async def fake_load_portfolios(path, *, host, port, client_id):  # noqa: ARG001
+        seen.append(Path(path).resolve())
+        return {}
+
+    monkeypatch.setattr(validate_portfolios, "load_portfolios", fake_load_portfolios)
+
+    asyncio.run(validate_portfolios.main(config_path=str(cfg_path)))
+
+    assert seen == [csv_path.resolve()]
 
 
 def _all_accounts_config(tmp_path: Path) -> Path:
