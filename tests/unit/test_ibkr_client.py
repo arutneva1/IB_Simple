@@ -50,11 +50,42 @@ class FakeIBSnapshot:
             SimpleNamespace(tag="CashBalance", value="1000", currency="USD"),
             SimpleNamespace(tag="CashBalance", value="500", currency="CAD"),
             SimpleNamespace(tag="NetLiquidation", value="2000", currency="USD"),
+            SimpleNamespace(tag="ExchangeRate", value="0.75", currency="CAD"),
         ]
 
 
-def test_snapshot_filters_cad_cash(monkeypatch):
+def test_snapshot_converts_cad_cash(monkeypatch):
     fake_ib = FakeIBSnapshot()
+    monkeypatch.setattr(ibkr_client, "IB", lambda: fake_ib)
+    client = IBKRClient()
+    result = asyncio.run(client.snapshot("ACC"))
+    assert result == {
+        "positions": [
+            {
+                "account": "ACC",
+                "symbol": "AAPL",
+                "position": 10,
+                "avg_cost": 100.0,
+            }
+        ],
+        "cash": 1000.0,
+        "net_liq": 1625.0,
+    }
+    symbols = {p["symbol"] for p in result["positions"]}
+    assert "MSFT" not in symbols
+
+
+class FakeIBSnapshotNoFx(FakeIBSnapshot):
+    async def accountSummaryAsync(self, account_id):
+        return [
+            SimpleNamespace(tag="CashBalance", value="1000", currency="USD"),
+            SimpleNamespace(tag="CashBalance", value="500", currency="CAD"),
+            SimpleNamespace(tag="NetLiquidation", value="2000", currency="USD"),
+        ]
+
+
+def test_snapshot_cad_cash_no_fx_rate(monkeypatch):
+    fake_ib = FakeIBSnapshotNoFx()
     monkeypatch.setattr(ibkr_client, "IB", lambda: fake_ib)
     client = IBKRClient()
     result = asyncio.run(client.snapshot("ACC"))
