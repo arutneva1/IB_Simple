@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping, cast
 
 from rich import print
 
@@ -55,13 +55,18 @@ async def confirm_per_account(
         else:
             print(*args, **kwargs)
 
+    async def _append(row: Mapping[str, Any]) -> None:
+        if output_lock is not None:
+            async with output_lock:
+                append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+        else:
+            append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+
     await _print(table)
     if args.dry_run:
         await _print("[green]Dry run complete (no orders submitted).[/green]")
         logging.info("Dry run complete (no orders submitted).")
-        append_run_summary(
-            Path(cfg.io.report_dir),
-            ts_dt,
+        await _append(
             {
                 "timestamp_run": ts_dt.isoformat(),
                 "account_id": account_id,
@@ -75,7 +80,7 @@ async def confirm_per_account(
                 "post_leverage": post_leverage,
                 "status": "dry_run",
                 "error": "",
-            },
+            }
         )
         return
 
@@ -86,9 +91,7 @@ async def confirm_per_account(
         logging.info(
             "Read-only mode: trading is disabled; no orders will be submitted."
         )
-        append_run_summary(
-            Path(cfg.io.report_dir),
-            ts_dt,
+        await _append(
             {
                 "timestamp_run": ts_dt.isoformat(),
                 "account_id": account_id,
@@ -102,7 +105,7 @@ async def confirm_per_account(
                 "post_leverage": pre_leverage,
                 "status": "read_only",
                 "error": "",
-            },
+            }
         )
         return
 
@@ -111,9 +114,7 @@ async def confirm_per_account(
         if resp != "y":
             await _print("[yellow]Aborted by user.[/yellow]")
             logging.info("Aborted by user.")
-            append_run_summary(
-                Path(cfg.io.report_dir),
-                ts_dt,
+            await _append(
                 {
                     "timestamp_run": ts_dt.isoformat(),
                     "account_id": account_id,
@@ -127,7 +128,7 @@ async def confirm_per_account(
                     "post_leverage": pre_leverage,
                     "status": "aborted",
                     "error": "",
-                },
+                }
             )
             return
 
@@ -317,9 +318,7 @@ async def confirm_per_account(
         len(trades),
         post_leverage_actual,
     )
-    append_run_summary(
-        Path(cfg.io.report_dir),
-        ts_dt,
+    await _append(
         {
             "timestamp_run": ts_dt.isoformat(),
             "account_id": account_id,
@@ -333,7 +332,7 @@ async def confirm_per_account(
             "post_leverage": post_leverage_actual,
             "status": "completed",
             "error": "",
-        },
+        }
     )
 
 
@@ -511,14 +510,14 @@ async def confirm_global(
         sell_trades = [t for t in pl["trades"] if t.action == "SELL"]
         buy_trades = [t for t in pl["trades"] if t.action == "BUY"]
         if sell_trades:
-            sp = dict(pl)
+            sp = cast(Plan, dict(pl))
             sp["trades"] = sell_trades
             sp["planned_orders"] = len(sell_trades)
             sp["sell_usd"] = sum(t.notional for t in sell_trades)
             sp["buy_usd"] = 0.0
             sell_plans.append(sp)
         if buy_trades:
-            bp = dict(pl)
+            bp = cast(Plan, dict(pl))
             bp["trades"] = buy_trades
             bp["planned_orders"] = len(buy_trades)
             bp["buy_usd"] = sum(t.notional for t in buy_trades)
