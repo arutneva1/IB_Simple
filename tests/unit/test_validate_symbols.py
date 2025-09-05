@@ -99,7 +99,7 @@ def test_connection_failure(monkeypatch) -> None:
     ib = setup_fake_ib(monkeypatch)
 
     async def fail_connect(host, port, clientId):  # noqa: N803 - mimics upstream
-        raise RuntimeError("boom")
+        raise OSError("boom")
 
     setattr(ib, "connectAsync", fail_connect)
     with pytest.raises(PortfolioCSVError) as excinfo:

@@ -79,7 +79,10 @@ async def validate_symbols(
                     or cd.stockType != "ETF"
                 ):
                     raise PortfolioCSVError(f"{symbol}: not a USD-denominated ETF")
-        except Exception as exc:  # pragma: no cover - network failure
+        except OSError as exc:  # pragma: no cover - network failure
+            # Limit this handler to connection-related issues so that
+            # PortfolioCSVError raised above (e.g., unknown symbols) is not
+            # swallowed and users can see the actual validation problem.
             raise PortfolioCSVError(f"IB connection failed: {exc}") from exc
     finally:
         try:
