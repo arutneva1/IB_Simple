@@ -173,3 +173,108 @@ path = acc1.csv
     )
 
     assert {global_csv.resolve(), acct_csv.resolve()} == set(seen)
+
+
+def _all_accounts_config(tmp_path: Path) -> Path:
+    config_text = """\
+[ibkr]
+host = 127.0.0.1
+port = 4002
+client_id = 42
+read_only = true
+
+[accounts]
+ids = ACC1, ACC2
+confirm_mode = per_account
+
+[models]
+smurf = 0.50
+badass = 0.30
+gltr = 0.20
+
+[rebalance]
+trigger_mode = per_holding
+per_holding_band_bps = 50
+portfolio_total_band_bps = 100
+min_order_usd = 500
+cash_buffer_type = pct
+cash_buffer_pct = 0.01
+cash_buffer_abs = 0
+allow_fractional = false
+max_leverage = 1.50
+maintenance_buffer_pct = 0.10
+trading_hours = rth
+max_passes = 3
+
+[pricing]
+price_source = last
+fallback_to_snapshot = true
+
+[execution]
+order_type = market
+algo_preference = adaptive
+fallback_plain_market = true
+batch_orders = true
+commission_report_timeout = 5.0
+wait_before_fallback = 300
+
+[io]
+report_dir = reports
+log_level = INFO
+
+[portfolio:ACC1]
+path = acc1.csv
+
+[portfolio:ACC2]
+path = acc2.csv
+"""
+    cfg_path = tmp_path / "settings.ini"
+    cfg_path.write_text(config_text)
+    return cfg_path
+
+
+def _write_two_csvs(tmp_path: Path) -> tuple[Path, Path]:
+    acc1 = tmp_path / "acc1.csv"
+    acc2 = tmp_path / "acc2.csv"
+    content = "ETF,SMURF,BADASS,GLTR\nCASH,100%,100%,100%\n"
+    acc1.write_text(content)
+    acc2.write_text(content)
+    return acc1, acc2
+
+
+def test_cli_accounts_only(tmp_path: Path) -> None:
+    cfg_path = _all_accounts_config(tmp_path)
+    _write_two_csvs(tmp_path)
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "OK"
+
+
+def test_cli_ignores_global_when_all_accounts_provided(tmp_path: Path) -> None:
+    cfg_path = _all_accounts_config(tmp_path)
+    _write_two_csvs(tmp_path)
+    missing = tmp_path / "missing.csv"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.io.validate_portfolios",
+            "--config",
+            str(cfg_path),
+            str(missing),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "OK"
