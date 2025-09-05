@@ -137,3 +137,65 @@ def test_parallel_accounts(monkeypatch, tmp_path):
     with report_files[0].open() as fh:
         rows = list(csv.DictReader(fh))
     assert [row["account_id"] for row in rows] == ["DU111111", "DU222222"]
+
+
+def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
+    """Exceptions during serialized confirmation print atomically."""
+
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
+    monkeypatch.setattr(rebalance, "plan_account", stub_plan_account)
+    monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
+
+    async def noisy_confirm(
+        plan,
+        args,
+        cfg,
+        ts_dt,
+        *,
+        client_factory,
+        submit_batch,  # noqa: ARG002
+        append_run_summary,  # noqa: ARG002
+        write_post_trade_report,  # noqa: ARG002
+        compute_drift,  # noqa: ARG002
+        prioritize_by_drift,  # noqa: ARG002
+        size_orders,  # noqa: ARG002
+        output_lock=None,
+    ):
+        assert output_lock is not None
+
+        async def background() -> None:
+            await rebalance._print_err("[yellow]noise[/yellow]", output_lock)
+
+        asyncio.create_task(background())
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(rebalance, "confirm_per_account", noisy_confirm)
+
+    original_load_config = rebalance.load_config
+
+    def fake_load_config(path):
+        cfg = original_load_config(path)
+        cfg.accounts.ids = ["DU111111", "DU222222"]
+        cfg.accounts.parallel = True
+        cfg.io.report_dir = str(tmp_path / "reports")
+        return cfg
+
+    monkeypatch.setattr(rebalance, "load_config", fake_load_config)
+
+    args = SimpleNamespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=True,
+        yes=False,
+        read_only=False,
+        parallel_accounts=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    lines = capsys.readouterr().out.splitlines()
+    noise_lines = [l for l in lines if "noise" in l]
+    error_lines = [l for l in lines if "boom" in l]
+    assert noise_lines and error_lines
+    for l in lines:
+        assert not ("noise" in l and "boom" in l)
