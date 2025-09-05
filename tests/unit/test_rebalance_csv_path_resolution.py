@@ -10,18 +10,23 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.rebalance as rebalance
-from src.io.config_loader import ConfirmMode, load_config as real_load_config
+from src.io.config_loader import ConfirmMode
+from src.io.config_loader import load_config as real_load_config
 from tests.unit.test_config_loader import VALID_CONFIG
 
 
-def test_csv_path_resolved_relative_to_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_csv_path_resolved_relative_to_config(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     captured: dict[str, Path] = {}
 
     async def fake_load_portfolios(path_map, *, host, port, client_id):  # noqa: ARG001
         captured.update(path_map)
         return {aid: {} for aid in path_map}
 
-    async def fake_plan_account(account_id, portfolios, cfg, ts_dt, **kwargs):  # noqa: ARG001
+    async def fake_plan_account(
+        account_id, portfolios, cfg, ts_dt, **kwargs
+    ):  # noqa: ARG001
         return {
             "account_id": account_id,
             "drifts": [],
@@ -76,4 +81,3 @@ def test_csv_path_resolved_relative_to_config(monkeypatch: pytest.MonkeyPatch, t
 
     expected = csv_path.resolve()
     assert captured == {"ACC1": expected, "ACC2": expected}
-

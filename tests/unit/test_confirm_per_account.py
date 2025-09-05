@@ -1,19 +1,17 @@
 import asyncio
+import sys
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-import sys
-from pathlib import Path
-
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.broker.errors import IBKRError
-from src.core.sizing import SizedTrade
-
 from src.core.confirmation import confirm_per_account
+from src.core.sizing import SizedTrade
 from src.io import (
     IBKR,
     IO,
@@ -208,7 +206,9 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
             )
         return results
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return ["dummy"]
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
@@ -216,7 +216,9 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
 
     calls = {"n": 0}
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         if calls["n"] == 0:
             calls["n"] += 1
             return [SizedTrade("XYZ", "SELL", 1, 11.0)], 0.0, 0.0
@@ -354,13 +356,17 @@ def test_confirm_per_account_logs_failed_summary(tmp_path):
     ):
         return path / "report.json"
 
-    def compute_drift(account_id, positions, targets, prices, net_liq, cfg):  # noqa: ARG001
+    def compute_drift(
+        account_id, positions, targets, prices, net_liq, cfg
+    ):  # noqa: ARG001
         return []
 
     def prioritize_by_drift(account_id, drifts, cfg):  # noqa: ARG001
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):  # noqa: ARG001
+    def size_orders(
+        account_id, drifts, prices, cash_after, net_liq, cfg
+    ):  # noqa: ARG001
         return [], 0.0, 0.0
 
     class DummyClient:
