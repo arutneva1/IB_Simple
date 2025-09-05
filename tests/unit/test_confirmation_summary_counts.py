@@ -38,7 +38,7 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
             max_leverage=1.0,
             maintenance_buffer_pct=0.0,
             trading_hours="rth",
-            max_passes=2,
+            max_passes=3,
         ),
         pricing=Pricing(price_source="last", fallback_to_snapshot=False),
         execution=Execution(
@@ -121,9 +121,10 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
     def size_orders(
         account_id, drifts, prices, cash_after, net_liq, cfg
     ):  # noqa: ARG001
-        if call_count["n"] == 0:
+        if call_count["n"] < 2:
             call_count["n"] += 1
-            return [SizedTrade("ABC", "BUY", 1, 10.0)], 10.0, 0.0
+            symbol = "ABC" if call_count["n"] == 1 else "DEF"
+            return [SizedTrade(symbol, "BUY", 1, 10.0)], 10.0, 0.0
         return [], 0.0, 0.0
 
     class DummyClient:
@@ -152,5 +153,5 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
 
     assert len(appended) == 1
     row = appended[0]
-    assert row["planned_orders"] == 1
-    assert row["submitted"] == 2
+    assert row["planned_orders"] == 3
+    assert row["submitted"] == 3
