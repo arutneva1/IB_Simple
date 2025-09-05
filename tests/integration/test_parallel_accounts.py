@@ -139,6 +139,41 @@ def test_parallel_accounts(monkeypatch, tmp_path):
     assert [row["account_id"] for row in rows] == ["DU111111", "DU222222"]
 
 
+def test_parallel_confirmation_overlap(monkeypatch, tmp_path):
+    """Confirmations run concurrently when confirmation is auto-approved."""
+    confirm_starts.clear()
+    monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
+    monkeypatch.setattr(rebalance, "plan_account", stub_plan_account)
+    monkeypatch.setattr(rebalance, "confirm_per_account", stub_confirm_per_account)
+    monkeypatch.setattr(rebalance, "load_portfolios", fake_load_portfolios)
+
+    original_load_config = rebalance.load_config
+
+    def fake_load_config(path):
+        cfg = original_load_config(path)
+        cfg.accounts.ids = ["DU111111", "DU222222"]
+        cfg.accounts.parallel = True
+        cfg.accounts.pacing_sec = 0.0
+        cfg.io.report_dir = str(tmp_path / "reports")
+        return cfg
+
+    monkeypatch.setattr(rebalance, "load_config", fake_load_config)
+
+    args = SimpleNamespace(
+        config="config/settings.ini",
+        csv="data/portfolios.csv",
+        dry_run=True,
+        yes=True,
+        read_only=False,
+        parallel_accounts=False,
+    )
+
+    asyncio.run(rebalance._run(args))
+
+    assert len(confirm_starts) == 2
+    assert abs(confirm_starts[1] - confirm_starts[0]) < 0.05
+
+
 def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
     """Exceptions during serialized confirmation print atomically."""
 
@@ -194,8 +229,8 @@ def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
     asyncio.run(rebalance._run(args))
 
     lines = capsys.readouterr().out.splitlines()
-    noise_lines = [l for l in lines if "noise" in l]
-    error_lines = [l for l in lines if "boom" in l]
+    noise_lines = [line for line in lines if "noise" in line]
+    error_lines = [line for line in lines if "boom" in line]
     assert noise_lines and error_lines
-    for l in lines:
-        assert not ("noise" in l and "boom" in l)
+    for line in lines:
+        assert not ("noise" in line and "boom" in line)
