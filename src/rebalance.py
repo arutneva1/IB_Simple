@@ -323,6 +323,7 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                 prioritize_by_drift=prioritize_by_drift,
                 size_orders=size_orders,
                 pacing_sec=getattr(accounts, "pacing_sec", 0),
+                parallel_accounts=getattr(accounts, "parallel", False),
             )
         )
 
