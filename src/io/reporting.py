@@ -196,9 +196,7 @@ def write_post_trade_report(
     ]
 
     trades_by_key = {(t.symbol, t.action): t for t in trades}
-    results_by_key = {
-        (r.get("symbol"), r.get("action")): r for r in results
-    }
+    results_by_key = {(r.get("symbol"), r.get("action")): r for r in results}
     timestamp_run = ts.isoformat()
     order_type = cfg.execution.order_type
     algo = cfg.execution.algo_preference
