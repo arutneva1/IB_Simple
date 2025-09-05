@@ -107,8 +107,9 @@ path = data/portfolios_DU111111.csv  # relative to settings.ini
 path = data/portfolios_DU222222.csv
 ```
 
-Accounts without an override use the global CSV.  Example run mixing global and
-per-account files:
+Accounts without an override use the global CSV. `validate_portfolios --all`
+needs a valid global CSV unless every account has an override. Example run
+mixing global and per-account files:
 
 ```bash
 python src/rebalance.py --config config/settings.ini --csv data/portfolios.csv
