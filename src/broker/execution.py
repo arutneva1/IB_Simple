@@ -159,13 +159,19 @@ async def submit_batch(
                 getattr(fallback_trade.orderStatus, "avgFillPrice", 0.0)
             )
             filled = filled_first + filled_second
-            avg_price = (
-                (filled_first * avg_price_first) + (filled_second * avg_price_second)
-            ) / filled
+            if filled > 0:
+                avg_price = (
+                    (filled_first * avg_price_first)
+                    + (filled_second * avg_price_second)
+                ) / filled
+            else:
+                avg_price = 0.0  # safeguard: avoid division when nothing filled
             exec_objs.append(fallback_trade)
         else:
             filled = filled_first
-            avg_price = avg_price_first
+            avg_price = (
+                avg_price_first if filled_first > 0 else 0.0
+            )  # safeguard for zero fill
 
         commission_placeholder = False
         exec_commissions: dict[str, float] = {}
