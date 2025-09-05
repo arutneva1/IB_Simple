@@ -148,6 +148,34 @@ def test_algo_order_falls_back_to_plain_market(monkeypatch):
     assert events == ["algo", "cancel", "plain"]
 
 
+def test_timeout_without_fallback_cancels_order(monkeypatch):
+    """Timed-out orders are cancelled when no fallback is used."""
+    ib = SimpleNamespace()
+    cancelled = False
+
+    trade = DummyTrade(status="Submitted")
+
+    def fake_place(*_a, **_k):
+        return trade
+
+    def fake_cancel(_order):
+        nonlocal cancelled
+        cancelled = True
+        trade.orderStatus.status = "Cancelled"
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    monkeypatch.setattr(ib, "cancelOrder", fake_cancel, raising=False)
+    client = FakeClient(ib)
+    st = SizedTrade("AAA", "BUY", 1.0, 1.0)
+    cfg = _base_cfg()
+    cfg.execution.wait_before_fallback = 0.01
+
+    with pytest.raises(IBKRError):
+        asyncio.run(submit_batch(client, [st], cfg, "DU"))
+
+    assert cancelled is True
+
+
 def test_submit_batch_merges_duplicate_trades(monkeypatch):
     """Duplicate trades for the same symbol/action collapse into one order."""
     ib = SimpleNamespace()
