@@ -242,9 +242,7 @@ def test_serialized_planner_output(monkeypatch, capsys, tmp_path):
     monkeypatch.setattr(rebalance, "IBKRClient", DummyClient)
     monkeypatch.setattr(rebalance, "compute_drift", lambda *a, **k: [])
     monkeypatch.setattr(rebalance, "prioritize_by_drift", lambda *a, **k: [])
-    monkeypatch.setattr(
-        rebalance, "size_orders", lambda *a, **k: ([], 0.0, 0.0)
-    )
+    monkeypatch.setattr(rebalance, "size_orders", lambda *a, **k: ([], 0.0, 0.0))
     monkeypatch.setattr(rebalance, "render_preview", lambda *a, **k: "")
     monkeypatch.setattr(
         rebalance, "write_pre_trade_report", lambda *a, **k: tmp_path / "pre.txt"
