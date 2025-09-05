@@ -295,6 +295,16 @@ def test_account_overrides_min_order_usd(tmp_path: Path) -> None:
     assert cfg_acc.rebalance.min_order_usd == 100
 
 
+def test_account_section_case_insensitive(tmp_path: Path) -> None:
+    content = VALID_CONFIG + "\n[Account: acc1 ]\nmin_order_usd = 100\n"
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.rebalance.min_order_usd == 500
+    cfg_acc = merge_account_overrides(cfg, "acc1")
+    assert cfg_acc.rebalance.min_order_usd == 100
+
+
 def test_account_overrides_cash_buffer_abs(tmp_path: Path) -> None:
     content = (
         VALID_CONFIG
