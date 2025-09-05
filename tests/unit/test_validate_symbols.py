@@ -36,7 +36,7 @@ class FakeIB:
     ):  # noqa: N803 (upstream uses camelCase)
         self.connected = True
 
-    async def disconnectAsync(self):
+    def disconnect(self):
         self.disconnects += 1
         self.connected = False
         if self.raise_disconnect:

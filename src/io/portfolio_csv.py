@@ -83,7 +83,7 @@ async def validate_symbols(
             raise PortfolioCSVError(f"IB connection failed: {exc}") from exc
     finally:
         try:
-            await ib.disconnectAsync()
+            ib.disconnect()
         except Exception:
             pass
 
