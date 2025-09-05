@@ -117,7 +117,11 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             return plan
         except (ConfigError, IBKRError, PlanningError) as exc:
             logging.error("Error processing account %s: %s", account_id, exc)
-            print(f"[red]{exc}[/red]")
+            if output_lock is not None:
+                async with output_lock:
+                    print(f"[red]{exc}[/red]")
+            else:
+                print(f"[red]{exc}[/red]")
             failures.append((account_id, str(exc)))
             planned_orders = plan["planned_orders"] if plan else 0
             buy_usd = plan["buy_usd"] if plan else 0.0
