@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, cast
@@ -53,6 +54,8 @@ async def confirm_per_account(
     planned_orders_initial = planned_orders
     buy_usd = plan["buy_usd"]
     sell_usd = plan["sell_usd"]
+    buy_usd_actual = 0.0
+    sell_usd_actual = 0.0
 
     async def _print(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         if output_lock is not None:
@@ -67,6 +70,66 @@ async def confirm_per_account(
                 append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
         else:
             append_run_summary(Path(cfg.io.report_dir), ts_dt, row)
+
+    def _build_lookup(res_list: list[Mapping[str, Any]]) -> dict[tuple[str | None, str | None], deque[Mapping[str, Any]]]:
+        lookup: dict[tuple[str | None, str | None], deque[Mapping[str, Any]]] = defaultdict(deque)
+        for r in res_list:
+            sym = r.get("symbol")
+            if sym is None:
+                continue
+            act = r.get("action")
+            lookup[(sym, act)].append(r)
+        return lookup
+
+    def _totals(tr_list, res_list) -> tuple[float, float]:
+        lookup = _build_lookup(res_list)
+        buy_total = 0.0
+        sell_total = 0.0
+        for t in tr_list:
+            q = lookup.get((t.symbol, t.action)) or lookup.get((t.symbol, None))
+            res = q.popleft() if q else {}
+            qty_any = res.get("fill_qty")
+            if qty_any is None:
+                qty_any = res.get("filled", 0.0)
+            price_any = res.get("fill_price")
+            if price_any is None:
+                price_any = res.get("avg_fill_price", 0.0)
+            value = float(qty_any) * float(price_any)
+            if t.action == "BUY":
+                buy_total += value
+            else:
+                sell_total += value
+        return buy_total, sell_total
+
+    def _apply_fills(tr_list, res_list, positions, prices, cash):
+        lookup = _build_lookup(res_list)
+        buy_total = 0.0
+        sell_total = 0.0
+        for t in tr_list:
+            q = lookup.get((t.symbol, t.action)) or lookup.get((t.symbol, None))
+            res = q.popleft() if q else {}
+            qty_any = res.get("fill_qty")
+            if qty_any is None:
+                qty_any = res.get("filled", t.quantity)
+            filled = float(qty_any)
+            price_any = res.get("fill_price")
+            if price_any is None:
+                price_any = res.get("avg_fill_price", prices.get(t.symbol, 0.0))
+            price = float(price_any)
+            if price <= 0:
+                price = prices.get(t.symbol, 0.0)
+            value = filled * price
+            if t.action == "BUY":
+                positions[t.symbol] = positions.get(t.symbol, 0.0) + filled
+                cash -= value
+                buy_total += value
+            else:
+                positions[t.symbol] = positions.get(t.symbol, 0.0) - filled
+                cash += value
+                sell_total += value
+            prices[t.symbol] = price
+        positions["CASH"] = cash
+        return buy_total, sell_total, cash
 
     await _print(table)
     if args.dry_run:
@@ -165,20 +228,7 @@ async def confirm_per_account(
         logging.error("One or more orders failed to fill")
         filled = sum(1 for r in results if r.get("status") == "Filled")
         rejected = len(results) - filled
-        buy_usd_actual = 0.0
-        sell_usd_actual = 0.0
-        for trade, res in zip(trades, results):
-            qty_any = res.get("fill_qty")
-            if qty_any is None:
-                qty_any = res.get("filled", 0.0)
-            price_any = res.get("fill_price")
-            if price_any is None:
-                price_any = res.get("avg_fill_price", 0.0)
-            value = float(qty_any) * float(price_any)
-            if trade.action == "BUY":
-                buy_usd_actual += value
-            else:
-                sell_usd_actual += value
+        buy_fail, sell_fail = _totals(trades, results)
         await _append(
             {
                 "timestamp_run": ts_dt.isoformat(),
@@ -187,8 +237,8 @@ async def confirm_per_account(
                 "submitted": len(trades),
                 "filled": filled,
                 "rejected": rejected,
-                "buy_usd": buy_usd_actual,
-                "sell_usd": sell_usd_actual,
+                "buy_usd": buy_fail,
+                "sell_usd": sell_fail,
                 "pre_leverage": pre_leverage,
                 "post_leverage": pre_leverage,
                 "status": "failed",
@@ -200,27 +250,11 @@ async def confirm_per_account(
     cash_after = current["CASH"]
     positions = current.copy()
     prices_before = prices.copy()
-    results_by_symbol = {r.get("symbol"): r for r in results}
-    for trade in trades:
-        res = results_by_symbol.get(trade.symbol, {})
-        filled_any = res.get("fill_qty")
-        if filled_any is None:
-            filled_any = res.get("filled", trade.quantity)
-        filled = float(filled_any)
-        price_any = res.get("fill_price")
-        if price_any is None:
-            price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
-        price = float(price_any)
-        if price <= 0:
-            price = prices.get(trade.symbol, 0.0)
-        if trade.action == "BUY":
-            positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
-            cash_after -= filled * price
-        else:
-            positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
-            cash_after += filled * price
-        prices[trade.symbol] = price
-    positions["CASH"] = cash_after
+    buy_pass, sell_pass, cash_after = _apply_fills(
+        trades, results, positions, prices, cash_after
+    )
+    buy_usd_actual += buy_pass
+    sell_usd_actual += sell_pass
 
     all_trades = list(trades)
     all_results = list(results)
@@ -280,24 +314,13 @@ async def confirm_per_account(
             )
         if any(r.get("status") != "Filled" for r in extra_results):
             logging.error("One or more orders failed to fill")
+            extra_buy, extra_sell = _totals(extra_trades, extra_results)
+            buy_total = buy_usd_actual + extra_buy
+            sell_total = sell_usd_actual + extra_sell
             current_trades = all_trades + list(extra_trades)
             current_results = all_results + list(extra_results)
             filled = sum(1 for r in current_results if r.get("status") == "Filled")
             rejected = len(current_results) - filled
-            buy_usd_actual = 0.0
-            sell_usd_actual = 0.0
-            for trade, res in zip(current_trades, current_results):
-                qty_any = res.get("fill_qty")
-                if qty_any is None:
-                    qty_any = res.get("filled", 0.0)
-                price_any = res.get("fill_price")
-                if price_any is None:
-                    price_any = res.get("avg_fill_price", 0.0)
-                value = float(qty_any) * float(price_any)
-                if trade.action == "BUY":
-                    buy_usd_actual += value
-                else:
-                    sell_usd_actual += value
             await _append(
                 {
                     "timestamp_run": ts_dt.isoformat(),
@@ -306,8 +329,8 @@ async def confirm_per_account(
                     "submitted": len(current_results),
                     "filled": filled,
                     "rejected": rejected,
-                    "buy_usd": buy_usd_actual,
-                    "sell_usd": sell_usd_actual,
+                    "buy_usd": buy_total,
+                    "sell_usd": sell_total,
                     "pre_leverage": pre_leverage,
                     "post_leverage": pre_leverage,
                     "status": "failed",
@@ -315,27 +338,11 @@ async def confirm_per_account(
                 }
             )
             raise IBKRError("One or more orders failed to fill")
-        results_by_symbol = {r.get("symbol"): r for r in extra_results}
-        for trade in extra_trades:
-            res = results_by_symbol.get(trade.symbol, {})
-            filled_any = res.get("fill_qty")
-            if filled_any is None:
-                filled_any = res.get("filled", trade.quantity)
-            filled = float(filled_any)
-            price_any = res.get("fill_price")
-            if price_any is None:
-                price_any = res.get("avg_fill_price", prices.get(trade.symbol, 0.0))
-            price = float(price_any)
-            if price <= 0:
-                price = prices.get(trade.symbol, 0.0)
-            if trade.action == "BUY":
-                positions[trade.symbol] = positions.get(trade.symbol, 0.0) + filled
-                cash_after -= filled * price
-            else:
-                positions[trade.symbol] = positions.get(trade.symbol, 0.0) - filled
-                cash_after += filled * price
-            prices[trade.symbol] = price
-        positions["CASH"] = cash_after
+        buy_pass, sell_pass, cash_after = _apply_fills(
+            extra_trades, extra_results, positions, prices, cash_after
+        )
+        buy_usd_actual += buy_pass
+        sell_usd_actual += sell_pass
         all_trades.extend(extra_trades)
         all_results.extend(extra_results)
         passes += 1
@@ -344,20 +351,8 @@ async def confirm_per_account(
     post_leverage_actual = post_gross_exposure_actual / net_liq if net_liq else 0.0
     filled = sum(1 for r in all_results if r.get("status") == "Filled")
     rejected = len(all_results) - filled
-    buy_usd = 0.0
-    sell_usd = 0.0
-    for trade, res in zip(all_trades, all_results):
-        qty_any = res.get("fill_qty")
-        if qty_any is None:
-            qty_any = res.get("filled", 0.0)
-        price_any = res.get("fill_price")
-        if price_any is None:
-            price_any = res.get("avg_fill_price", 0.0)
-        value = float(qty_any) * float(price_any)
-        if trade.action == "BUY":
-            buy_usd += value
-        else:
-            sell_usd += value
+    buy_usd = buy_usd_actual
+    sell_usd = sell_usd_actual
     trades = all_trades
     results = all_results
     post_path = write_post_trade_report(
