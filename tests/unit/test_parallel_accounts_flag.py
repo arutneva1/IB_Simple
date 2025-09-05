@@ -1,14 +1,15 @@
 import asyncio
 import sys
 import time
-from pathlib import Path
 from argparse import Namespace
+from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import pytest
 
 import src.rebalance as rebalance
+from src.io import AppConfig
 
 
 def test_parallel_accounts_flag_overrides_config(
@@ -49,7 +50,7 @@ def test_parallel_accounts_flag_overrides_config(
     monkeypatch.setattr(rebalance, "setup_logging", lambda *a, **k: None)
 
     original_load_config = rebalance.load_config
-    cfg_holder: dict[str, object] = {}
+    cfg_holder: dict[str, AppConfig] = {}
 
     def fake_load_config(path):
         cfg = original_load_config(path)
