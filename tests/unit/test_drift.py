@@ -11,6 +11,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from src.core.drift import Drift, compute_drift, prioritize_by_drift
+from src.io import ConfigError
 
 
 def test_compute_drift_normalizes_and_combines_targets() -> None:
@@ -88,6 +89,38 @@ def test_compute_drift_respects_cash_buffer(
 
     cash = by_symbol["CASH"]
     assert cash.drift_usd == pytest.approx(5000.0)
+
+
+def test_compute_drift_zero_investable_net_liq() -> None:
+    """All weights and drifts become zero when buffer equals net liquidity."""
+
+    current = {"AAA": 10, "CASH": 5000}
+    targets = {"AAA": 50.0}
+    prices = {"AAA": 100.0}
+    net_liq = 6000.0
+    cfg = SimpleNamespace(
+        rebalance=SimpleNamespace(cash_buffer_type="abs", cash_buffer_abs=6000.0)
+    )
+
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg)
+
+    assert all(d.current_wt_pct == pytest.approx(0.0) for d in drifts)
+    assert all(d.drift_usd == pytest.approx(0.0) for d in drifts)
+
+
+def test_compute_drift_buffer_exceeds_net_liq_raises() -> None:
+    """Buffer larger than net liquidity raises ConfigError."""
+
+    current = {"AAA": 10, "CASH": 5000}
+    targets = {"AAA": 100.0}
+    prices = {"AAA": 100.0}
+    net_liq = 6000.0
+    cfg = SimpleNamespace(
+        rebalance=SimpleNamespace(cash_buffer_type="abs", cash_buffer_abs=7000.0)
+    )
+
+    with pytest.raises(ConfigError):
+        compute_drift("ACCT", current, targets, prices, net_liq, cfg)
 
 
 def test_compute_drift_defaults_missing_targets_to_zero() -> None:
