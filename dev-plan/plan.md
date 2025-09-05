@@ -24,7 +24,7 @@
 **Deliverables**
 - `README.md` with quickstart
 - Base repo structure:
-  - `src/` (code), `tests/` (pytest), `reports/` (output), `config/` (sample `settings.ini`), `data/` (sample `portfolios.csv`)
+  - `src/` (code), `tests/` (pytest), `reports/` (output), `config/` (sample `settings.ini` and `portfolios.csv`)
 - `.editorconfig`, `.gitignore`, `requirements.txt`, `requirements-dev.txt` / `pyproject.toml`
 - `pre-commit` hooks (black, isort, ruff/flake8)
 
@@ -101,7 +101,7 @@
 - [ ] Unknown ETF symbol aborts
 
 **Acceptance**
-- CLI `python -m src.io.validate_portfolios data/portfolios.csv` prints OK or detailed errors
+- CLI `python -m src.io.validate_portfolios config/portfolios.csv` prints OK or detailed errors
 
 ---
 
@@ -354,14 +354,14 @@ jobs:
 
 ## 7) Operational Runbook (MVP)
 
-1) Edit `config/settings.ini` and `data/portfolios.csv`  
+1) Edit `config/settings.ini` and `config/portfolios.csv`  
 2) Dry-run:
 ```bash
-python rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
+python rebalance.py --dry-run --config config/settings.ini --csv config/portfolios.csv
 ```
 3) Live (paper):
 ```bash
-python rebalance.py --confirm --config config/settings.ini --csv data/portfolios.csv
+python rebalance.py --confirm --config config/settings.ini --csv config/portfolios.csv
 ```
 4) Inspect `reports/rebalance_*.csv` and logs
 

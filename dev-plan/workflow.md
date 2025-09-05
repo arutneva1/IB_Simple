@@ -33,10 +33,9 @@ ibkr-rebalancer/
 ├─ tests/
 │  ├─ unit/
 │  └─ integration/
-├─ data/
-│  └─ portfolios.csv    # sample
 ├─ config/
-│  └─ settings.ini      # sample
+│  ├─ settings.ini      # sample
+│  └─ portfolios.csv    # sample
 ├─ reports/             # output (gitignored)
 ├─ README.md
 ├─ requirements.txt, requirements-dev.txt (or pyproject.toml)
@@ -164,7 +163,7 @@ report_dir = reports
 log_level = INFO
 ```
 
-`data/portfolios.csv` (example only)
+`config/portfolios.csv` (example only)
 ```
 ETF,SMURF,BADASS,GLTR
 BLOK,,0%,
@@ -280,7 +279,7 @@ def load_config(path: str):
 - Happy path; CASH positive; CASH negative; malformed `%` raises error.
 
 **Acceptance**
-- `python -m src.io.portfolio_csv data/portfolios.csv` prints “OK” or clear errors
+- `python -m src.io.portfolio_csv config/portfolios.csv` prints “OK” or clear errors
 
 ---
 
@@ -442,13 +441,13 @@ pre-commit run --all-files
 pytest -q -m "not integration"
 
 # Validate portfolio CSV
-python -m src.io.validate_portfolios data/portfolios.csv
+python -m src.io.validate_portfolios config/portfolios.csv
 
 # Dry-run preview
-python src/rebalance.py --dry-run --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --dry-run --config config/settings.ini --csv config/portfolios.csv
 
 # Live (paper) with confirmation
-python src/rebalance.py --confirm --config config/settings.ini --csv data/portfolios.csv
+python src/rebalance.py --confirm --config config/settings.ini --csv config/portfolios.csv
 
 # Show latest report
 powershell -Command "Get-ChildItem reports | Sort-Object LastWriteTime -Descending | Select-Object -First 1"
