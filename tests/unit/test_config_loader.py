@@ -177,6 +177,20 @@ def test_portfolio_path_directory(tmp_path: Path) -> None:
     assert "somedir" in err
 
 
+def test_portfolio_section_unknown_keys(tmp_path: Path, caplog) -> None:
+    cfg_path = tmp_path / "settings.ini"
+    cfg_path.write_text(
+        VALID_CONFIG
+        + "\n[portfolio: acc1]\npath = foo.csv\nfoo = bar\nunknown = baz\n"
+    )
+    (tmp_path / "foo.csv").write_text("")
+    with caplog.at_level(logging.WARNING):
+        cfg = load_config(cfg_path)
+    assert cfg.portfolio_paths["ACC1"] == (tmp_path / "foo.csv").resolve()
+    messages = [rec.message.lower() for rec in caplog.records]
+    assert any("unknown portfolio keys" in m for m in messages)
+
+
 def test_missing_accounts_section(tmp_path: Path) -> None:
     content = VALID_CONFIG.replace("\n[accounts]\nids = ACC1, ACC2\n", "\n")
     path = tmp_path / "settings.ini"

@@ -307,14 +307,20 @@ def load_config(path: Path) -> AppConfig:
     for section in cp.sections():
         if section.lower().startswith("portfolio:"):
             acc_id = section.split(":", 1)[1].strip().upper()
+            items = dict(cp.items(section))
             try:
-                raw_path = Path(cp.get(section, "path"))
+                raw_path = Path(items.pop("path"))
                 resolved = (base_dir / raw_path).resolve()
-            except NoOptionError as exc:
+            except KeyError as exc:
                 raise ConfigError(f"[{section}] missing key: path") from exc
             if not resolved.is_file():
                 raise ConfigError(
                     f"[portfolio:{acc_id}] path is missing or not a regular file: {resolved}"
+                )
+            if items:
+                logging.warning(
+                    "Ignoring unknown portfolio keys: %s",
+                    ", ".join(sorted(items.keys())),
                 )
             portfolio_paths[acc_id] = resolved
 
