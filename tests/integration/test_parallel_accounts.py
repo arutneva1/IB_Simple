@@ -117,7 +117,7 @@ def test_parallel_accounts(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -161,7 +161,7 @@ def test_parallel_confirmation_overlap(monkeypatch, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=True,
         read_only=False,
@@ -219,7 +219,7 @@ def test_serialized_confirmation_output(monkeypatch, capsys, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -297,7 +297,7 @@ def test_serialized_planner_output(monkeypatch, capsys, tmp_path):
 
     args = SimpleNamespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=True,
         read_only=False,

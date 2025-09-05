@@ -64,7 +64,7 @@ def test_parallel_accounts_flag_overrides_config(
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,

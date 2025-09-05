@@ -70,7 +70,7 @@ def test_prompt_default(
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -114,7 +114,7 @@ def test_yes_skips_prompt(
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=True,
         read_only=False,
@@ -147,7 +147,7 @@ def test_prompt_global(
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -192,7 +192,7 @@ def test_yes_skips_prompt_global(
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=True,
         read_only=False,

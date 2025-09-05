@@ -51,6 +51,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     csv_path = Path(args.csv)
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg: AppConfig = load_config(cfg_path)
+    cfg_path = cfg_path.resolve()
+    cfg_dir = cfg_path.parent
     cli_confirm_mode = getattr(args, "confirm_mode", None)
     if cli_confirm_mode:
         cfg.accounts.confirm_mode = ConfirmMode(cli_confirm_mode)
@@ -61,8 +63,15 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
     logging.info("Loaded configuration from %s", cfg_path)
 
+    if not csv_path.is_absolute():
+        csv_path = (cfg_dir / csv_path).resolve()
     portfolio_paths: dict[str, Path] = getattr(cfg, "portfolio_paths", {})
-    path_map = {acct: portfolio_paths.get(acct, csv_path) for acct in cfg.accounts.ids}
+    path_map: dict[str, Path] = {}
+    for acct in cfg.accounts.ids:
+        p = portfolio_paths.get(acct, csv_path)
+        if not p.is_absolute():
+            p = (cfg_dir / p).resolve()
+        path_map[acct] = p
     print("[blue]Loading portfolios[/blue]")
     for acct, p in path_map.items():
         logging.info("Portfolio for %s loaded from %s", acct, p)

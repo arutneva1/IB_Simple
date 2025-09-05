@@ -58,7 +58,7 @@ def test_per_account_prompts_once_per_account(monkeypatch, tmp_path):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=False,
         read_only=False,
@@ -89,7 +89,7 @@ def test_global_prompt_once_and_aborts(monkeypatch, tmp_path, capsys):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=False,
         read_only=False,

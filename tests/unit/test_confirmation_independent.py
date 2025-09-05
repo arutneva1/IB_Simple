@@ -72,7 +72,7 @@ def test_independent_confirmation_statuses(monkeypatch, tmp_path):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=False,
         yes=False,
         read_only=False,

@@ -58,7 +58,7 @@ def test_rebalance_dry_run(monkeypatch, capsys):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,
@@ -89,7 +89,7 @@ def test_rebalance_multiple_accounts_failure(monkeypatch, capsys):
 
     args = Namespace(
         config="config/settings.ini",
-        csv="data/portfolios.csv",
+        csv=str(Path("..") / "data" / "portfolios.csv"),
         dry_run=True,
         yes=False,
         read_only=False,
