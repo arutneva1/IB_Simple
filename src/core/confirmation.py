@@ -50,6 +50,7 @@ async def confirm_per_account(
     post_leverage = plan["post_leverage"]
     table = plan["table"]
     planned_orders = plan["planned_orders"]
+    planned_orders_initial = planned_orders
     buy_usd = plan["buy_usd"]
     sell_usd = plan["sell_usd"]
 
@@ -359,7 +360,6 @@ async def confirm_per_account(
             sell_usd += value
     trades = all_trades
     results = all_results
-    planned_orders = len(trades)
     post_path = write_post_trade_report(
         Path(cfg.io.report_dir),
         ts_dt,
@@ -386,7 +386,7 @@ async def confirm_per_account(
         {
             "timestamp_run": ts_dt.isoformat(),
             "account_id": account_id,
-            "planned_orders": planned_orders,
+            "planned_orders": planned_orders_initial,
             "submitted": len(trades),
             "filled": filled,
             "rejected": rejected,
