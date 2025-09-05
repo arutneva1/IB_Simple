@@ -198,17 +198,17 @@ def write_post_trade_report(
     # Aggregate trades and results across all passes for each (symbol, action)
     aggregated_trades: dict[tuple[str, str], SizedTrade] = {}
     for t in trades:
-        key = (t.symbol, t.action)
-        if key in aggregated_trades:
-            prev = aggregated_trades[key]
-            aggregated_trades[key] = SizedTrade(
+        trade_key = (t.symbol, t.action)
+        if trade_key in aggregated_trades:
+            prev = aggregated_trades[trade_key]
+            aggregated_trades[trade_key] = SizedTrade(
                 t.symbol,
                 t.action,
                 prev.quantity + t.quantity,
                 prev.notional + t.notional,
             )
         else:
-            aggregated_trades[key] = SizedTrade(
+            aggregated_trades[trade_key] = SizedTrade(
                 t.symbol, t.action, t.quantity, t.notional
             )
 
@@ -218,7 +218,7 @@ def write_post_trade_report(
         if sym is None:
             continue
         act = r.get("action")
-        key = (sym, act)
+        res_key = (sym, act)
         qty_any = r.get("fill_qty")
         if qty_any is None:
             qty_any = r.get("filled", 0.0)
@@ -228,8 +228,9 @@ def write_post_trade_report(
             price_any = r.get("avg_fill_price", 0.0)
         price = float(price_any or 0.0)
         exec_comms = r.get("exec_commissions")
+        commission: float
         if isinstance(exec_comms, dict) and exec_comms:
-            commission = sum(exec_comms.values())
+            commission = float(sum(exec_comms.values()))
         else:
             commission = float(r.get("commission", 0.0))
 
@@ -241,9 +242,9 @@ def write_post_trade_report(
         else:
             ts_str = str(ts_any)
 
-        agg = aggregated_results.get(key)
+        agg = aggregated_results.get(res_key)
         if agg is None:
-            aggregated_results[key] = {
+            aggregated_results[res_key] = {
                 "fill_qty": qty,
                 "_fill_value": qty * price,
                 "fill_price": price,
@@ -278,12 +279,12 @@ def write_post_trade_report(
 
     # Finalize aggregated results by computing weighted average fill price
     results_by_key: dict[tuple[str | None, str | None], dict[str, Any]] = {}
-    for key, agg in aggregated_results.items():
+    for res_key, agg in aggregated_results.items():
         qty = agg.get("fill_qty", 0.0)
         value = agg.pop("_fill_value", 0.0)
         if qty:
             agg["fill_price"] = value / qty
-        results_by_key[key] = agg
+        results_by_key[res_key] = agg
 
     trades_by_key = aggregated_trades
     timestamp_run = ts.isoformat()
