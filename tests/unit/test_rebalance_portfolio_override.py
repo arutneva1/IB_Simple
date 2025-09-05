@@ -1,7 +1,7 @@
 import asyncio
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from argparse import Namespace
 
 import pytest
 
@@ -65,7 +65,7 @@ def test_rebalance_uses_portfolio_overrides(
     default_csv = tmp_path / "default.csv"
     default_csv.write_text("")
 
-    args = SimpleNamespace(
+    args = Namespace(
         config="config/settings.ini",
         csv=str(default_csv),
         dry_run=True,
