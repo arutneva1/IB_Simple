@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
+from rich import print
+
 from src.broker.errors import IBKRError
 from src.broker.ibkr_client import IBKRClient
 from src.core.errors import PlanningError
