@@ -10,7 +10,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 import src.rebalance as rebalance
 from src.io.config_loader import ConfirmMode
 from src.io.config_loader import load_config as real_load_config
-from tests.unit.test_config_loader import VALID_CONFIG_WITH_PORTFOLIO
+from tests.unit.test_config_loader import VALID_CONFIG_WITH_ACCOUNT_PATH
 
 
 def test_rebalance_uses_portfolio_overrides(
@@ -51,7 +51,7 @@ def test_rebalance_uses_portfolio_overrides(
 
     def fake_load_config(path):  # noqa: ARG001
         cfg_path = tmp_path / "settings.ini"
-        cfg_path.write_text(VALID_CONFIG_WITH_PORTFOLIO)
+        cfg_path.write_text(VALID_CONFIG_WITH_ACCOUNT_PATH)
         (tmp_path / "foo.csv").write_text("")
         cfg = real_load_config(cfg_path)
         cfg.accounts.pacing_sec = 0.0
