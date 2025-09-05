@@ -55,7 +55,10 @@ runtime via `--confirm-mode`:
 
 `pacing_sec` throttles between accounts by pausing for the specified number of seconds.
 Set `parallel = true` to plan and execute accounts concurrently. The same can
-be enabled at runtime via `--parallel-accounts`.
+be enabled at runtime via `--parallel-accounts`. When running with
+`confirm_mode = per_account` and interactive prompts (i.e., without `--yes`),
+plans are computed concurrently but confirmations are serialized per account to
+avoid overlapping prompts.
 
 Example forcing a global prompt:
 
@@ -157,7 +160,8 @@ Displays the batch summary and exits without placing orders.
 ### Dry run across multiple accounts
 When `[accounts]` lists more than one ID, the rebalancer previews each
 account in sequence. Run the same command to simulate the batch, or add
-`--parallel-accounts` to process them concurrently:
+`--parallel-accounts` to process them concurrently. Per-account confirmations
+remain serialized so prompts appear one at a time:
 
 ```bash
 python src/rebalance.py --dry-run --parallel-accounts --config config/settings.ini --csv data/portfolios.csv
