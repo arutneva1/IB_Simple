@@ -127,9 +127,7 @@ def test_confirm_global_error_aggregation(monkeypatch, cfg):
             raise RuntimeError("boom")
         return await stub_confirm_per_account(plan, *args, **kwargs)
 
-    monkeypatch.setattr(
-        "src.core.confirmation.confirm_per_account", faulty_confirm
-    )
+    monkeypatch.setattr("src.core.confirmation.confirm_per_account", faulty_confirm)
 
     args = SimpleNamespace(dry_run=False, yes=True, read_only=False)
     ts_dt = datetime.utcnow()
