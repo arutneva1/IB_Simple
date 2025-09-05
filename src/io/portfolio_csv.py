@@ -119,8 +119,10 @@ def _parse_csv(
             raise PortfolioCSVError("Missing header")
         field_list = list(fieldnames)
         if len(field_list) != len(set(field_list)):
-            dupes = [n for n in field_list if field_list.count(n) > 1]
-            raise PortfolioCSVError(f"Duplicate columns: {', '.join(dupes)}")
+            dupes = {n for n in field_list if field_list.count(n) > 1}
+            raise PortfolioCSVError(
+                f"Duplicate columns: {', '.join(sorted(dupes))}"
+            )
         exp = expected or field_list
         if set(field_list) != set(exp):
             extra = set(field_list) - set(exp)
