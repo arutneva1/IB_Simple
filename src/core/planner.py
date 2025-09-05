@@ -12,7 +12,7 @@ from src.core.errors import PlanningError
 from src.core.preview import render as render_preview
 from src.core.pricing import PricingError, get_price
 from src.core.sizing import SizedTrade
-from src.io import AppConfig, merge_account_overrides
+from src.io import AppConfig
 from src.io.reporting import write_pre_trade_report
 
 
@@ -63,8 +63,23 @@ async def plan_account(
     render_preview=render_preview,
     write_pre_trade_report=write_pre_trade_report,
 ) -> Plan:
-    """Plan trades for a single account."""
-    cfg = merge_account_overrides(cfg, account_id)
+    """Plan trades for a single account.
+
+    Parameters
+    ----------
+    account_id:
+        The IBKR account identifier.
+    portfolios:
+        Mapping of symbols to target weightings for different models.
+    cfg:
+        Account-specific application configuration with overrides already
+        applied via :func:`~src.io.config_loader.merge_account_overrides`.
+    ts_dt:
+        Timestamp used for reporting and logging.
+    client_factory, compute_drift, prioritize_by_drift, size_orders,
+    fetch_price, render_preview, write_pre_trade_report:
+        Dependency injection hooks for testing and custom behaviour.
+    """
 
     print(
         f"[blue]Connecting to IBKR at {cfg.ibkr.host}:{cfg.ibkr.port} (client id {cfg.ibkr.client_id}) for account {account_id}[/blue]"
