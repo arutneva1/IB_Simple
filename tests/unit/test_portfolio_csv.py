@@ -170,3 +170,37 @@ CASH,50%,50%,50%
     path.write_text(content)
     with pytest.raises(PortfolioCSVError, match=r"Unknown ETF symbol: FAKE"):
         asyncio.run(load_portfolios(path, host="127.0.0.1", port=4001, client_id=1))
+
+
+def test_load_portfolios_map_relative_and_absolute(tmp_path: Path, monkeypatch) -> None:
+    """Relative and absolute paths to the same file should share cache."""
+
+    content = """ETF,SMURF,BADASS,GLTR
+BLOK,50%,50%,0%
+CASH,50%,50%,100%
+"""
+    path = tmp_path / "pf.csv"
+    path.write_text(content)
+
+    monkeypatch.chdir(tmp_path)
+
+    calls = 0
+
+    original_parse_csv = portfolio_csv._parse_csv
+
+    def fake_parse_csv(p, expected):
+        nonlocal calls
+        calls += 1
+        return original_parse_csv(p, expected)
+
+    monkeypatch.setattr(portfolio_csv, "_parse_csv", fake_parse_csv)
+
+    mapping = {"acct1": Path("pf.csv"), "acct2": path.resolve()}
+    result = asyncio.run(
+        portfolio_csv.load_portfolios_map(
+            mapping, host="127.0.0.1", port=4001, client_id=1
+        )
+    )
+
+    assert calls == 1
+    assert result["acct1"] is result["acct2"]
