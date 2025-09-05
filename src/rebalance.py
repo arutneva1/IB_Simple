@@ -48,7 +48,7 @@ async def _print_err(msg: str, lock: asyncio.Lock | None) -> None:
 
 async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     cfg_path = Path(args.config)
-    csv_path = Path(args.csv)
+    csv_arg = args.csv
     print(f"[blue]Loading configuration from {cfg_path}[/blue]")
     cfg: AppConfig = load_config(cfg_path)
     cfg_path = cfg_path.resolve()
@@ -63,6 +63,14 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
     setup_logging(Path(cfg.io.report_dir), cfg.io.log_level, timestamp)
     logging.info("Loaded configuration from %s", cfg_path)
 
+    if csv_arg is not None:
+        csv_path = Path(csv_arg)
+    else:
+        accounts_path = getattr(cfg.accounts, "path", None)
+        if accounts_path is not None:
+            csv_path = accounts_path
+        else:
+            csv_path = Path("data/portfolios.csv")
     if not csv_path.is_absolute():
         csv_path = (cfg_dir / csv_path).resolve()
     portfolio_paths: dict[str, Path] = getattr(cfg, "portfolio_paths", {})
@@ -355,8 +363,8 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--csv",
-        default="data/portfolios.csv",
-        help="Path to portfolio CSV",
+        default=None,
+        help="Path to portfolio CSV (defaults to [accounts] path or data/portfolios.csv)",
     )
     parser.add_argument(
         "--dry-run",

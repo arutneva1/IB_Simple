@@ -32,13 +32,28 @@ async def main(
         print(exc)
         raise SystemExit(1)
 
+    cfg_dir = Path(config_path).resolve().parent
+    global_path: Path | None = None
+    if path is not None:
+        p = Path(path)
+        if not p.is_absolute():
+            p = (cfg_dir / p).resolve()
+        global_path = p
+    else:
+        accounts_path = cfg.accounts.path
+        if accounts_path is not None:
+            p = accounts_path
+            if not p.is_absolute():
+                p = (cfg_dir / p).resolve()
+            global_path = p
+
     missing = [acct for acct in cfg.accounts.ids if acct not in cfg.portfolio_paths]
     all_have_paths = not missing
 
     try:
         if validate_all or all_have_paths:
             if not all_have_paths:
-                if path is None:
+                if global_path is None:
                     missing_ids = ", ".join(missing)
                     print(
                         "CSV path required for accounts without overrides: "
@@ -46,7 +61,7 @@ async def main(
                     )
                     raise SystemExit(1)
                 path_map = {
-                    acct: cfg.portfolio_paths.get(acct, Path(path))
+                    acct: cfg.portfolio_paths.get(acct, global_path)
                     for acct in cfg.accounts.ids
                 }
             else:
@@ -60,11 +75,11 @@ async def main(
                 client_id=cfg.ibkr.client_id,
             )
         else:
-            if path is None:
+            if global_path is None:
                 print("CSV path required")
                 raise SystemExit(1)
             await load_portfolios(
-                Path(path),
+                global_path,
                 host=cfg.ibkr.host,
                 port=cfg.ibkr.port,
                 client_id=cfg.ibkr.client_id,

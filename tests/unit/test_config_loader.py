@@ -156,6 +156,32 @@ def test_portfolio_paths_resolve_from_config_dir(
     assert cfg.portfolio_paths == {"ACC1": (cfg_dir / portfolio_rel).resolve()}
 
 
+def test_accounts_path_resolves_from_config_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg_dir = tmp_path / "cfg"
+    cfg_dir.mkdir()
+    rel = Path("data/foo.csv")
+    (cfg_dir / rel).parent.mkdir(parents=True)
+    (cfg_dir / rel).write_text("")
+    cfg_path = cfg_dir / "settings.ini"
+    cfg_content = VALID_CONFIG.replace(
+        "[accounts]\nids = ACC1, ACC2\n",
+        f"[accounts]\nids = ACC1, ACC2\npath = {rel.as_posix()}\n",
+    )
+    cfg_path.write_text(cfg_content)
+
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    monkeypatch.chdir(other_dir)
+
+    cfg = load_config(cfg_path)
+
+    expected = (cfg_dir / rel).resolve()
+    assert cfg.accounts.path == expected
+    assert cfg.accounts_path == expected
+
+
 def test_portfolio_path_missing(tmp_path: Path) -> None:
     cfg_path = tmp_path / "settings.ini"
     cfg_path.write_text(VALID_CONFIG + "\n[portfolio: acc1]\npath = missing.csv\n")

@@ -110,6 +110,7 @@ class Accounts:
     confirm_mode: ConfirmMode
     pacing_sec: float = 0.0
     parallel: bool = False
+    path: Path | None = None
 
 
 @dataclass
@@ -125,6 +126,7 @@ class AppConfig:
     accounts: Accounts
     account_overrides: Dict[str, AccountOverride] = field(default_factory=dict)
     portfolio_paths: Dict[str, Path] = field(default_factory=dict)
+    accounts_path: Path | None = None
 
 
 TOLERANCE = 0.001
@@ -282,11 +284,20 @@ def load_config(path: Path) -> AppConfig:
         parallel = cp.getboolean("accounts", "parallel", fallback=False)
     except ValueError as exc:
         raise ConfigError("[accounts] parallel must be a boolean") from exc
+    raw_accounts_path = cp.get("accounts", "path", fallback=None)
+    accounts_path = None
+    if raw_accounts_path:
+        accounts_path = (base_dir / Path(raw_accounts_path)).resolve()
+        if not accounts_path.is_file():
+            raise ConfigError(
+                f"[accounts] path is missing or not a regular file: {accounts_path}"
+            )
     accounts = Accounts(
         ids=ids,
         confirm_mode=confirm_mode,
         pacing_sec=pacing_sec,
         parallel=parallel,
+        path=accounts_path,
     )
 
     ibkr = IBKR(
@@ -460,6 +471,7 @@ def load_config(path: Path) -> AppConfig:
         accounts=accounts,
         account_overrides=account_overrides,
         portfolio_paths=portfolio_paths,
+        accounts_path=accounts_path,
     )
 
 
