@@ -140,7 +140,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
 
     plans: list[Plan] = []
     if getattr(accounts, "parallel", False):
-        tasks = []
+        tasks: list[asyncio.Task] = []
+        task_accounts: list[str] = []
         pacing = getattr(accounts, "pacing_sec", 0.0)
         for idx, account_id in enumerate(accounts.ids):
 
@@ -152,8 +153,35 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             tasks.append(
                 asyncio.create_task(start_after_delay(account_id, idx * pacing))
             )
-        results = await asyncio.gather(*tasks)
-        plans.extend([p for p in results if p is not None])
+            task_accounts.append(account_id)
+        results: list[Plan | Exception | None] = await asyncio.gather(
+            *tasks, return_exceptions=True
+        )
+        for aid, res in zip(task_accounts, results):
+            if isinstance(res, Exception):
+                logging.error("Unhandled error processing account %s: %s", aid, res)
+                print(f"[red]{res}[/red]")
+                failures.append((aid, str(res)))
+                capture_summary(
+                    Path(cfg.io.report_dir),
+                    ts_dt,
+                    {
+                        "timestamp_run": ts_dt.isoformat(),
+                        "account_id": aid,
+                        "planned_orders": 0,
+                        "submitted": 0,
+                        "filled": 0,
+                        "rejected": 0,
+                        "buy_usd": 0.0,
+                        "sell_usd": 0.0,
+                        "pre_leverage": 0.0,
+                        "post_leverage": 0.0,
+                        "status": "failed",
+                        "error": str(res),
+                    },
+                )
+            elif res is not None:
+                plans.append(res)
     else:
         for account_id in accounts.ids:
             plan = await handle_account(account_id)
