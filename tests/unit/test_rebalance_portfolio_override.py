@@ -8,7 +8,8 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 import src.rebalance as rebalance
-from src.io.config_loader import ConfirmMode, load_config as real_load_config
+from src.io.config_loader import ConfirmMode
+from src.io.config_loader import load_config as real_load_config
 from tests.unit.test_config_loader import VALID_CONFIG_WITH_PORTFOLIO
 
 
