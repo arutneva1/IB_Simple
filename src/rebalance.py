@@ -226,18 +226,21 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
             elif res is not None:
                 plans.append(res)
     else:
-        for account_id in accounts.ids:
+        pacing = getattr(accounts, "pacing_sec", 0)
+        for idx, account_id in enumerate(accounts.ids):
             plan = await handle_account(account_id)
             if plan is not None:
                 plans.append(plan)
-            await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
+            if idx < len(accounts.ids) - 1:
+                await asyncio.sleep(pacing)
 
     if (
         getattr(accounts, "parallel", False)
         and confirm_mode is ConfirmMode.PER_ACCOUNT
         and not args.yes
     ):
-        for plan in plans:
+        pacing = getattr(accounts, "pacing_sec", 0)
+        for idx, plan in enumerate(plans):
             account_id = plan["account_id"]
             try:
                 await confirm_per_account(
@@ -301,7 +304,8 @@ async def _run(args: argparse.Namespace) -> list[tuple[str, str]]:
                     },
                 )
             finally:
-                await asyncio.sleep(getattr(accounts, "pacing_sec", 0))
+                if idx < len(plans) - 1:
+                    await asyncio.sleep(pacing)
 
     if confirm_mode is ConfirmMode.GLOBAL:
         plans.sort(key=lambda p: str(p["account_id"]))
