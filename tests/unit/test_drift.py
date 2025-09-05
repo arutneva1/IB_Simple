@@ -123,6 +123,18 @@ def test_compute_drift_buffer_exceeds_net_liq_raises() -> None:
         compute_drift("ACCT", current, targets, prices, net_liq, cfg)
 
 
+def test_compute_drift_missing_price_for_target_raises() -> None:
+    """A KeyError is raised when a target symbol lacks pricing data."""
+
+    current = {"AAA": 10, "CASH": 5000}
+    targets = {"AAA": 50.0, "BBB": 50.0}
+    prices = {"AAA": 100.0}  # Missing BBB price
+    net_liq = 6000.0
+
+    with pytest.raises(KeyError):
+        compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
+
+
 def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     """Symbols absent from targets are treated as having 0% target weight."""
 
