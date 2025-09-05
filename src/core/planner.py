@@ -130,6 +130,7 @@ async def plan_account(
                 + weights["gltr"] * cfg.models.gltr
             )
 
+        tasks: list[asyncio.Task[Any]] = []
         try:
             await _print("[blue]Computing drift[/blue]")
             logging.info("Computing drift for %s", account_id)
@@ -171,6 +172,9 @@ async def plan_account(
 
             trade_prices = {sym: prices[sym] for sym in trade_symbols}
         except Exception as exc:  # pragma: no cover - defensive
+            for t in tasks:
+                t.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
             raise PlanningError(str(exc)) from exc
         return current, prices, trade_prices, net_liq, drifts, prioritized, targets
 
