@@ -101,7 +101,7 @@ def test_connection_failure(monkeypatch) -> None:
     async def fail_connect(host, port, clientId):  # noqa: N803 - mimics upstream
         raise RuntimeError("boom")
 
-    ib.connectAsync = fail_connect
+    setattr(ib, "connectAsync", fail_connect)
     with pytest.raises(PortfolioCSVError) as excinfo:
         asyncio.run(
             portfolio_csv.validate_symbols(
