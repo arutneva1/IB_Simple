@@ -254,7 +254,9 @@ def test_account_id_normalization(tmp_path: Path) -> None:
         "ids = ACC1, ACC2",
         "ids = acc1 , Acc2 ",
     )
-    content += "\n[portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
+    content += (
+        "\n[portfolio: acc1 ]\npath = foo.csv\n[account: Acc2]\nmin_order_usd = 100\n"
+    )
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
