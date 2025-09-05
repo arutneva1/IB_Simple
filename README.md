@@ -5,6 +5,22 @@ API. It loads a settings file and portfolio CSV, previews the rebalance, and
 demonstrates dry‑run versus prompted execution so you can build out the real
 trading logic.
 
+## Quickstart (Anaconda)
+
+FIRST TIME
+```bash
+cd IB_Trade
+conda create -n ibkr-rebal python=3.10 -y
+conda activate ibkr-rebal
+pip install -r requirements.txt -r requirements-dev.txt
+python -m src.rebalance --config config/settings.ini
+```
+Consecutive use
+```bash
+cd IB_Trade
+python -m src.rebalance --config config/settings.ini
+```
+
 ## Quickstart (Windows PowerShell)
 
 ```powershell
