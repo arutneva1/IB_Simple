@@ -323,7 +323,7 @@ async def confirm_per_account(
         )
         iter_prioritized = prioritize_by_drift(account_id, iter_drifts, cfg)
         extra_trades, _, _ = size_orders(
-            account_id, iter_prioritized, prices, cash_after, net_liq, cfg
+            account_id, iter_prioritized, prices, positions, cash_after, net_liq, cfg
         )
         if not extra_trades:
             break

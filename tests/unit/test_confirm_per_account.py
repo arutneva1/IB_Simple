@@ -85,7 +85,7 @@ def test_confirm_per_account_applies_overrides(tmp_path):
     def prioritize_by_drift(account_id, drifts, cfg):
         return []
 
-    def size_orders(account_id, drifts, prices, cash_after, net_liq, cfg):
+    def size_orders(account_id, drifts, prices, current_positions, cash_after, net_liq, cfg):
         return [], 0.0, 0.0
 
     def append_run_summary(path, ts_dt, row):
@@ -216,7 +216,7 @@ def test_confirm_per_account_reports_totals_for_same_symbol_buys_and_sells(tmp_p
     calls = {"n": 0}
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         if calls["n"] == 0:
             calls["n"] += 1
@@ -364,7 +364,7 @@ def test_confirm_per_account_logs_failed_summary(tmp_path):
         return []
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         return [], 0.0, 0.0
 
@@ -497,7 +497,7 @@ def test_confirm_per_account_missing_price(tmp_path):
         return []
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         return [], 0.0, 0.0
 
@@ -597,7 +597,7 @@ def test_confirm_per_account_missing_result_entry(tmp_path):
         return []
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         return [], 0.0, 0.0
 
@@ -745,7 +745,7 @@ def test_confirm_per_account_multiple_same_symbol_trades_ignore_stray_fills(tmp_
         return []
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         return [], 0.0, 0.0
 
@@ -880,7 +880,7 @@ def test_confirm_per_account_totals_skip_unmatched_fills(tmp_path):
         return []
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         return [], 0.0, 0.0
 
