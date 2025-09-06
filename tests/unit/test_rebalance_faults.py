@@ -41,7 +41,7 @@ def test_partial_account_failures(monkeypatch: pytest.MonkeyPatch) -> None:
         async def disconnect(self, host, port, client_id):  # noqa: ARG002
             return None
 
-        async def snapshot(self, account_id):  # noqa: ARG001
+        async def snapshot(self, account_id, *_, **__):  # noqa: ARG001
             if account_id == "bad":
                 raise IBKRError("boom")
             return {"positions": [], "cash": 0.0, "net_liq": 0.0}

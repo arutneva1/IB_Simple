@@ -48,7 +48,7 @@ def _setup_common(monkeypatch: pytest.MonkeyPatch):
         async def disconnect(self, host, port, client_id):
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {"positions": [], "cash": 100.0, "net_liq": 100.0}
 
     monkeypatch.setattr(rebalance, "IBKRClient", lambda: FakeClient())

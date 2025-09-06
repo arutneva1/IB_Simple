@@ -106,7 +106,10 @@ async def plan_account(
     async def _plan_with_client(client):
         await _print("[blue]Retrieving account snapshot[/blue]")
         logging.info("Retrieving account snapshot for %s", account_id)
-        snapshot = await client.snapshot(account_id)
+        snapshot = await client.snapshot(
+            account_id,
+            progress=lambda msg: _print(f"[blue]{msg}[/blue]"),
+        )
 
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
         current["CASH"] = float(snapshot["cash"])

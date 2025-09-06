@@ -51,7 +51,7 @@ def _setup_common(
         async def disconnect(self, host, port, client_id):  # pragma: no cover
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {
                 "positions": [{"symbol": "AAA", "position": 1, "avg_cost": 10.0}],
                 "cash": 100.0,

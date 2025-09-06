@@ -24,7 +24,7 @@ def test_plan_account_fetches_only_needed_prices() -> None:
         ) -> None:  # pragma: no cover - simple stub
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {
                 "positions": [
                     {"symbol": "AAA", "position": 1.0, "market_price": 10.0},
@@ -99,7 +99,7 @@ def test_plan_account_fetches_price_for_avg_cost_position() -> None:
         ) -> None:  # pragma: no cover - simple stub
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {
                 "positions": [
                     {"symbol": "AAA", "position": 1.0, "avg_cost": 10.0},

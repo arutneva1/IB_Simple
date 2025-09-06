@@ -27,7 +27,7 @@ def test_plan_account_builds_targets_from_mix() -> None:
         ) -> None:  # pragma: no cover - simple stub
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {
                 "positions": [
                     {"symbol": "AAA", "position": 0.0, "market_price": 1.0},

@@ -28,7 +28,9 @@ class DummyIBKRClient:
         type(self).disconnected = True
         return None
 
-    async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
+    async def snapshot(
+        self, account_id: str, *_: object, **__: object
+    ) -> dict:  # noqa: ARG002
         raise KeyboardInterrupt
 
 
