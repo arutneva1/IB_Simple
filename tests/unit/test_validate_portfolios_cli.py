@@ -124,7 +124,6 @@ cash_buffer_pct = 0.01
 cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
-maintenance_buffer_pct = 0.10
 trading_hours = rth
 max_passes = 3
 
@@ -241,7 +240,6 @@ cash_buffer_pct = 0.01
 cash_buffer_abs = 0
 allow_fractional = false
 max_leverage = 1.50
-maintenance_buffer_pct = 0.10
 trading_hours = rth
 max_passes = 3
 

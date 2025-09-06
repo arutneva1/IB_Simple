@@ -81,7 +81,6 @@ cash_buffer_pct = 0.01            ; when pct: reserve 1% of NetLiq as cash
 cash_buffer_abs = 0               ; when abs: reserve this USD amount
 allow_fractional = false          ; set true only if account supports it
 max_leverage = 1.50               ; hard cap on gross (e.g., 150%)
-maintenance_buffer_pct = 0.10     ; not used (rely on max_leverage)
 trading_hours = rth               ; rth or eth (extended trading hours)
 
 [pricing]
@@ -101,7 +100,6 @@ log_level = INFO
 
 **Notes:**
 - One global config per install (no per-run override file).  
-- `maintenance_buffer_pct` is retained in schema but **not enforced**; leverage guard uses `max_leverage` only.
 
 ---
 

@@ -36,7 +36,6 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
             cash_buffer_abs=0.0,
             allow_fractional=False,
             max_leverage=1.0,
-            maintenance_buffer_pct=0.0,
             trading_hours="rth",
             max_passes=3,
         ),

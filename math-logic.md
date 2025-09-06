@@ -216,15 +216,7 @@ See trade-decision-flow.pdf for an overview. This project is like a helpful robo
 **Example with numbers**
 : With `max_leverage = 1.50` and `net_liq = $10,000`, exposure cannot exceed `$15,000`.
 
-### `rebalance.maintenance_buffer_pct`
-**What it is**
-: Extra cushion for margin requirements (not enforced yet).
-
-**Why it matters**
-: Shows how much wiggle room the planner wants.
-
-**Example with numbers**
-: A `0.10` buffer hints at keeping `10%` of net value free for margin calls.
+No separate maintenance margin buffer is applied; leverage is capped solely by `max_leverage`.
 
 ### `rebalance.trading_hours`
 **What it is**
