@@ -124,6 +124,19 @@ min_order_usd = 10            ; lower minimum order just for DU111111
 In this example, account `DU111111` can submit fractional orders as small as
 $10 while all other accounts require whole-share orders of at least $50.
 
+Use `path` within an `[account:<ID>]` block to load a distinct portfolio CSV for
+that account:
+
+```ini
+[account:DU111111]
+path = portfolios_DU111111.csv  ; portfolio CSV just for DU111111
+
+[account:DU222222]
+path = portfolios_DU222222.csv  ; DU222222 loads its own file
+```
+
+Accounts without a `path` entry fall back to the global CSV.
+
 ### Per-account portfolio files
 
 By default all accounts share the CSV passed via `--csv`. Specify a separate
