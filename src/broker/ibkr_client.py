@@ -94,18 +94,38 @@ class IBKRClient:
 
         try:
             log.info("Starting account snapshot for %s", account_id)
+
+            # Retrieve raw positions for the account
             positions: List[Position] = await self._ib.reqPositionsAsync()
             positions = [p for p in positions if p.account == account_id]
-            usd_positions = [
-                {
+
+            # Request portfolio updates which include market prices/values
+            await self._ib.reqAccountUpdatesAsync(account_id)
+            portfolio_items = self._ib.portfolio()
+            portfolio_map = {
+                (item.account, getattr(item.contract, "symbol", "")): item
+                for item in portfolio_items
+            }
+
+            usd_positions: List[Dict[str, Any]] = []
+            for p in positions:
+                if p.contract.currency != "USD":
+                    continue
+
+                key = (p.account, getattr(p.contract, "symbol", ""))
+                item = portfolio_map.get(key)
+
+                pos: Dict[str, Any] = {
                     "account": p.account,
                     "symbol": getattr(p.contract, "symbol", ""),
                     "position": p.position,
                     "avg_cost": p.avgCost,
                 }
-                for p in positions
-                if p.contract.currency == "USD"
-            ]
+                if item is not None:
+                    pos["market_price"] = item.marketPrice
+                    pos["market_value"] = item.marketValue
+
+                usd_positions.append(pos)
 
             # Ensure account summary data is fetched for the target account.
             # ``ib_async`` changed the signature of ``reqAccountSummaryAsync`` at
