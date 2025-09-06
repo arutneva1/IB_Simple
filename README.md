@@ -331,6 +331,4 @@ The test skips if the connection variables are missing or, with
 
 ## Future Work
 
-Parallel execution or other concurrency features are intentionally left out of
-the v1 scope. The current design processes accounts sequentially to keep
-behavior predictable and easier to audit.
+Future enhancements are planned, such as scheduled rebalancing, richer reporting, and other improvements. Contributions are welcome.
