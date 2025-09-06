@@ -116,7 +116,7 @@
 - (unit) Mocks for error paths
 
 **Acceptance**
-- CLI `python -m src.snapshot --config config/settings.ini` prints summary JSON of positions/cash
+- Programmatic call to `IBKRClient.snapshot` or `python -m src.rebalance --config config/settings.ini --dry-run` prints summary JSON of positions/cash
 
 ---
 

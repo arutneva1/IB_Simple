@@ -9,42 +9,6 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 from src.core.drift import compute_drift
 
 
-async def _run_snapshot(monkeypatch):
-    snapshot = import_module("src.snapshot")
-    cfg = SimpleNamespace(
-        ibkr=SimpleNamespace(host="h", port=1, client_id=1),
-        accounts=SimpleNamespace(ids=["acct1", "bad", "acct2"]),
-    )
-    monkeypatch.setattr(snapshot, "load_config", lambda _p: cfg)
-
-    calls: list[str] = []
-
-    class FakeClient:
-        async def connect(self, host, port, client_id):  # pragma: no cover - trivial
-            return None
-
-        async def disconnect(self, host, port, client_id):  # pragma: no cover - trivial
-            return None
-
-        async def snapshot(self, account_id):
-            calls.append(account_id)
-            if account_id == "bad":
-                raise ValueError("boom")
-            return {"positions": [], "cash": 0.0, "net_liq": 0.0}
-
-    monkeypatch.setattr(snapshot, "IBKRClient", lambda: FakeClient())
-
-    await snapshot._run(Path("cfg"))
-    return calls
-
-
-def test_snapshot_invoked_once_per_account(monkeypatch, capsys):
-    calls = asyncio.run(_run_snapshot(monkeypatch))
-    out = capsys.readouterr().out
-    assert calls == ["acct1", "bad", "acct2"]
-    assert "boom" in out
-
-
 async def _run_rebalance(monkeypatch):
     rebalance = import_module("src.rebalance")
     cfg = SimpleNamespace(
