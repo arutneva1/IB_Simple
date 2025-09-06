@@ -85,7 +85,9 @@ def test_confirm_per_account_applies_overrides(tmp_path):
     def prioritize_by_drift(account_id, drifts, cfg):
         return []
 
-    def size_orders(account_id, drifts, prices, current_positions, cash_after, net_liq, cfg):
+    def size_orders(
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
+    ):
         return [], 0.0, 0.0
 
     def append_run_summary(path, ts_dt, row):
