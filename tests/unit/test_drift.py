@@ -135,6 +135,19 @@ def test_compute_drift_missing_price_for_target_raises() -> None:
         compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
 
 
+def test_compute_drift_ignores_zero_weight_targets_without_holdings() -> None:
+    """Zero-weight targets lacking holdings don't require pricing."""
+
+    current = {"AAA": 10, "CASH": 5000}
+    targets = {"AAA": 50.0, "BBB": 0.0}
+    prices = {"AAA": 100.0}  # No BBB price provided
+    net_liq = 6000.0
+
+    drifts = compute_drift("ACCT", current, targets, prices, net_liq, cfg=None)
+    symbols = {d.symbol for d in drifts}
+    assert symbols == {"AAA", "CASH"}
+
+
 def test_compute_drift_defaults_missing_targets_to_zero() -> None:
     """Symbols absent from targets are treated as having 0% target weight."""
 
