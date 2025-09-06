@@ -8,7 +8,6 @@ to fetch the current account state in a simplified dictionary form.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from dataclasses import asdict, dataclass
 from types import TracebackType
@@ -38,16 +37,12 @@ class IBKRClient:
     convenience ``snapshot`` method for retrieving account data.
     """
 
-    def __init__(self, account_updates_timeout: float | None = None) -> None:
+    def __init__(self) -> None:
         self._ib = IB()
         # Connection parameters used by the async context manager methods.
         self._host: str | None = None
         self._port: int | None = None
         self._client_id: int | None = None
-        # Timeout for reqAccountUpdatesAsync calls in snapshot.
-        self._account_updates_timeout = (
-            account_updates_timeout if account_updates_timeout is not None else 10.0
-        )
 
     async def __aenter__(self) -> "IBKRClient":
         """Connect to IBKR using stored connection parameters."""
@@ -115,21 +110,10 @@ class IBKRClient:
             # Request portfolio updates which include market prices/values
             if progress is not None:
                 await progress("requesting account updates")
-            portfolio_items: List[Any] = []
-            try:
-                await asyncio.wait_for(
-                    self._ib.reqAccountUpdatesAsync(account_id),
-                    timeout=self._account_updates_timeout,
-                )
-                if progress is not None:
-                    await progress("received account updates")
-                portfolio_items = self._ib.portfolio()
-            except asyncio.TimeoutError as exc:
-                raise IBKRError(
-                    f"account update request for {account_id} timed out"
-                ) from exc
-            finally:
-                self._ib.client.reqAccountUpdates(False, account_id)
+            portfolio_items: List[Any] = self._ib.portfolio()
+            if progress is not None:
+                await progress("received account updates")
+            self._ib.client.reqAccountUpdates(False, account_id)
             portfolio_map = {
                 (item.account, getattr(item.contract, "symbol", "")): item
                 for item in portfolio_items
