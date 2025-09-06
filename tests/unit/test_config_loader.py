@@ -302,6 +302,26 @@ def test_model_weights_not_sum_to_one(tmp_path: Path) -> None:
         load_config(path)
 
 
+def test_execution_adaptive_priority_valid(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "adaptive_priority = normal", "adaptive_priority = urgent"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    cfg = load_config(path)
+    assert cfg.execution.adaptive_priority == "urgent"
+
+
+def test_execution_adaptive_priority_invalid(tmp_path: Path) -> None:
+    content = VALID_CONFIG.replace(
+        "adaptive_priority = normal", "adaptive_priority = asap"
+    )
+    path = tmp_path / "settings.ini"
+    path.write_text(content)
+    with pytest.raises(ConfigError):
+        load_config(path)
+
+
 def test_account_overrides_allow_fractional(tmp_path: Path) -> None:
     content = VALID_CONFIG + "\n[account: acc1 ]\nallow_fractional = true\n"
     path = tmp_path / "settings.ini"
