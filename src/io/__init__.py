@@ -27,12 +27,6 @@ from .portfolio_csv import (
     load_portfolios_map,
     validate_symbols,
 )
-from .reporting import (
-    append_run_summary,
-    setup_logging,
-    write_post_trade_report,
-    write_pre_trade_report,
-)
 
 __all__ = [
     "AppConfig",
@@ -58,3 +52,16 @@ __all__ = [
     "write_post_trade_report",
     "append_run_summary",
 ]
+
+
+def __getattr__(name: str):
+    if name in {
+        "append_run_summary",
+        "setup_logging",
+        "write_post_trade_report",
+        "write_pre_trade_report",
+    }:
+        from . import reporting
+
+        return getattr(reporting, name)
+    raise AttributeError(name)
