@@ -141,6 +141,21 @@ mixing global and per-account files:
 python -m src.rebalance --config config/settings.ini --csv config/portfolios.csv
 ```
 
+### Rebalance passes
+
+The `[rebalance]` section controls how many times the tool sweeps leftover cash
+after the initial trades fill. The `max_passes` setting caps these repeated
+cash sweeps; each pass recalculates drift and submits additional batches until
+remaining cash falls below `min_order_usd` or the limit is reached. The sample
+`config/settings.ini` enables three passes by default with `max_passes = 3`.
+
+### Batch order submission
+
+Under `[execution]`, `batch_orders` determines whether orders are grouped before
+being sent to IBKR. When enabled, submissions are bundled into batches instead
+of dispatched one by one, reducing API round-trips. The default configuration
+has `batch_orders = true` in `config/settings.ini`.
+
 ## Usage
 
 ### Validate configuration
