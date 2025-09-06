@@ -10,6 +10,7 @@ from src.io.config_loader import (  # noqa: E402
     IBKR,
     IO,
     Accounts,
+    AdaptivePriority,
     AppConfig,
     ConfigError,
     ConfirmMode,
@@ -115,7 +116,7 @@ def test_load_valid_config(config_file: Path) -> None:
             batch_orders=True,
             commission_report_timeout=5.0,
             wait_before_fallback=300.0,
-            adaptive_priority="normal",
+            adaptive_priority=AdaptivePriority.NORMAL,
         ),
         io=IO(report_dir="reports", log_level="INFO"),
         accounts=Accounts(
@@ -309,7 +310,7 @@ def test_execution_adaptive_priority_valid(tmp_path: Path) -> None:
     path = tmp_path / "settings.ini"
     path.write_text(content)
     cfg = load_config(path)
-    assert cfg.execution.adaptive_priority == "urgent"
+    assert cfg.execution.adaptive_priority == AdaptivePriority.URGENT
 
 
 def test_execution_adaptive_priority_invalid(tmp_path: Path) -> None:

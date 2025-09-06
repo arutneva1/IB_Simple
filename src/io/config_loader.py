@@ -25,6 +25,14 @@ class ConfirmMode(Enum):
     GLOBAL = "global"
 
 
+class AdaptivePriority(Enum):
+    """Adaptive order priority levels."""
+
+    PATIENT = "patient"
+    NORMAL = "normal"
+    URGENT = "urgent"
+
+
 @dataclass
 class IBKR:
     """Settings for Interactive Brokers connection."""
@@ -80,7 +88,7 @@ class Execution:
     batch_orders: bool
     commission_report_timeout: float
     wait_before_fallback: float
-    adaptive_priority: str = "normal"
+    adaptive_priority: AdaptivePriority = AdaptivePriority.NORMAL
 
 
 @dataclass
@@ -426,6 +434,15 @@ def load_config(path: Path) -> AppConfig:
 
     # [execution]
     try:
+        adaptive_priority_str = (
+            cp.get("execution", "adaptive_priority", fallback="normal").strip().lower()
+        )
+        adaptive_priority = AdaptivePriority(adaptive_priority_str)
+    except ValueError as exc:
+        raise ConfigError(
+            "[execution] adaptive_priority must be 'patient', 'normal', or 'urgent'"
+        ) from exc
+    try:
         execution = Execution(
             order_type=cp.get("execution", "order_type"),
             algo_preference=cp.get("execution", "algo_preference"),
@@ -437,16 +454,10 @@ def load_config(path: Path) -> AppConfig:
             wait_before_fallback=cp.getfloat(
                 "execution", "wait_before_fallback", fallback=300.0
             ),
-            adaptive_priority=cp.get(
-                "execution", "adaptive_priority", fallback="normal"
-            ).lower(),
+            adaptive_priority=adaptive_priority,
         )
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[execution] {exc}") from exc
-    if execution.adaptive_priority not in {"patient", "normal", "urgent"}:
-        raise ConfigError(
-            "[execution] adaptive_priority must be 'patient', 'normal', or 'urgent'"
-        )
 
     # [io]
     try:

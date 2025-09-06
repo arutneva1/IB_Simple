@@ -84,9 +84,7 @@ async def submit_batch(
                 if use_algo and algo_pref == "adaptive":
                     algo_used_local = True
                     order.algoStrategy = "Adaptive"
-                    priority = getattr(
-                        cfg.execution, "adaptive_priority", "normal"
-                    ).capitalize()
+                    priority = cfg.execution.adaptive_priority.value.capitalize()
                     order.algoParams = [TagValue("adaptivePriority", priority)]
             order.account = account_id
             if cfg.rebalance.trading_hours == "eth":
