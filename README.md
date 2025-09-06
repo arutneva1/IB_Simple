@@ -218,6 +218,10 @@ from src.core.pricing import get_price
 price = await get_price(ib, "SPY", price_source="last", fallback_to_snapshot=True)
 ```
 
+When planning a rebalance, prices are requested only for current holdings
+without snapshot values and symbols that have a non-zero target weight but
+aren't already priced.
+
 ### Drift preview
 Generate a table of drift metrics:
 

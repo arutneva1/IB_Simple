@@ -132,7 +132,15 @@ async def plan_account(
 
         tasks: list[asyncio.Task[Any]] = []
         try:
-            target_symbols = {sym for sym in targets if sym != "CASH"}
+            missing_current = {
+                sym for sym in current if sym != "CASH" and sym not in snapshot_prices
+            }
+            needed_targets = {
+                sym
+                for sym, wt in targets.items()
+                if sym != "CASH" and wt != 0 and sym not in snapshot_prices
+            }
+            target_symbols = missing_current | needed_targets
             await _print(
                 f"[blue]Fetching prices for {len(target_symbols)} target symbols[/blue]"
             )
