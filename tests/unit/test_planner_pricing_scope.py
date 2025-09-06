@@ -48,6 +48,7 @@ def test_plan_account_fetches_only_needed_prices() -> None:
         "AAA": {"smurf": 1.0},
         "BBB": {"smurf": 1.0},
         "CCC": {"smurf": 1.0},
+        "DDD": {"smurf": 0.0},
         "CASH": {},
     }
 

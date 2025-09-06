@@ -129,17 +129,18 @@ def compute_drift(
         for sym, val in values.items()
     }
 
-    # Union of all symbols from current holdings and targets.
-    symbols = set(current_wts) | set(targets)
+    # Ignore zero-weight targets when building the symbol universe.
+    non_zero_targets = {s: wt for s, wt in targets.items() if wt != 0}
+    symbols = set(current_wts) | set(non_zero_targets)
 
     # Ensure target-only symbols have associated pricing data.
-    for sym in set(targets) - set(current_wts):
+    for sym in set(non_zero_targets) - set(current_wts):
         if sym != "CASH" and sym not in prices:
             raise KeyError(f"missing price for {sym}")
 
     drifts: list[Drift] = []
     for symbol in sorted(symbols):
-        target = targets.get(symbol, 0.0)
+        target = non_zero_targets.get(symbol, 0.0)
         current_wt = current_wts.get(symbol, 0.0)
         drift_pct = current_wt - target
         drift_usd = investable_net_liq * drift_pct / 100.0
