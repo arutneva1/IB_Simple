@@ -303,7 +303,8 @@ python -m src.rebalance --read-only --config config/settings.ini --csv config/po
 Forces preview-only mode even if `--yes` is used.
 
 ### Reporting & logging
-After a run, timestamped artifacts are written under `reports/`:
+After a run, timestamped artifacts are written under `reports/`.
+The directory is created automatically if missing and is not tracked in version control:
 
 ```text
 reports/rebalance_pre_<account>_<timestamp>.csv   # state and intended trades per account
