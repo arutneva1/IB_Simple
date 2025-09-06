@@ -65,7 +65,6 @@ class Rebalance:
     cash_buffer_abs: float | None
     allow_fractional: bool
     max_leverage: float
-    maintenance_buffer_pct: float  # decimal fraction (e.g., 0.10 = 10%)
     trading_hours: str
     max_passes: int
 
@@ -367,7 +366,6 @@ def load_config(path: Path) -> AppConfig:
         ).lower()
         allow_fractional = cp.getboolean("rebalance", "allow_fractional")
         max_leverage = cp.getfloat("rebalance", "max_leverage")
-        maintenance_buffer_pct = cp.getfloat("rebalance", "maintenance_buffer_pct")
         trading_hours = cp.get("rebalance", "trading_hours").strip().lower()
         max_passes = cp.getint("rebalance", "max_passes", fallback=1)
     except (NoSectionError, NoOptionError, ValueError) as exc:
@@ -402,8 +400,6 @@ def load_config(path: Path) -> AppConfig:
         raise ConfigError("[rebalance] cash_buffer_type must be 'pct' or 'abs'")
     if max_leverage <= 0:
         raise ConfigError("[rebalance] max_leverage must be positive")
-    if not 0 <= maintenance_buffer_pct <= 1:
-        raise ConfigError("[rebalance] maintenance_buffer_pct must be between 0 and 1")
     if trading_hours not in {"rth", "eth"}:
         raise ConfigError("[rebalance] trading_hours must be 'rth' or 'eth'")
     if max_passes <= 0:
@@ -418,7 +414,6 @@ def load_config(path: Path) -> AppConfig:
         cash_buffer_abs=cash_buffer_abs,
         allow_fractional=allow_fractional,
         max_leverage=max_leverage,
-        maintenance_buffer_pct=maintenance_buffer_pct,
         trading_hours=trading_hours,
         max_passes=max_passes,
     )

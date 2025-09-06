@@ -39,7 +39,6 @@ def test_failing_confirmation_writes_single_summary(tmp_path, monkeypatch):
             cash_buffer_abs=0.0,
             allow_fractional=False,
             max_leverage=1.0,
-            maintenance_buffer_pct=0.0,
             trading_hours="rth",
             max_passes=1,
         ),
