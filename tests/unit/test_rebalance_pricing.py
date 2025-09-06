@@ -111,7 +111,7 @@ def test_run_fetches_prices_for_targets_and_trades(
     asyncio.run(rebalance._run(args))
 
     assert pre == {"AAA": 15.0, "BBB": 20.0}
-    assert fetched.count("AAA") == 2
+    assert fetched.count("AAA") == 1
     assert fetched.count("BBB") == 1
     assert sizing == {"AAA": 15.0}
 

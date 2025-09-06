@@ -75,6 +75,7 @@ class Pricing:
 
     price_source: str
     fallback_to_snapshot: bool
+    price_max_age_sec: float | None = None
 
 
 @dataclass
@@ -420,9 +421,14 @@ def load_config(path: Path) -> AppConfig:
 
     # [pricing]
     try:
+        try:
+            max_age = cp.getfloat("pricing", "price_max_age_sec")
+        except (NoOptionError, ValueError):
+            max_age = None
         pricing = Pricing(
             price_source=cp.get("pricing", "price_source"),
             fallback_to_snapshot=cp.getboolean("pricing", "fallback_to_snapshot"),
+            price_max_age_sec=max_age,
         )
     except (NoSectionError, NoOptionError, ValueError) as exc:
         raise ConfigError(f"[pricing] {exc}") from exc
