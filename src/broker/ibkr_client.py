@@ -30,48 +30,14 @@ class Snapshot:
 
 
 class IBKRClient:
-    """Thin wrapper around :class:`ib_async.IB` with context manager support."""
+    """Thin wrapper around :class:`ib_async.IB`.
 
-    def __init__(
-        self,
-        host: str | None = None,
-        port: int | None = None,
-        client_id: int | None = None,
-    ) -> None:
+    Provides ``connect``/``disconnect`` helpers with exponential backoff and a
+    convenience ``snapshot`` method for retrieving account data.
+    """
+
+    def __init__(self) -> None:
         self._ib = IB()
-        self._host = host
-        self._port = port
-        self._client_id = client_id
-
-    async def __aenter__(self) -> "IBKRClient":
-        """Connect to IBKR when used as an async context manager."""
-
-        if None in (self._host, self._port, self._client_id):
-            raise IBKRError("host, port and client_id required for context manager")
-        assert (
-            self._host is not None
-            and self._port is not None
-            and self._client_id is not None
-        )
-        await self.connect(self._host, self._port, self._client_id)
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb) -> bool:
-        """Ensure disconnection even if an error occurred in the context."""
-
-        if None not in (self._host, self._port, self._client_id):
-            try:
-                assert (
-                    self._host is not None
-                    and self._port is not None
-                    and self._client_id is not None
-                )
-                await self.disconnect(self._host, self._port, self._client_id)
-            except Exception:  # pragma: no cover - disconnect errors
-                log.exception("Error while disconnecting from IBKR")
-                if exc_type is None:
-                    raise
-        return False
 
     async def connect(self, host: str, port: int, client_id: int) -> None:
         """Connect to TWS/Gateway with exponential backoff."""
