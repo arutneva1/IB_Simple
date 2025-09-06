@@ -159,16 +159,13 @@ has `batch_orders = true` in `config/settings.ini`.
 ## Usage
 
 ### Validate configuration
-The configuration can be checked by loading it with `load_config()`:
+Check the configuration from the command line:
 
 ```bash
-python - <<'PY'
-from pathlib import Path
-from src.io.config_loader import load_config
-load_config(Path("config/settings.ini"))
-print("Config OK")
-PY
+python -m src.io.validate_config config/settings.ini
 ```
+
+This prints `Config OK` when the file is valid.
 
 `validate_portfolios.py` also validates the configuration before checking
 portfolio files.

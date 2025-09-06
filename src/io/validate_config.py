@@ -1,4 +1,13 @@
-"""CLI utility to validate configuration files."""
+"""Validate configuration files.
+
+This module exposes a tiny CLI::
+
+    python -m src.io.validate_config <path>
+
+Running the command loads the configuration file and prints ``Config OK`` if
+the file is valid.  Otherwise, the error is printed and the process exits with
+a non-zero status code.
+"""
 
 from __future__ import annotations
 
@@ -6,12 +15,14 @@ from pathlib import Path
 
 from .config_loader import ConfigError, load_config
 
+__all__ = ["main"]
 
-def main(path: str) -> None:
+
+def main(config_path: str) -> None:
     """Validate the given config printing ``Config OK`` on success."""
 
     try:
-        load_config(Path(path))
+        load_config(Path(config_path))
     except (ConfigError, OSError) as exc:  # pragma: no cover - simple wrapper
         print(exc)
         raise SystemExit(1)
