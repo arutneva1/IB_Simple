@@ -30,9 +30,9 @@ def _cfg(
 
 def test_render_sorted_and_filtered() -> None:
     drifts = [
-        Drift("AAA", 0.0, 0.0, 0.0, -120.0, "BUY"),
-        Drift("BBB", 0.0, 0.0, 0.0, 80.0, "SELL"),
-        Drift("CCC", 0.0, 0.0, 0.0, 200.0, "SELL"),
+        Drift("AAA", 0.0, 0.0, 0.0, -120.0, 1.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, 80.0, 1.0, "SELL"),
+        Drift("CCC", 0.0, 0.0, 0.0, 200.0, 1.0, "SELL"),
     ]
     cfg = _cfg(100)
 
@@ -47,7 +47,7 @@ def test_render_sorted_and_filtered() -> None:
 
 
 def test_render_shows_quantities_and_est_value() -> None:
-    drifts = [Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY")]
+    drifts = [Drift("AAA", 0.0, 0.0, 0.0, -100.0, 1.0, "BUY")]
     prices = {"AAA": 25.0}
     cfg = _cfg(1)
 
@@ -65,8 +65,8 @@ def test_render_shows_quantities_and_est_value() -> None:
 
 def test_render_batch_summary() -> None:
     drifts = [
-        Drift("AAA", 0.0, 0.0, 0.0, -100.0, "BUY"),
-        Drift("BBB", 0.0, 0.0, 0.0, 50.0, "SELL"),
+        Drift("AAA", 0.0, 0.0, 0.0, -100.0, 1.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, 50.0, 1.0, "SELL"),
     ]
     trades = [
         SizedTrade("AAA", "BUY", 10.0, 100.0),

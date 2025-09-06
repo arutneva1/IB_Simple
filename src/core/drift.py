@@ -32,6 +32,8 @@ class Drift:
         Dollar value of the drift.  Positive values indicate an overweight
         position (requiring a sell to rebalance) while negative values indicate
         an underweight position (requiring a buy).
+    snapshot_price:
+        Price used when the drift snapshot was computed. ``1`` for ``"CASH"``.
     action:
         Suggested action: ``"BUY"`` when underweight, ``"SELL"`` when
         overweight and ``"HOLD"`` when within the target.
@@ -42,6 +44,7 @@ class Drift:
     current_wt_pct: float
     drift_pct: float
     drift_usd: float
+    snapshot_price: float
     action: str
 
 
@@ -141,6 +144,11 @@ def compute_drift(
         drift_pct = current_wt - target
         drift_usd = investable_net_liq * drift_pct / 100.0
 
+        if symbol == "CASH":
+            snapshot_price = 1.0
+        else:
+            snapshot_price = prices[symbol]
+
         if drift_pct > 0:
             action = "SELL"
         elif drift_pct < 0:
@@ -155,6 +163,7 @@ def compute_drift(
                 current_wt_pct=current_wt,
                 drift_pct=drift_pct,
                 drift_usd=drift_usd,
+                snapshot_price=snapshot_price,
                 action=action,
             )
         )

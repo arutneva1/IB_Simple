@@ -67,8 +67,8 @@ def _setup_common(
     def fake_compute_drift(account_id, current, targets, prices, net_liq, cfg):
         captured_pre.update(prices)
         return [
-            Drift("AAA", 0, 0, -10.0, -10.0, "BUY"),
-            Drift("BBB", 0, 0, 0.0, 0.0, "HOLD"),
+            Drift("AAA", 0, 0, -10.0, -10.0, 1.0, "BUY"),
+            Drift("BBB", 0, 0, 0.0, 0.0, 1.0, "HOLD"),
         ]
 
     monkeypatch.setattr(rebalance, "compute_drift", fake_compute_drift)

@@ -28,7 +28,7 @@ def test_write_pre_and_post_trade_reports(tmp_path, caplog):
     caplog.set_level(logging.INFO)
     ts = datetime(2023, 1, 1)
 
-    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, 100.0, "BUY")
     trades = [SizedTrade("AAA", "BUY", 10.0, 1000.0)]
     prices = {"AAA": 100.0}
     cfg = _cfg()
@@ -224,7 +224,7 @@ def test_append_run_summary(tmp_path):
 
 def test_post_trade_missing_execid_notes(tmp_path):
     ts = datetime(2023, 1, 1)
-    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, 100.0, "BUY")
     trades = [SizedTrade("AAA", "BUY", 10.0, 1000.0)]
     results = [
         {
@@ -263,7 +263,7 @@ def test_post_trade_missing_execid_notes(tmp_path):
 
 def test_post_trade_report_aggregates_multiple_passes(tmp_path):
     ts = datetime(2023, 1, 1)
-    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, 100.0, "BUY")
     trades = [
         SizedTrade("AAA", "BUY", 5.0, 500.0),
         SizedTrade("AAA", "BUY", 3.0, 300.0),
