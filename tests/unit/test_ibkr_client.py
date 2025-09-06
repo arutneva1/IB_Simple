@@ -42,6 +42,37 @@ class FakeIBSnapshot:
             ),
         ]
 
+    async def reqAccountUpdatesAsync(self, account):
+        return None
+
+    def portfolio(self):
+        return [
+            SimpleNamespace(
+                account="ACC",
+                contract=SimpleNamespace(symbol="AAPL", currency="USD"),
+                position=10,
+                marketPrice=110.0,
+                marketValue=1100.0,
+                averageCost=100.0,
+            ),
+            SimpleNamespace(
+                account="ACC",
+                contract=SimpleNamespace(symbol="SHOP", currency="CAD"),
+                position=5,
+                marketPrice=150.0,
+                marketValue=750.0,
+                averageCost=150.0,
+            ),
+            SimpleNamespace(
+                account="OTHER",
+                contract=SimpleNamespace(symbol="MSFT", currency="USD"),
+                position=20,
+                marketPrice=200.0,
+                marketValue=4000.0,
+                averageCost=200.0,
+            ),
+        ]
+
     async def reqAccountSummaryAsync(self, account_id):
         return None
 
@@ -66,6 +97,8 @@ def test_snapshot_converts_cad_cash(monkeypatch):
                 "symbol": "AAPL",
                 "position": 10,
                 "avg_cost": 100.0,
+                "market_price": 110.0,
+                "market_value": 1100.0,
             }
         ],
         "cash": 1000.0,
@@ -96,6 +129,8 @@ def test_snapshot_cad_cash_no_fx_rate(monkeypatch):
                 "symbol": "AAPL",
                 "position": 10,
                 "avg_cost": 100.0,
+                "market_price": 110.0,
+                "market_value": 1100.0,
             }
         ],
         "cash": 1000.0,

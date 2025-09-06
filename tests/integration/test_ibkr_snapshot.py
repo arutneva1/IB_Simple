@@ -26,3 +26,5 @@ def test_ibkr_snapshot():
     snapshot = asyncio.run(run())
     assert isinstance(snapshot["net_liq"], (int, float))
     assert isinstance(snapshot["positions"], list)
+    for pos in snapshot["positions"]:
+        assert "market_price" in pos
