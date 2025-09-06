@@ -135,6 +135,7 @@ fallback_to_snapshot = true
 [execution]
 order_type = market
 algo_preference = adaptive
+adaptive_priority = normal
 fallback_plain_market = true
 batch_orders = true
 commission_report_timeout = 5.0
@@ -251,6 +252,7 @@ fallback_to_snapshot = true
 [execution]
 order_type = market
 algo_preference = adaptive
+adaptive_priority = normal
 fallback_plain_market = true
 batch_orders = true
 commission_report_timeout = 5.0
