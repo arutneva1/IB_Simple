@@ -37,7 +37,7 @@ Use this as a **living PR checklist**. Each phase must meet its acceptance items
 - [x] Required keys/types/ranges validated
 - [x] Clear `ConfigError` messages on failure
 - [x] Unit tests cover valid/invalid configs
-- [x] CLI `src/io/validate_config.py` for config validation
+- [x] Config validation via `load_config()`; no dedicated CLI
 
 ### Phase B2 — CSV Parser & Portfolio Validation
 - [x] `src/io/portfolio_csv.py` implemented

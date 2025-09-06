@@ -81,7 +81,7 @@
 - [ ] Models sum not ≈ 1.0
 
 **Acceptance**
-- CLI `python -m src.io.validate_config config/settings.ini` prints OK or errors
+- Loading the config with `load_config()` prints OK or errors
 
 ---
 
