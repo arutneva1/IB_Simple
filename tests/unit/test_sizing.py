@@ -149,9 +149,7 @@ def test_rejects_non_finite_price_or_quantity() -> None:
     drifts = [_drift("AAA", -100.0, net_liq, 100.0)]
     prices = {"AAA": math.nan}
     with pytest.raises(ValueError):
-        size_orders(
-            "ACCT", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg
-        )
+        size_orders("ACCT", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg)
 
     # Non-finite quantity
     bad_drift = Drift("BBB", 0.0, 0.0, 0.0, math.nan, 1.0, "BUY")
