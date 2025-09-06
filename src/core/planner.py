@@ -34,9 +34,6 @@ class Plan(TypedDict, total=False):
     planned_orders: int
     buy_usd: float
     sell_usd: float
-    sell_results: list[dict[str, Any]]
-    buy_results: list[dict[str, Any]]
-    failed: bool
 
 
 async def _fetch_price(ib, symbol: str, cfg) -> tuple[str, float]:
