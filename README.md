@@ -160,12 +160,10 @@ python -m src.io.validate_portfolios --config config/settings.ini --all config/p
 An active IBKR session (TWS or IB Gateway) must be running so the tool can
 verify ticker symbols.
 
-### Account snapshot (paper)
-```bash
-python -m src.snapshot --config config/settings.ini
-```
-This step requires an IBKR paper account and serves as a manual integration test.
-It returns positions and cash in USD, ignoring any CAD cash.
+### Account snapshot
+The standalone snapshot script has been removed. Use
+`IBKRClient.snapshot` directly or run the `rebalance` CLI to view account
+positions and cash.
 
 ### Pricing utility
 Retrieve a market price using [`src/core/pricing.py`](src/core/pricing.py):
