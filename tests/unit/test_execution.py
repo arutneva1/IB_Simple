@@ -87,6 +87,31 @@ def test_submit_batch_sets_order_account(monkeypatch):
     assert res[0]["action"] == trade.action
 
 
+def test_submit_batch_honors_batch_flag(monkeypatch):
+    """Orders submit sequentially when batch_orders is False."""
+    ib = SimpleNamespace()
+
+    def fake_place(*_a, **_k):
+        return DummyTrade(status="Filled", filled=1.0)
+
+    monkeypatch.setattr(ib, "placeOrder", fake_place, raising=False)
+    client = FakeClient(ib)
+    trades = [
+        SizedTrade("AAA", "BUY", 1.0, 1.0),
+        SizedTrade("BBB", "BUY", 1.0, 1.0),
+    ]
+    cfg = _base_cfg()
+    cfg.execution.batch_orders = False
+
+    def fail_gather(*_a, **_k):
+        raise AssertionError("gather should not be called when batching disabled")
+
+    monkeypatch.setattr(asyncio, "gather", fail_gather)
+    res = asyncio.run(submit_batch(client, trades, cfg, "DU"))
+    assert len(res) == 2
+    assert all(r["status"] == "Filled" for r in res)
+
+
 def test_partial_fill_reports_final_quantity(monkeypatch, caplog):
     """Partial fill updates are reflected in final result and logged."""
     ib = SimpleNamespace()

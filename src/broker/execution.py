@@ -325,11 +325,20 @@ async def submit_batch(
     sell_trades = _combine([t for t in trades if t.action == "SELL"])
     buy_trades = _combine([t for t in trades if t.action == "BUY"])
 
+    batch_orders = getattr(cfg.execution, "batch_orders", True)
     results: list[dict[str, Any]] = []
     if sell_trades:
-        results.extend(await asyncio.gather(*[_submit_one(t) for t in sell_trades]))
+        if batch_orders:
+            results.extend(await asyncio.gather(*[_submit_one(t) for t in sell_trades]))
+        else:
+            for t in sell_trades:
+                results.append(await _submit_one(t))
     if buy_trades:
-        results.extend(await asyncio.gather(*[_submit_one(t) for t in buy_trades]))
+        if batch_orders:
+            results.extend(await asyncio.gather(*[_submit_one(t) for t in buy_trades]))
+        else:
+            for t in buy_trades:
+                results.append(await _submit_one(t))
     status_counts: dict[str, int] = {}
     for res in results:
         status_counts[res["status"]] = status_counts.get(res["status"], 0) + 1
