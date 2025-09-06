@@ -13,18 +13,12 @@ __all__ = [
     "PlanningError",
     "compute_drift",
     "Drift",
-    "build_targets",
-    "TargetError",
     "size_orders",
     "SizedTrade",
 ]
 
 
 def __getattr__(name: str):
-    if name in {"build_targets", "TargetError"}:
-        from . import targets
-
-        return getattr(targets, name)
     if name in {"size_orders", "SizedTrade"}:
         from . import sizing
 

@@ -122,9 +122,9 @@ async def plan_account(
         targets: dict[str, float] = {}
         for symbol, weights in portfolios.items():
             targets[symbol] = (
-                weights["smurf"] * cfg.models.smurf
-                + weights["badass"] * cfg.models.badass
-                + weights["gltr"] * cfg.models.gltr
+                weights.get("smurf", 0.0) * cfg.models.smurf
+                + weights.get("badass", 0.0) * cfg.models.badass
+                + weights.get("gltr", 0.0) * cfg.models.gltr
             )
 
         tasks: list[asyncio.Task[Any]] = []

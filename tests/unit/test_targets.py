@@ -1,46 +1,79 @@
-"""Tests for :mod:`core.targets` build_targets function."""
+from __future__ import annotations
 
-import sys
-from pathlib import Path
+import asyncio
+from datetime import datetime
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
-sys.path.append(str(Path(__file__).resolve().parents[2]))
+from src.broker.ibkr_client import IBKRClient
+from src.core.planner import plan_account
+from src.io import AppConfig
 
-from src.core.targets import TargetError, build_targets
-from src.io.config_loader import Models
 
+def test_plan_account_builds_targets_from_mix() -> None:
+    """plan_account computes targets using model mix values."""
 
-def test_build_targets_defaults_missing_weights_to_zero() -> None:
-    """Symbols missing weights for some models default those weights to ``0``."""
+    class FakeClient(IBKRClient):
+        def __init__(self) -> None:  # pragma: no cover - simple stub
+            self._ib = object()
 
-    models = {
+        async def __aenter__(self) -> "FakeClient":  # pragma: no cover - simple stub
+            return self
+
+        async def __aexit__(
+            self, exc_type, exc, tb
+        ) -> bool:  # pragma: no cover - simple stub
+            return False
+
+        async def snapshot(self, account_id):
+            return {
+                "positions": [
+                    {"symbol": "AAA", "position": 0.0, "market_price": 1.0},
+                    {"symbol": "BBB", "position": 0.0, "market_price": 1.0},
+                    {"symbol": "CCC", "position": 0.0, "market_price": 1.0},
+                ],
+                "cash": 0.0,
+                "net_liq": 0.0,
+            }
+
+    cfg = cast(
+        AppConfig,
+        SimpleNamespace(
+            ibkr=SimpleNamespace(host="h", port=1, client_id=1),
+            models=SimpleNamespace(smurf=0.6, badass=0.2, gltr=0.2),
+            pricing=SimpleNamespace(price_source="last", fallback_to_snapshot=True),
+            io=SimpleNamespace(report_dir="reports", log_level="INFO"),
+        ),
+    )
+
+    portfolios = {
         "AAA": {"smurf": 100.0},
         "BBB": {"badass": 100.0},
         "CCC": {"gltr": 100.0},
         "CASH": {},
     }
-    mix = Models(smurf=0.6, badass=0.2, gltr=0.2)
 
-    targets = build_targets(models, mix)
+    plan = asyncio.run(
+        plan_account(
+            "A",
+            portfolios,
+            cfg,
+            datetime.now(),
+            client_factory=FakeClient,
+            compute_drift=lambda *args, **kwargs: [],
+            prioritize_by_drift=lambda *args, **kwargs: [],
+            size_orders=lambda *args, **kwargs: ([], 0.0, 0.0),
+            fetch_price=lambda *args, **kwargs: ("", 0.0),
+            render_preview=lambda *args, **kwargs: "",
+            write_pre_trade_report=lambda *args, **kwargs: None,
+        )
+    )
 
+    targets = plan["targets"]
     assert targets["AAA"] == pytest.approx(60.0)
     assert targets["BBB"] == pytest.approx(20.0)
     assert targets["CCC"] == pytest.approx(20.0)
-    # missing weights for CASH default to zero
-    assert targets["CASH"] == pytest.approx(0.0)
+    assert targets.get("CASH", 0.0) == pytest.approx(0.0)
     assert sum(targets.values()) == pytest.approx(100.0)
-
-
-def test_build_targets_raises_when_total_invalid() -> None:
-    """Totals outside the tolerance raise ``TargetError``."""
-
-    models = {
-        "AAA": {"smurf": 100.0},
-        "BBB": {"badass": 100.0},
-        "CASH": {},
-    }
-    mix = Models(smurf=0.6, badass=0.3, gltr=0.1)
-
-    with pytest.raises(TargetError):
-        build_targets(models, mix)
