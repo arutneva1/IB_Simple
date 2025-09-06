@@ -142,9 +142,19 @@ python -m src.rebalance --config config/settings.ini --csv config/portfolios.csv
 ## Usage
 
 ### Validate configuration
+The configuration can be checked by loading it with `load_config()`:
+
 ```bash
-python -m src.io.validate_config config/settings.ini
+python - <<'PY'
+from pathlib import Path
+from src.io.config_loader import load_config
+load_config(Path("config/settings.ini"))
+print("Config OK")
+PY
 ```
+
+`validate_portfolios.py` also validates the configuration before checking
+portfolio files.
 
 ### Validate portfolio CSV
 Validate a single CSV (or all configured per-account files when each account
