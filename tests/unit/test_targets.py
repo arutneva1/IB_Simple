@@ -24,8 +24,8 @@ def test_plan_account_builds_targets_from_mix() -> None:
 
         async def __aexit__(
             self, exc_type, exc, tb
-        ) -> bool:  # pragma: no cover - simple stub
-            return False
+        ) -> None:  # pragma: no cover - simple stub
+            return None
 
         async def snapshot(self, account_id):
             return {
