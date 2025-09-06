@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict, dataclass
+from types import TracebackType
 from typing import Any, Dict, List, cast
 
 from ib_async import IB, Position
@@ -38,6 +39,28 @@ class IBKRClient:
 
     def __init__(self) -> None:
         self._ib = IB()
+        # Connection parameters used by the async context manager methods.
+        self._host: str | None = None
+        self._port: int | None = None
+        self._client_id: int | None = None
+
+    async def __aenter__(self) -> "IBKRClient":
+        """Connect to IBKR using stored connection parameters."""
+        if self._host is None or self._port is None or self._client_id is None:
+            raise IBKRError("Connection parameters not set")
+        await self.connect(self._host, self._port, self._client_id)
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        """Disconnect from IBKR on context manager exit."""
+        if self._host is None or self._port is None or self._client_id is None:
+            return
+        await self.disconnect(self._host, self._port, self._client_id)
 
     async def connect(self, host: str, port: int, client_id: int) -> None:
         """Connect to TWS/Gateway with exponential backoff."""
