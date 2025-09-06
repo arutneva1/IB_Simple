@@ -55,6 +55,9 @@ def test_plan_account_builds_targets_from_mix() -> None:
         "CASH": {},
     }
 
+    async def fake_fetch_price(*args, **kwargs):
+        return "", 0.0
+
     plan = asyncio.run(
         plan_account(
             "A",
@@ -65,7 +68,7 @@ def test_plan_account_builds_targets_from_mix() -> None:
             compute_drift=lambda *args, **kwargs: [],
             prioritize_by_drift=lambda *args, **kwargs: [],
             size_orders=lambda *args, **kwargs: ([], 0.0, 0.0),
-            fetch_price=lambda *args, **kwargs: ("", 0.0),
+            fetch_price=fake_fetch_price,
             render_preview=lambda *args, **kwargs: "",
             write_pre_trade_report=lambda *args, **kwargs: None,
         )

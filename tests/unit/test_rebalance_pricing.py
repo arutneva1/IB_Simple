@@ -110,8 +110,9 @@ def test_run_fetches_prices_for_targets_and_trades(
     )
     asyncio.run(rebalance._run(args))
 
-    assert pre == {"AAA": 10.0, "BBB": 20.0}
-    assert fetched == ["BBB", "AAA"]
+    assert pre == {"AAA": 15.0, "BBB": 20.0}
+    assert fetched.count("AAA") == 2
+    assert fetched.count("BBB") == 1
     assert sizing == {"AAA": 15.0}
 
 
@@ -138,5 +139,5 @@ def test_run_aborts_when_trade_price_unavailable(
     out, _ = capsys.readouterr()
     assert "bad price" in out
     assert pre == {}
-    assert fetched == ["BBB"]
+    assert sorted(fetched) == ["AAA", "BBB"]
     assert sizing == {}
