@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from dataclasses import asdict, dataclass
 from types import TracebackType
-from typing import Any, Dict, List, cast
+from typing import Any, Awaitable, Callable, Dict, List, cast
 
 from ib_async import IB, Position
 
@@ -84,7 +84,11 @@ class IBKRClient:
         )
         log.info("Disconnected from IBKR")
 
-    async def snapshot(self, account_id: str) -> Dict[str, Any]:
+    async def snapshot(
+        self,
+        account_id: str,
+        progress: Callable[[str], Awaitable[None]] | None = None,
+    ) -> Dict[str, Any]:
         """Return a snapshot of positions and account balances.
 
         The snapshot contains positions denominated in USD, the available cash
@@ -96,11 +100,19 @@ class IBKRClient:
             log.info("Starting account snapshot for %s", account_id)
 
             # Retrieve raw positions for the account
+            if progress is not None:
+                await progress("requesting positions")
             positions: List[Position] = await self._ib.reqPositionsAsync()
+            if progress is not None:
+                await progress("received positions")
             positions = [p for p in positions if p.account == account_id]
 
             # Request portfolio updates which include market prices/values
+            if progress is not None:
+                await progress("requesting account updates")
             await self._ib.reqAccountUpdatesAsync(account_id)
+            if progress is not None:
+                await progress("received account updates")
             portfolio_items = self._ib.portfolio()
             portfolio_map = {
                 (item.account, getattr(item.contract, "symbol", "")): item
@@ -112,7 +124,11 @@ class IBKRClient:
                 if p.contract.currency != "USD":
                     continue
 
-                key = (p.account, getattr(p.contract, "symbol", ""))
+                symbol = getattr(p.contract, "symbol", "")
+                if progress is not None:
+                    await progress(f"processing {symbol}")
+
+                key = (p.account, symbol)
                 item = portfolio_map.get(key)
 
                 pos: Dict[str, Any] = {
@@ -133,11 +149,15 @@ class IBKRClient:
             # fall back to calling it without arguments if a ``TypeError`` is
             # raised.  Using ``cast`` avoids a mypy complaint about the
             # potentially varying call signature.
+            if progress is not None:
+                await progress("requesting account summary")
             req_summary = cast(Any, self._ib.reqAccountSummaryAsync)
             try:
                 await req_summary(account_id)
             except TypeError:
                 await req_summary()
+            if progress is not None:
+                await progress("received account summary")
             summary = await self._ib.accountSummaryAsync(account_id)
             summary = [
                 s for s in summary if getattr(s, "account", account_id) == account_id

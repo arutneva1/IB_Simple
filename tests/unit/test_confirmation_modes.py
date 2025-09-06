@@ -18,7 +18,7 @@ class DummyClient:
     async def disconnect(self, host, port, client_id):  # noqa: ARG002
         return None
 
-    async def snapshot(self, account_id):  # noqa: ARG002
+    async def snapshot(self, account_id, *_, **__):  # noqa: ARG002
         return {"positions": [], "cash": 0.0, "net_liq": 0.0}
 
 

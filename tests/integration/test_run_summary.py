@@ -30,7 +30,7 @@ class DummyIBKRClient:
     ) -> None:  # noqa: ARG002
         pass
 
-    async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
+    async def snapshot(self, account_id: str, *_: object, **__: object) -> dict:  # noqa: ARG002
         return {
             "positions": [
                 {"symbol": "SPY", "position": 10, "avg_cost": 100.0},

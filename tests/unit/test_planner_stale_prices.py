@@ -21,7 +21,7 @@ def test_plan_account_refreshes_stale_prices(monkeypatch):
         ) -> None:  # pragma: no cover - simple stub
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {
                 "positions": [
                     {"symbol": "AAA", "position": 1.0, "market_price": 10.0},

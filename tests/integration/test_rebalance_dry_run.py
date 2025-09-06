@@ -30,7 +30,9 @@ class DummyIBKRClient:
     ) -> None:  # noqa: ARG002
         pass
 
-    async def snapshot(self, account_id: str) -> dict:  # noqa: ARG002
+    async def snapshot(
+        self, account_id: str, *_: object, **__: object
+    ) -> dict:  # noqa: ARG002
         if account_id == "DUFAIL":
             raise IBKRError("snapshot failed")
         return {

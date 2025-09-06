@@ -46,7 +46,7 @@ def test_tasks_cancelled_on_unexpected_error() -> None:
         async def disconnect(self, host, port, client_id):
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             return {"positions": [], "cash": 0.0, "net_liq": 0.0}
 
     cfg = cast(

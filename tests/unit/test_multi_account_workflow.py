@@ -64,7 +64,7 @@ async def _run_rebalance(monkeypatch):
         async def disconnect(self, host, port, client_id):  # pragma: no cover - trivial
             return None
 
-        async def snapshot(self, account_id):
+        async def snapshot(self, account_id, *_, **__):
             snap_calls.append(account_id)
             return snapshots[account_id]
 
