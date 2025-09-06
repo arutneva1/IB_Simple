@@ -53,7 +53,7 @@ def test_render_shows_quantities_and_est_value() -> None:
 
     prioritized = prioritize_by_drift("ACCT", drifts, cfg)
     trades, post_exp, post_lev = size_orders(
-        "ACCT", prioritized, prices, cash=100.0, net_liq=100.0, cfg=cfg
+        "ACCT", prioritized, prices, {}, cash=100.0, net_liq=100.0, cfg=cfg
     )
     table = render("ACCT", prioritized, trades, 100.0, 1.0, post_exp, post_lev)
 

@@ -78,7 +78,9 @@ def _setup_common(
         lambda account_id, drifts, cfg: [d for d in drifts if d.action != "HOLD"],
     )
 
-    def fake_size_orders(account_id, prioritized, prices, cash, net_liq, cfg):
+    def fake_size_orders(
+        account_id, prioritized, prices, current_positions, cash, net_liq, cfg
+    ):
         captured_sizing.update(prices)
         return [], [], []
 

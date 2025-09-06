@@ -242,6 +242,7 @@ async def plan_account(
         account_id,
         prioritized,
         trade_prices,
+        current,
         current["CASH"],
         net_liq,
         cfg,

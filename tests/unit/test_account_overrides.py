@@ -42,10 +42,10 @@ def test_overrides_affect_only_target_account():
     cfg = _cfg()
 
     trades1, _, _ = size_orders(
-        "ACC1", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACC1", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg
     )
     trades2, _, _ = size_orders(
-        "ACC2", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACC2", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg
     )
 
     trades1_sorted = sorted(trades1, key=lambda t: t.symbol)
@@ -76,10 +76,10 @@ def test_confirm_global_respects_fractional_override():
     cfg.io = SimpleNamespace(report_dir=".")
 
     trades1, _, _ = size_orders(
-        "ACC1", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACC1", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg
     )
     trades2, _, _ = size_orders(
-        "ACC2", drifts, prices, cash=200.0, net_liq=net_liq, cfg=cfg
+        "ACC2", drifts, prices, {}, cash=200.0, net_liq=net_liq, cfg=cfg
     )
 
     plan1 = {

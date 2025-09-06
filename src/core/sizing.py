@@ -56,6 +56,7 @@ def size_orders(
     account_id: str,
     drifts: list[Drift],
     prices: Mapping[str, float],
+    current_positions: Mapping[str, float],
     cash: float,
     net_liq: float,
     cfg: Any,
@@ -70,6 +71,9 @@ def size_orders(
         Prioritised drift records.
     prices:
         Mapping of symbols to current prices.
+    current_positions:
+        Mapping of symbols to current position quantities. Used to cap sell
+        orders so they do not exceed existing holdings.
     cash:
         Current cash balance in USD.
     net_liq:
@@ -137,13 +141,14 @@ def size_orders(
             if spend_cap < notional:
                 unmet_buys.append((d.symbol, notional - spend_cap))
         elif d.action == "SELL":
-            qty = notional / price
+            qty = min(current_positions.get(d.symbol, 0.0), notional / price)
             if not math.isfinite(qty):
                 raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
+            notional = qty * price
             if not allow_fractional:
                 qty = float(int(qty))
                 notional = qty * price
-            if notional < min_order_usd:
+            if notional < min_order_usd or qty == 0:
                 continue
             trades.append(SizedTrade(d.symbol, "SELL", qty, notional))
             available += notional

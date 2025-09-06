@@ -119,7 +119,7 @@ def test_summary_reports_planned_and_executed_counts(tmp_path):
     call_count = {"n": 0}
 
     def size_orders(
-        account_id, drifts, prices, cash_after, net_liq, cfg
+        account_id, drifts, prices, current_positions, cash_after, net_liq, cfg
     ):  # noqa: ARG001
         if call_count["n"] < 2:
             call_count["n"] += 1
