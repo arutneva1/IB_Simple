@@ -78,5 +78,5 @@ def test_plan_account_builds_targets_from_mix() -> None:
     assert targets["AAA"] == pytest.approx(60.0)
     assert targets["BBB"] == pytest.approx(20.0)
     assert targets["CCC"] == pytest.approx(20.0)
-    assert targets.get("CASH", 0.0) == pytest.approx(0.0)
+    assert "CASH" not in targets
     assert sum(targets.values()) == pytest.approx(100.0)
