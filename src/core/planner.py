@@ -142,17 +142,15 @@ async def plan_account(
             stale_snapshot: set[str] = set()
             for sym, ts in list(price_timestamps.items()):
                 price = snapshot_prices.get(sym, 0.0)
-                age_exceeded = max_age is not None and (
-                    now - ts
-                ).total_seconds() > max_age
+                age_exceeded = (
+                    max_age is not None and (now - ts).total_seconds() > max_age
+                )
                 if price <= 0 or age_exceeded:
                     stale_snapshot.add(sym)
                     snapshot_prices.pop(sym, None)
                     price_timestamps.pop(sym, None)
             missing_current = {
-                sym
-                for sym in current
-                if sym != "CASH" and sym not in snapshot_prices
+                sym for sym in current if sym != "CASH" and sym not in snapshot_prices
             }
             needed_targets = {
                 sym
