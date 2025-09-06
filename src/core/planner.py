@@ -134,17 +134,29 @@ async def plan_account(
 
         tasks: list[asyncio.Task[Any]] = []
         try:
+            max_age = getattr(cfg.pricing, "price_max_age_sec", None)
+            now = datetime.utcnow()
+            stale_snapshot: set[str] = set()
+            for sym, ts in list(price_timestamps.items()):
+                price = snapshot_prices.get(sym, 0.0)
+                age_exceeded = max_age is not None and (
+                    now - ts
+                ).total_seconds() > max_age
+                if price <= 0 or age_exceeded:
+                    stale_snapshot.add(sym)
+                    snapshot_prices.pop(sym, None)
+                    price_timestamps.pop(sym, None)
             missing_current = {
                 sym
                 for sym in current
-                if sym != "CASH" and snapshot_prices.get(sym, 0.0) <= 0.0
+                if sym != "CASH" and sym not in snapshot_prices
             }
             needed_targets = {
                 sym
                 for sym, wt in targets.items()
-                if sym != "CASH" and wt != 0 and snapshot_prices.get(sym, 0.0) <= 0.0
+                if sym != "CASH" and wt != 0 and sym not in snapshot_prices
             }
-            target_symbols = missing_current | needed_targets
+            target_symbols = stale_snapshot | missing_current | needed_targets
             await _print(
                 f"[blue]Fetching prices for {len(target_symbols)} target symbols[/blue]"
             )
