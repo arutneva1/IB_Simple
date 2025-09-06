@@ -14,6 +14,9 @@ from src.broker.ibkr_client import IBKRClient
 
 
 class FakeIBSnapshot:
+    def __init__(self):
+        self.client = SimpleNamespace(reqAccountUpdates=lambda subscribe, account: None)
+
     async def connectAsync(self, host, port, clientId):
         return None
 
@@ -138,6 +141,30 @@ def test_snapshot_cad_cash_no_fx_rate(monkeypatch):
     }
     symbols = {p["symbol"] for p in result["positions"]}
     assert "MSFT" not in symbols
+
+
+class SlowIBSnapshot(FakeIBSnapshot):
+    def __init__(self):
+        super().__init__()
+        self.cancel_called = False
+        self.client = SimpleNamespace(reqAccountUpdates=self._cancel)
+
+    async def reqAccountUpdatesAsync(self, account):
+        await asyncio.sleep(0.2)
+
+    def _cancel(self, subscribe, account):
+        if not subscribe:
+            self.cancel_called = True
+
+
+def test_snapshot_times_out(monkeypatch):
+    slow_ib = SlowIBSnapshot()
+    monkeypatch.setattr(ibkr_client, "IB", lambda: slow_ib)
+    client = IBKRClient(account_updates_timeout=0.05)
+    with pytest.raises(IBKRError) as exc:
+        asyncio.run(client.snapshot("ACC"))
+    assert "timed out" in str(exc.value)
+    assert slow_ib.cancel_called
 
 
 class FailingIB:
