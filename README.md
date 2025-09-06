@@ -291,9 +291,11 @@ timestamp_run,account_id,planned_orders,submitted,filled,rejected,buy_usd,sell_u
 
 ### Order execution module
 `src/broker/execution.py` submits the confirmed trades and supports IBKR's
-`none`, Adaptive, or Midprice algos via `execution.algo_preference`. Midprice
-uses the dedicated MIDPRICE order type pegged to the NBBO midpoint and may be
-rejected if the account lacks entitlement or the market does not support it.
+`none`, Adaptive, or Midprice algos via `execution.algo_preference`. When
+`adaptive` is chosen, `execution.adaptive_priority` selects `Patient`,
+`Normal`, or `Urgent`. Midprice uses the dedicated MIDPRICE order type pegged 
+to the NBBO midpoint and may be rejected if the account lacks entitlement or the 
+market does not support it.
 Submitted orders are tagged with their account code so Interactive Brokers
 books them correctly. If the selected algo is rejected and
 `fallback_plain_market` is true, it retries with a plain market order. Trading hours are controlled by
