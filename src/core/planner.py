@@ -112,10 +112,13 @@ async def plan_account(
         current["CASH"] = float(snapshot["cash"])
 
         snapshot_prices: dict[str, float] = {}
+        price_timestamps: dict[str, datetime] = {}
         for pos in snapshot["positions"]:
             price = pos.get("market_price") or pos.get("avg_cost")
             if price is not None:
-                snapshot_prices[pos["symbol"]] = float(price)
+                symbol = pos["symbol"]
+                snapshot_prices[symbol] = float(price)
+                price_timestamps[symbol] = datetime.utcnow()
 
         net_liq = float(snapshot.get("net_liq", 0.0))
 
@@ -153,6 +156,7 @@ async def plan_account(
                     await asyncio.gather(*tasks, return_exceptions=True)
                     raise
                 snapshot_prices[symbol] = price
+                price_timestamps[symbol] = datetime.utcnow()
                 await _print(f"[blue]  ({idx}/{len(target_symbols)}) {symbol}[/blue]")
             tasks = []
 
@@ -171,31 +175,57 @@ async def plan_account(
                 if d.symbol != "CASH" and d.action in ("BUY", "SELL")
             }
 
-            await _print(
-                f"[blue]Fetching prices for {len(trade_symbols)} trade symbols[/blue]"
-            )
-            logging.info(
-                "Fetching prices for %s: %d symbols",
-                account_id,
-                len(trade_symbols),
-            )
-            tasks = [
-                asyncio.create_task(fetch_price(client._ib, sym, cfg))
-                for sym in trade_symbols
-            ]
+            max_age = getattr(cfg.pricing, "price_max_age_sec", None)
+            now = datetime.utcnow()
             trade_prices: dict[str, float] = {}
-            for idx, task in enumerate(asyncio.as_completed(tasks), 1):
-                try:
-                    symbol, price = await task
-                except PricingError as exc:
-                    await _print(f"[red]{exc}[/red]")
-                    logging.error(str(exc))
-                    for t in tasks:
-                        t.cancel()
-                    await asyncio.gather(*tasks, return_exceptions=True)
-                    raise
-                trade_prices[symbol] = price
-                await _print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
+            stale_symbols: list[str] = []
+            for sym in trade_symbols:
+                if sym in snapshot_prices:
+                    trade_prices[sym] = snapshot_prices[sym]
+                    if max_age is not None:
+                        ts = price_timestamps.get(sym)
+                        if ts is None or (now - ts).total_seconds() > max_age:
+                            stale_symbols.append(sym)
+                else:
+                    stale_symbols.append(sym)
+
+            if stale_symbols:
+                await _print(
+                    f"[blue]Fetching prices for {len(stale_symbols)} trade symbols[/blue]"
+                )
+                logging.info(
+                    "Fetching prices for %s: %d symbols",
+                    account_id,
+                    len(stale_symbols),
+                )
+                tasks = [
+                    asyncio.create_task(fetch_price(client._ib, sym, cfg))
+                    for sym in stale_symbols
+                ]
+                for idx, task in enumerate(asyncio.as_completed(tasks), 1):
+                    try:
+                        symbol, price = await task
+                    except PricingError as exc:
+                        await _print(f"[red]{exc}[/red]")
+                        logging.error(str(exc))
+                        for t in tasks:
+                            t.cancel()
+                        await asyncio.gather(*tasks, return_exceptions=True)
+                        raise
+                    trade_prices[symbol] = price
+                    snapshot_prices[symbol] = price
+                    price_timestamps[symbol] = datetime.utcnow()
+                    await _print(
+                        f"[blue]  ({idx}/{len(stale_symbols)}) {symbol}[/blue]"
+                    )
+                tasks = []
+            else:
+                await _print("[blue]Reusing existing prices for trade symbols[/blue]")
+                logging.info(
+                    "Reusing existing prices for %s: %d symbols",
+                    account_id,
+                    len(trade_symbols),
+                )
         except Exception as exc:  # pragma: no cover - defensive
             for t in tasks:
                 t.cancel()
