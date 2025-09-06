@@ -226,6 +226,8 @@ python -m src.core.preview
 ```
 
 The main rebalancer prints a batch summary preview before submitting trades.
+A minimal example of calling the underlying `render` function lives in
+`tests/examples/test_preview_demo.py`.
 
 ### Dry run
 Launch IB Gateway or Trader Workstation, then run:
