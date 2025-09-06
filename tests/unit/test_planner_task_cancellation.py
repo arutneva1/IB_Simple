@@ -29,8 +29,8 @@ def test_tasks_cancelled_on_unexpected_error() -> None:
 
     def fake_compute_drift(account_id, current, targets, prices, net_liq, cfg):
         return [
-            Drift("ERR", 0.0, 0.0, 0.0, 0.0, "BUY"),
-            Drift("SLOW", 0.0, 0.0, 0.0, 0.0, "BUY"),
+            Drift("ERR", 0.0, 0.0, 0.0, 0.0, 1.0, "BUY"),
+            Drift("SLOW", 0.0, 0.0, 0.0, 0.0, 1.0, "BUY"),
         ]
 
     def fake_prioritize(account_id, drifts, cfg):

@@ -27,18 +27,21 @@ def _cfg():
     return SimpleNamespace(rebalance=reb, account_overrides=overrides)
 
 
-def _drift(symbol: str, usd: float, net_liq: float) -> Drift:
+def _drift(symbol: str, usd: float, net_liq: float, price: float) -> Drift:
     pct = usd / net_liq * 100.0
     action = "BUY" if usd < 0 else "SELL" if usd > 0 else "HOLD"
     current = 0.0
     target = -pct
-    return Drift(symbol, target, current, pct, usd, action)
+    return Drift(symbol, target, current, pct, usd, price, action)
 
 
 def test_overrides_affect_only_target_account():
     net_liq = 1000.0
-    drifts = [_drift("AAA", -30.0, net_liq), _drift("BBB", -80.0, net_liq)]
     prices = {"AAA": 7.0, "BBB": 30.0}
+    drifts = [
+        _drift("AAA", -30.0, net_liq, prices["AAA"]),
+        _drift("BBB", -80.0, net_liq, prices["BBB"]),
+    ]
     cfg = _cfg()
 
     trades1, _, _ = size_orders(
@@ -70,8 +73,11 @@ def test_overrides_affect_only_target_account():
 
 def test_confirm_global_respects_fractional_override():
     net_liq = 1000.0
-    drifts = [_drift("AAA", -30.0, net_liq), _drift("BBB", -80.0, net_liq)]
     prices = {"AAA": 7.0, "BBB": 30.0}
+    drifts = [
+        _drift("AAA", -30.0, net_liq, prices["AAA"]),
+        _drift("BBB", -80.0, net_liq, prices["BBB"]),
+    ]
     cfg = _cfg()
     cfg.io = SimpleNamespace(report_dir=".")
 

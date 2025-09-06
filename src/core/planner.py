@@ -111,11 +111,11 @@ async def plan_account(
         current = {p["symbol"]: float(p["position"]) for p in snapshot["positions"]}
         current["CASH"] = float(snapshot["cash"])
 
-        prices: dict[str, float] = {}
+        snapshot_prices: dict[str, float] = {}
         for pos in snapshot["positions"]:
             price = pos.get("market_price") or pos.get("avg_cost")
             if price is not None:
-                prices[pos["symbol"]] = float(price)
+                snapshot_prices[pos["symbol"]] = float(price)
 
         net_liq = float(snapshot.get("net_liq", 0.0))
 
@@ -130,7 +130,7 @@ async def plan_account(
         tasks: list[asyncio.Task[Any]] = []
         try:
             missing_symbols = {
-                sym for sym in targets if sym not in prices and sym != "CASH"
+                sym for sym in targets if sym not in snapshot_prices and sym != "CASH"
             }
             if missing_symbols:
                 await _print(
@@ -155,7 +155,7 @@ async def plan_account(
                             t.cancel()
                         await asyncio.gather(*tasks, return_exceptions=True)
                         raise
-                    prices[symbol] = price
+                    snapshot_prices[symbol] = price
                     await _print(
                         f"[blue]  ({idx}/{len(missing_symbols)}) {symbol}[/blue]"
                     )
@@ -163,7 +163,9 @@ async def plan_account(
 
             await _print("[blue]Computing drift[/blue]")
             logging.info("Computing drift for %s", account_id)
-            drifts = compute_drift(account_id, current, targets, prices, net_liq, cfg)
+            drifts = compute_drift(
+                account_id, current, targets, snapshot_prices, net_liq, cfg
+            )
             await _print("[blue]Prioritizing trades[/blue]")
             logging.info("Prioritizing trades for %s", account_id)
             prioritized = prioritize_by_drift(account_id, drifts, cfg)
@@ -186,6 +188,7 @@ async def plan_account(
                 asyncio.create_task(fetch_price(client._ib, sym, cfg))
                 for sym in trade_symbols
             ]
+            trade_prices: dict[str, float] = {}
             for idx, task in enumerate(asyncio.as_completed(tasks), 1):
                 try:
                     symbol, price = await task
@@ -196,16 +199,22 @@ async def plan_account(
                         t.cancel()
                     await asyncio.gather(*tasks, return_exceptions=True)
                     raise
-                prices[symbol] = price
+                trade_prices[symbol] = price
                 await _print(f"[blue]  ({idx}/{len(trade_symbols)}) {symbol}[/blue]")
-
-            trade_prices = {sym: prices[sym] for sym in trade_symbols}
         except Exception as exc:  # pragma: no cover - defensive
             for t in tasks:
                 t.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
             raise PlanningError(str(exc)) from exc
-        return current, prices, trade_prices, net_liq, drifts, prioritized, targets
+        return (
+            current,
+            snapshot_prices,
+            trade_prices,
+            net_liq,
+            drifts,
+            prioritized,
+            targets,
+        )
 
     if hasattr(client, "__aenter__"):
         setattr(client, "_host", cfg.ibkr.host)
@@ -214,7 +223,7 @@ async def plan_account(
         async with client:
             (
                 current,
-                prices,
+                snapshot_prices,
                 trade_prices,
                 net_liq,
                 drifts,
@@ -226,7 +235,7 @@ async def plan_account(
         try:
             (
                 current,
-                prices,
+                snapshot_prices,
                 trade_prices,
                 net_liq,
                 drifts,
@@ -252,13 +261,14 @@ async def plan_account(
     planned_orders = len(trades)
     buy_usd = sum(t.notional for t in trades if t.action == "BUY")
     sell_usd = sum(t.notional for t in trades if t.action == "SELL")
+    combined_prices = {**snapshot_prices, **trade_prices}
     pre_path = write_pre_trade_report(
         Path(cfg.io.report_dir),
         ts_dt,
         account_id,
         drifts,
         trades,
-        prices,
+        combined_prices,
         net_liq,
         pre_gross_exposure,
         pre_leverage,
@@ -283,7 +293,7 @@ async def plan_account(
         "account_id": account_id,
         "drifts": drifts,
         "trades": trades,
-        "prices": prices,
+        "prices": combined_prices,
         "current": current,
         "targets": targets,
         "net_liq": net_liq,

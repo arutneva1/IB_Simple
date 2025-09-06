@@ -14,8 +14,8 @@ from src.core.sizing import SizedTrade
 
 def test_preview_demo_example() -> None:
     sample_plan = [
-        Drift("AAA", 50.0, 60.0, 10.0, 640.0, "SELL"),
-        Drift("BBB", 50.0, 40.0, -10.0, -640.0, "BUY"),
+        Drift("AAA", 50.0, 60.0, 10.0, 640.0, 100.0, "SELL"),
+        Drift("BBB", 50.0, 40.0, -10.0, -640.0, 100.0, "BUY"),
     ]
     sample_trades = [
         SizedTrade("AAA", "SELL", 6.4, 640.0),

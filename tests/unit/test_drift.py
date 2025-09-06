@@ -243,9 +243,9 @@ def test_total_drift_mode_selects_largest_until_band(
 
 def test_prioritize_by_drift_filters_and_sorts(cfg_factory) -> None:
     drifts = [
-        Drift("AAA", 0.0, 0.0, 0.0, 50.0, "BUY"),
-        Drift("BBB", 0.0, 0.0, 0.0, -200.0, "SELL"),
-        Drift("CCC", 0.0, 0.0, 0.0, 150.0, "BUY"),
+        Drift("AAA", 0.0, 0.0, 0.0, 50.0, 1.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, -200.0, 1.0, "SELL"),
+        Drift("CCC", 0.0, 0.0, 0.0, 150.0, 1.0, "BUY"),
     ]
     cfg = cfg_factory(min_order=100)
     prioritized = prioritize_by_drift("ACCT", drifts, cfg)

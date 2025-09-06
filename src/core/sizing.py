@@ -122,10 +122,12 @@ def size_orders(
         if not math.isfinite(price):
             raise ValueError(f"non-finite price for {d.symbol}: {price}")
 
-        notional = abs(d.drift_usd)
+        desired_qty = abs(d.drift_usd) / d.snapshot_price
+        desired_notional = desired_qty * price
+
         if d.action == "BUY":
             # Greedy spend limited by current availability.
-            spend_cap = min(notional, max(0.0, available))
+            spend_cap = min(desired_notional, max(0.0, available))
             qty = spend_cap / price if spend_cap > 0 else 0.0
             if not math.isfinite(qty):
                 raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
@@ -133,15 +135,15 @@ def size_orders(
                 qty = float(int(qty))
                 spend_cap = qty * price
             if spend_cap < min_order_usd or qty == 0:
-                unmet_buys.append((d.symbol, notional))
+                unmet_buys.append((d.symbol, desired_notional))
                 continue
             trades.append(SizedTrade(d.symbol, "BUY", qty, spend_cap))
             available -= spend_cap
             total_buy += spend_cap
-            if spend_cap < notional:
-                unmet_buys.append((d.symbol, notional - spend_cap))
+            if spend_cap < desired_notional:
+                unmet_buys.append((d.symbol, desired_notional - spend_cap))
         elif d.action == "SELL":
-            qty = min(current_positions.get(d.symbol, 0.0), notional / price)
+            qty = min(current_positions.get(d.symbol, 0.0), desired_qty)
             if not math.isfinite(qty):
                 raise ValueError(f"non-finite quantity for {d.symbol}: {qty}")
             notional = qty * price

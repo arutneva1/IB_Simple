@@ -13,9 +13,9 @@ def _cfg(min_usd: int) -> SimpleNamespace:
 
 def test_prioritize_filters_and_sorts_by_abs_drift_usd() -> None:
     drifts = [
-        Drift("AAA", 0.0, 0.0, 0.0, -120.0, "BUY"),
-        Drift("BBB", 0.0, 0.0, 0.0, 80.0, "SELL"),
-        Drift("CCC", 0.0, 0.0, 0.0, 200.0, "SELL"),
+        Drift("AAA", 0.0, 0.0, 0.0, -120.0, 1.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, 80.0, 1.0, "SELL"),
+        Drift("CCC", 0.0, 0.0, 0.0, 200.0, 1.0, "SELL"),
     ]
     cfg = _cfg(100)
 
@@ -26,8 +26,8 @@ def test_prioritize_filters_and_sorts_by_abs_drift_usd() -> None:
 
 def test_prioritize_retains_all_when_threshold_zero() -> None:
     drifts = [
-        Drift("AAA", 0.0, 0.0, 0.0, -120.0, "BUY"),
-        Drift("BBB", 0.0, 0.0, 0.0, 80.0, "SELL"),
+        Drift("AAA", 0.0, 0.0, 0.0, -120.0, 1.0, "BUY"),
+        Drift("BBB", 0.0, 0.0, 0.0, 80.0, 1.0, "SELL"),
     ]
     cfg = _cfg(0)
 

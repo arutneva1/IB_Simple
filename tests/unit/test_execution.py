@@ -337,7 +337,7 @@ def test_delayed_commission_reports_recorded(monkeypatch, tmp_path):
     assert res[0]["commission"] == pytest.approx(1.2)
     assert res[0]["action"] == sized_trade.action
 
-    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, "BUY")
+    drift = Drift("AAA", 60.0, 50.0, -10.0, -1000.0, 100.0, "BUY")
     ts = datetime(2023, 1, 1)
     post_path = write_post_trade_report(
         tmp_path,
