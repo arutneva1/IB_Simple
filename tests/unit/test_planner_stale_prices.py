@@ -77,4 +77,3 @@ def test_plan_account_refreshes_stale_prices(monkeypatch):
     )
 
     assert fetched == ["AAA"]
-
