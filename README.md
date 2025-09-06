@@ -38,7 +38,12 @@ pip install -r requirements.txt -r requirements-dev.txt
 pre-commit install
 $env:PYTHONPATH = "."
 pytest -q -m "not integration"
+python -m src.rebalance --config config/settings.ini
 ```
+
+FYI: The `-m` option tells Python to treat `src.rebalance` as a module name rather than a file path.
+
+If you prefer script-style invocation (`python src/rebalance.py`), ensure `$env:PYTHONPATH = "."` so Python can locate the package.
 
 ### Customize sample files
 
