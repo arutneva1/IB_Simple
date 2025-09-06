@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from src.io import ConfigError
+from src.io.config_loader import ConfigError
 
 
 @dataclass(frozen=True)

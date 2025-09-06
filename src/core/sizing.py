@@ -20,7 +20,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from src.io import merge_account_overrides
+from src.io.config_loader import merge_account_overrides
 
 from .drift import Drift
 
