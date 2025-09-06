@@ -114,8 +114,8 @@ async def plan_account(
         snapshot_prices: dict[str, float] = {}
         price_timestamps: dict[str, datetime] = {}
         for pos in snapshot["positions"]:
-            price = pos.get("market_price") or pos.get("avg_cost")
-            if price is not None:
+            price = pos.get("market_price")
+            if price is not None and float(price) > 0:
                 symbol = pos["symbol"]
                 snapshot_prices[symbol] = float(price)
                 price_timestamps[symbol] = datetime.utcnow()
@@ -135,12 +135,14 @@ async def plan_account(
         tasks: list[asyncio.Task[Any]] = []
         try:
             missing_current = {
-                sym for sym in current if sym != "CASH" and sym not in snapshot_prices
+                sym
+                for sym in current
+                if sym != "CASH" and snapshot_prices.get(sym, 0.0) <= 0.0
             }
             needed_targets = {
                 sym
                 for sym, wt in targets.items()
-                if sym != "CASH" and wt != 0 and sym not in snapshot_prices
+                if sym != "CASH" and wt != 0 and snapshot_prices.get(sym, 0.0) <= 0.0
             }
             target_symbols = missing_current | needed_targets
             await _print(
